@@ -1,0 +1,50 @@
+{
+  "tests": [
+    {
+      "name": "GET incidents list",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST incident - rejected (no evidence)",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "type": "ecology",
+        "title": "Тест фейк",
+        "country": "Тестляндия",
+        "severity": "low",
+        "has_photo": false,
+        "has_video": false,
+        "has_witnesses": false
+      },
+      "expectedStatus": 422,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST incident - verified (with evidence)",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "type": "ecology",
+        "title": "Незаконная вырубка — тест",
+        "description": "Зафиксировано спутником и свидетелями",
+        "country": "Бразилия",
+        "location": "-3.4653, -62.2159",
+        "severity": "high",
+        "has_photo": true,
+        "has_video": true,
+        "has_witnesses": true,
+        "has_satellite": true,
+        "mgp_distinction": true,
+        "mgp_proportionality": true,
+        "mgp_necessity": true,
+        "is_anonymous": false
+      },
+      "expectedStatus": 201,
+      "bodyMatcher": "partial"
+    }
+  ]
+}
