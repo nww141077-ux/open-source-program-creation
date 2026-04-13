@@ -1,20 +1,39 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import IncidentModal from "@/components/IncidentModal";
 import AiChat from "@/components/AiChat";
 
-const INCIDENTS = [
-  { id: "INC-001", type: "ecology", title: "Незаконная вырубка леса", country: "Бразилия", status: "active", severity: "high", date: "12.04.2026", responsible: "ОГР-Южная Америка", ai: 92 },
-  { id: "INC-002", type: "water", title: "Загрязнение реки Рейн", country: "Германия", status: "investigating", severity: "medium", date: "11.04.2026", responsible: "ОГР-Европа", ai: 87 },
-  { id: "INC-003", type: "air", title: "Выброс CO₂ сверх нормы", country: "Китай", status: "resolved", severity: "high", date: "10.04.2026", responsible: "ОГР-Азия", ai: 95 },
-  { id: "INC-004", type: "ecology", title: "Браконьерство в заповеднике", country: "Кения", status: "active", severity: "medium", date: "09.04.2026", responsible: "ОГР-Африка", ai: 76 },
-  { id: "INC-005", type: "cyber", title: "Кибератака на инфраструктуру", country: "Норвегия", status: "investigating", severity: "critical", date: "08.04.2026", responsible: "ОГР-Европа", ai: 88 },
-  { id: "INC-006", type: "water", title: "Нефтяной разлив", country: "Нигерия", status: "active", severity: "critical", date: "07.04.2026", responsible: "ОГР-Африка", ai: 91 },
-  { id: "INC-007", type: "air", title: "Лесные пожары", country: "Канада", status: "resolved", severity: "high", date: "06.04.2026", responsible: "ОГР-Сев. Америка", ai: 83 },
-  { id: "INC-008", type: "ecology", title: "Незаконный сброс отходов", country: "Индия", status: "active", severity: "medium", date: "05.04.2026", responsible: "ОГР-Азия", ai: 79 },
+const API = "https://functions.poehali.dev/c71047de-6e10-499a-aa1c-e9fdba33e7bd";
+
+// Демо-инциденты — показываются пока база пустая
+const DEMO_INCIDENTS = [
+  { id: "INC-001", type: "ecology", title: "Незаконная вырубка леса", country: "Бразилия", status: "active", severity: "high", date: "12.04.2026", responsible: "ОГР-Экология", ai: 92 },
+  { id: "INC-002", type: "water", title: "Загрязнение реки Рейн", country: "Германия", status: "investigating", severity: "medium", date: "11.04.2026", responsible: "ОГР-Водные ресурсы", ai: 87 },
+  { id: "INC-003", type: "air", title: "Выброс CO₂ сверх нормы", country: "Китай", status: "resolved", severity: "high", date: "10.04.2026", responsible: "ОГР-Атмосфера", ai: 95 },
+  { id: "INC-004", type: "ecology", title: "Браконьерство в заповеднике", country: "Кения", status: "active", severity: "medium", date: "09.04.2026", responsible: "ОГР-Экология", ai: 76 },
+  { id: "INC-005", type: "cyber", title: "Кибератака на инфраструктуру", country: "Норвегия", status: "investigating", severity: "critical", date: "08.04.2026", responsible: "ОГР-Киберзащита", ai: 88 },
+  { id: "INC-006", type: "water", title: "Нефтяной разлив", country: "Нигерия", status: "active", severity: "critical", date: "07.04.2026", responsible: "ОГР-Водные ресурсы", ai: 91 },
+  { id: "INC-007", type: "air", title: "Лесные пожары", country: "Канада", status: "resolved", severity: "high", date: "06.04.2026", responsible: "ОГР-Атмосфера", ai: 83 },
+  { id: "INC-008", type: "ecology", title: "Незаконный сброс отходов", country: "Индия", status: "active", severity: "medium", date: "05.04.2026", responsible: "ОГР-Экология", ai: 79 },
 ];
+
+function normalizeIncident(raw: any) {
+  return {
+    id: raw.incident_code || raw.id,
+    type: raw.type,
+    title: raw.title,
+    country: raw.country,
+    status: raw.status === "verified" ? "active" : raw.status === "pending_verification" ? "investigating" : raw.status,
+    severity: raw.severity,
+    date: raw.created_at ? new Date(raw.created_at).toLocaleDateString("ru-RU") : "",
+    responsible: raw.responsible_organ || "ОГР-Общий",
+    ai: raw.ai_confidence || 0,
+    actions: raw.actions || [],
+    _raw: raw,
+  };
+}
 
 const WEEKLY = [
   { day: "Пн", count: 12 },
@@ -49,10 +68,25 @@ export default function EgsuDashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<NavTab>("overview");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedIncident, setSelectedIncident] = useState<typeof INCIDENTS[0] | null>(null);
+  const [selectedIncident, setSelectedIncident] = useState<any | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [dbIncidents, setDbIncidents] = useState<any[]>([]);
+  const [loadingDb, setLoadingDb] = useState(true);
 
-  const filtered = statusFilter === "all" ? INCIDENTS : INCIDENTS.filter(i => i.status === statusFilter);
+  useEffect(() => {
+    fetch(API)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setDbIncidents(data.map(normalizeIncident));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingDb(false));
+  }, []);
+
+  const INCIDENTS = dbIncidents.length > 0 ? dbIncidents : DEMO_INCIDENTS;
+  const filtered = statusFilter === "all" ? INCIDENTS : INCIDENTS.filter((i: any) => i.status === statusFilter);
 
   return (
     <div className="min-h-screen font-body" style={{ background: "#060a12" }}>
@@ -367,8 +401,10 @@ export default function EgsuDashboard() {
             </div>
           )}
 
-          <div className="mt-8 text-center">
-            <p className="text-white/15 text-[10px]">© 2024 Николаев Владимир Владимирович · Все права защищены · ЕГСУ 2.0</p>
+          <div className="mt-8 text-center space-y-1">
+            <p className="text-white/15 text-[10px]">© 13 апреля 2026 · ЕГСУ 2.0 · Все права защищены</p>
+            <p className="text-white/10 text-[10px]">Правообладатель и контрольный пакет акций: Николаев Владимир Владимирович</p>
+            <p className="text-white/10 text-[10px]">Разработка: Poehali.dev · Партнёрская программа ЕГСУ</p>
           </div>
         </main>
       </div>
