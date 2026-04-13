@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import GlobalLaw from "./pages/GlobalLaw";
 import EgsuDashboard from "./pages/EgsuDashboard";
 import EgsuReport from "./pages/EgsuReport";
+import EgsuDocs from "./pages/EgsuDocs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/egsu" element={<GlobalLaw />} />
           <Route path="/egsu/dashboard" element={<EgsuDashboard />} />
           <Route path="/egsu/report" element={<EgsuReport />} />
+          <Route path="/egsu/docs" element={<EgsuDocs />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

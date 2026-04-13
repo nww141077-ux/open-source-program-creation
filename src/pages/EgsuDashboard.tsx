@@ -106,12 +106,20 @@ export default function EgsuDashboard() {
             <div className="text-white/30 text-[10px]">ЕЦСУ 2.0 · Аналитика</div>
           </div>
         </div>
-        <button onClick={() => navigate("/egsu/report")}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-black transition-all hover:scale-105"
-          style={{ background: "linear-gradient(135deg, #f43f5e, #f59e0b)" }}>
-          <Icon name="Plus" size={14} />
-          <span className="hidden md:block">Новый инцидент</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate("/egsu/docs")}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105"
+            style={{ background: "rgba(168,85,247,0.15)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.3)" }}>
+            <Icon name="FileText" size={14} />
+            <span className="hidden md:block">Документы</span>
+          </button>
+          <button onClick={() => navigate("/egsu/report")}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-black transition-all hover:scale-105"
+            style={{ background: "linear-gradient(135deg, #f43f5e, #f59e0b)" }}>
+            <Icon name="Plus" size={14} />
+            <span className="hidden md:block">Новый инцидент</span>
+          </button>
+        </div>
       </nav>
 
       <div className="pt-14 flex">
