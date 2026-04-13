@@ -62,7 +62,7 @@ export default function GlobalLaw() {
             <Icon name="Globe" size={16} className="text-black" />
           </div>
           <div>
-            <div className="font-display text-base font-bold text-white tracking-wide leading-none">ГЛОБАЛЬНЫЙ ЗАКОН</div>
+            <div className="font-display text-base font-bold text-white tracking-wide leading-none">СИСТЕМА УПРАВЛЕНИЯ</div>
             <div className="text-white/30 text-[10px]">ЕЦСУ 2.0 · Lite</div>
           </div>
         </div>
