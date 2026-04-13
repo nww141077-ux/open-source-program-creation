@@ -1,0 +1,359 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Icon from "@/components/ui/icon";
+
+const INCIDENTS = [
+  { id: "INC-001", type: "ecology", title: "Незаконная вырубка леса", country: "Бразилия", status: "active", severity: "high", date: "12.04.2026", responsible: "ОГР-Южная Америка", ai: 92 },
+  { id: "INC-002", type: "water", title: "Загрязнение реки Рейн", country: "Германия", status: "investigating", severity: "medium", date: "11.04.2026", responsible: "ОГР-Европа", ai: 87 },
+  { id: "INC-003", type: "air", title: "Выброс CO₂ сверх нормы", country: "Китай", status: "resolved", severity: "high", date: "10.04.2026", responsible: "ОГР-Азия", ai: 95 },
+  { id: "INC-004", type: "ecology", title: "Браконьерство в заповеднике", country: "Кения", status: "active", severity: "medium", date: "09.04.2026", responsible: "ОГР-Африка", ai: 76 },
+  { id: "INC-005", type: "cyber", title: "Кибератака на инфраструктуру", country: "Норвегия", status: "investigating", severity: "critical", date: "08.04.2026", responsible: "ОГР-Европа", ai: 88 },
+  { id: "INC-006", type: "water", title: "Нефтяной разлив", country: "Нигерия", status: "active", severity: "critical", date: "07.04.2026", responsible: "ОГР-Африка", ai: 91 },
+  { id: "INC-007", type: "air", title: "Лесные пожары", country: "Канада", status: "resolved", severity: "high", date: "06.04.2026", responsible: "ОГР-Сев. Америка", ai: 83 },
+  { id: "INC-008", type: "ecology", title: "Незаконный сброс отходов", country: "Индия", status: "active", severity: "medium", date: "05.04.2026", responsible: "ОГР-Азия", ai: 79 },
+];
+
+const WEEKLY = [
+  { day: "Пн", count: 12 },
+  { day: "Вт", count: 19 },
+  { day: "Ср", count: 8 },
+  { day: "Чт", count: 24 },
+  { day: "Пт", count: 16 },
+  { day: "Сб", count: 9 },
+  { day: "Вс", count: 14 },
+];
+
+const BY_TYPE = [
+  { type: "Экология", count: 45, color: "#00ff87" },
+  { type: "Вода", count: 28, color: "#3b82f6" },
+  { type: "Воздух", count: 19, color: "#f59e0b" },
+  { type: "Кибер", count: 8, color: "#f43f5e" },
+];
+
+const TYPE_COLORS: Record<string, string> = { ecology: "#00ff87", water: "#3b82f6", air: "#f59e0b", cyber: "#f43f5e" };
+const TYPE_LABELS: Record<string, string> = { ecology: "Экология", water: "Вода", air: "Воздух", cyber: "Кибер" };
+const STATUS_COLORS: Record<string, string> = { active: "#f43f5e", investigating: "#f59e0b", resolved: "#00ff87" };
+const STATUS_LABELS: Record<string, string> = { active: "Активен", investigating: "Расследование", resolved: "Решён" };
+const SEVERITY_COLORS: Record<string, string> = { critical: "#f43f5e", high: "#f59e0b", medium: "#3b82f6" };
+const SEVERITY_LABELS: Record<string, string> = { critical: "Критический", high: "Высокий", medium: "Средний" };
+
+const maxCount = Math.max(...WEEKLY.map(w => w.count));
+const total = BY_TYPE.reduce((a, b) => a + b.count, 0);
+
+type NavTab = "overview" | "incidents" | "ai" | "organs";
+
+export default function EgsuDashboard() {
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<NavTab>("overview");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const filtered = statusFilter === "all" ? INCIDENTS : INCIDENTS.filter(i => i.status === statusFilter);
+
+  return (
+    <div className="min-h-screen font-body" style={{ background: "#060a12" }}>
+      {/* NAV */}
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 md:px-8 py-3"
+        style={{ background: "rgba(6,10,18,0.97)", borderBottom: "1px solid rgba(168,85,247,0.15)", backdropFilter: "blur(20px)" }}>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate("/egsu")} className="flex items-center gap-2 text-white/40 hover:text-white/70 transition-colors">
+            <Icon name="ChevronLeft" size={16} />
+          </button>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, #a855f7, #3b82f6)" }}>
+            <Icon name="LayoutDashboard" size={14} className="text-white" />
+          </div>
+          <div>
+            <div className="font-display text-base font-bold text-white tracking-wide leading-none">ДАШБОРД КООРДИНАТОРА</div>
+            <div className="text-white/30 text-[10px]">ЕГСУ 2.0 · Аналитика</div>
+          </div>
+        </div>
+        <button onClick={() => navigate("/egsu/report")}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-black transition-all hover:scale-105"
+          style={{ background: "linear-gradient(135deg, #f43f5e, #f59e0b)" }}>
+          <Icon name="Plus" size={14} />
+          <span className="hidden md:block">Новый инцидент</span>
+        </button>
+      </nav>
+
+      <div className="pt-14 flex">
+        {/* SIDEBAR */}
+        <aside className="fixed left-0 top-14 bottom-0 w-14 md:w-52 flex flex-col py-4 gap-1 px-2"
+          style={{ background: "rgba(6,10,18,0.95)", borderRight: "1px solid rgba(255,255,255,0.05)" }}>
+          {([
+            { key: "overview", icon: "BarChart3", label: "Обзор" },
+            { key: "incidents", icon: "AlertTriangle", label: "Инциденты" },
+            { key: "ai", icon: "Cpu", label: "ИИ-аналитика" },
+            { key: "organs", icon: "Network", label: "Органы ЕГСУ" },
+          ] as { key: NavTab; icon: string; label: string }[]).map((item) => (
+            <button key={item.key} onClick={() => setActiveTab(item.key)}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all w-full text-left"
+              style={{
+                background: activeTab === item.key ? "rgba(168,85,247,0.12)" : "transparent",
+                color: activeTab === item.key ? "#a855f7" : "rgba(255,255,255,0.4)",
+                border: activeTab === item.key ? "1px solid rgba(168,85,247,0.25)" : "1px solid transparent",
+              }}>
+              <Icon name={item.icon as any} size={17} />
+              <span className="hidden md:block">{item.label}</span>
+            </button>
+          ))}
+        </aside>
+
+        {/* MAIN */}
+        <main className="flex-1 ml-14 md:ml-52 p-4 md:p-6">
+
+          {/* OVERVIEW */}
+          {activeTab === "overview" && (
+            <div className="space-y-5 animate-fade-up">
+              <div>
+                <h1 className="font-display text-2xl font-bold text-white uppercase">Обзор системы</h1>
+                <p className="text-white/30 text-sm mt-0.5">Апрель 2026 · Все регионы</p>
+              </div>
+
+              {/* KPI */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {[
+                  { label: "Всего инцидентов", value: "1 247", delta: "+12%", icon: "AlertTriangle", color: "#f43f5e" },
+                  { label: "Решено", value: "893", delta: "+8%", icon: "CheckCircle", color: "#00ff87" },
+                  { label: "Активных", value: "241", delta: "-3%", icon: "Activity", color: "#f59e0b" },
+                  { label: "Стран-участниц", value: "47", delta: "+2", icon: "Globe", color: "#a855f7" },
+                ].map((kpi) => (
+                  <div key={kpi.label} className="p-4 rounded-2xl"
+                    style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${kpi.color}20` }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ background: `${kpi.color}15` }}>
+                        <Icon name={kpi.icon as any} size={16} style={{ color: kpi.color }} />
+                      </div>
+                      <span className="text-xs font-semibold" style={{ color: kpi.delta.startsWith("+") ? "#00ff87" : "#f43f5e" }}>
+                        {kpi.delta}
+                      </span>
+                    </div>
+                    <div className="font-display text-2xl font-bold" style={{ color: kpi.color }}>{kpi.value}</div>
+                    <div className="text-white/40 text-xs mt-0.5">{kpi.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid lg:grid-cols-3 gap-4">
+                {/* Weekly chart */}
+                <div className="lg:col-span-2 p-5 rounded-2xl"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <h3 className="font-display text-sm font-semibold text-white/70 uppercase tracking-wider mb-4">Инциденты за неделю</h3>
+                  <div className="flex items-end gap-3 h-28">
+                    {WEEKLY.map((w) => (
+                      <div key={w.day} className="flex-1 flex flex-col items-center gap-1">
+                        <span className="text-white/40 text-[10px]">{w.count}</span>
+                        <div className="w-full rounded-t-md transition-all"
+                          style={{ height: `${(w.count / maxCount) * 96}px`, background: "linear-gradient(to top, #a855f7, #3b82f6)" }} />
+                        <span className="text-white/30 text-[10px]">{w.day}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* By type */}
+                <div className="p-5 rounded-2xl"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <h3 className="font-display text-sm font-semibold text-white/70 uppercase tracking-wider mb-4">По типам</h3>
+                  <div className="space-y-3">
+                    {BY_TYPE.map((item) => (
+                      <div key={item.type}>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-white/60">{item.type}</span>
+                          <span style={{ color: item.color }}>{item.count} ({Math.round(item.count / total * 100)}%)</span>
+                        </div>
+                        <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+                          <div className="h-1.5 rounded-full" style={{ width: `${item.count / total * 100}%`, background: item.color }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent */}
+              <div className="rounded-2xl overflow-hidden"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <h3 className="font-display text-sm font-semibold text-white/70 uppercase tracking-wider">Последние инциденты</h3>
+                  <button onClick={() => setActiveTab("incidents")} className="text-xs text-white/30 hover:text-white/60 transition-colors">Все →</button>
+                </div>
+                {INCIDENTS.slice(0, 4).map((inc) => (
+                  <div key={inc.id} className="flex items-center gap-4 px-5 py-3 hover:bg-white/2 transition-colors"
+                    style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: STATUS_COLORS[inc.status] }} />
+                    <span className="text-white/30 text-xs w-20 shrink-0">{inc.id}</span>
+                    <span className="text-white/80 text-sm flex-1 truncate">{inc.title}</span>
+                    <span className="text-white/30 text-xs hidden md:block">{inc.country}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full shrink-0"
+                      style={{ background: `${STATUS_COLORS[inc.status]}15`, color: STATUS_COLORS[inc.status] }}>
+                      {STATUS_LABELS[inc.status]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* INCIDENTS */}
+          {activeTab === "incidents" && (
+            <div className="space-y-4 animate-fade-up">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="font-display text-2xl font-bold text-white uppercase">Инциденты</h1>
+                  <p className="text-white/30 text-sm mt-0.5">{INCIDENTS.length} записей</p>
+                </div>
+                <div className="flex gap-2">
+                  {["all", "active", "investigating", "resolved"].map((s) => (
+                    <button key={s} onClick={() => setStatusFilter(s)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                      style={{
+                        background: statusFilter === s ? "rgba(168,85,247,0.15)" : "rgba(255,255,255,0.04)",
+                        color: statusFilter === s ? "#a855f7" : "rgba(255,255,255,0.4)",
+                        border: statusFilter === s ? "1px solid rgba(168,85,247,0.3)" : "1px solid transparent",
+                      }}>
+                      {s === "all" ? "Все" : STATUS_LABELS[s]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl overflow-hidden"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                        {["№", "Тип", "Инцидент", "Страна", "Угроза", "Статус", "ИИ %", "Ответственный"].map(h => (
+                          <th key={h} className="text-left px-4 py-3 text-white/30 text-xs font-semibold uppercase tracking-wider whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((inc) => (
+                        <tr key={inc.id} className="hover:bg-white/2 transition-colors"
+                          style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                          <td className="px-4 py-3 text-white/30 text-xs">{inc.id}</td>
+                          <td className="px-4 py-3">
+                            <span className="text-xs px-2 py-0.5 rounded-full"
+                              style={{ background: `${TYPE_COLORS[inc.type]}15`, color: TYPE_COLORS[inc.type] }}>
+                              {TYPE_LABELS[inc.type]}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-white/80 whitespace-nowrap">{inc.title}</td>
+                          <td className="px-4 py-3 text-white/50 whitespace-nowrap">{inc.country}</td>
+                          <td className="px-4 py-3">
+                            <span className="text-xs font-semibold" style={{ color: SEVERITY_COLORS[inc.severity] }}>
+                              {SEVERITY_LABELS[inc.severity]}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-xs px-2 py-0.5 rounded-full"
+                              style={{ background: `${STATUS_COLORS[inc.status]}15`, color: STATUS_COLORS[inc.status] }}>
+                              {STATUS_LABELS[inc.status]}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span style={{ color: inc.ai >= 85 ? "#00ff87" : inc.ai >= 75 ? "#f59e0b" : "#f43f5e" }}
+                              className="text-sm font-semibold">{inc.ai}%</span>
+                          </td>
+                          <td className="px-4 py-3 text-white/40 text-xs whitespace-nowrap">{inc.responsible}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* AI */}
+          {activeTab === "ai" && (
+            <div className="space-y-5 animate-fade-up">
+              <div>
+                <h1 className="font-display text-2xl font-bold text-white uppercase">ИИ-аналитика</h1>
+                <p className="text-white/30 text-sm mt-0.5">Состояние алгоритмов · Открытый код</p>
+              </div>
+              <div className="grid md:grid-cols-3 gap-4">
+                {[
+                  { name: "Классификатор инцидентов", accuracy: 78, status: "active", model: "CNN v2.1", processed: "12 847" },
+                  { name: "Детектор аномалий", accuracy: 84, status: "active", model: "LSTM v1.8", processed: "9 203" },
+                  { name: "Генератор отчётов (NLP)", accuracy: 91, status: "active", model: "Transformer v3", processed: "4 512" },
+                ].map((ai) => (
+                  <div key={ai.name} className="p-5 rounded-2xl"
+                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(168,85,247,0.15)" }}>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#00ff87" }} />
+                      <span className="text-white/60 text-xs font-semibold uppercase">{ai.status}</span>
+                    </div>
+                    <h3 className="text-white font-semibold text-sm mb-1">{ai.name}</h3>
+                    <p className="text-white/30 text-xs mb-4">{ai.model}</p>
+                    <div className="mb-1 flex justify-between text-xs">
+                      <span className="text-white/40">Точность</span>
+                      <span style={{ color: ai.accuracy >= 85 ? "#00ff87" : "#f59e0b" }}>{ai.accuracy}%</span>
+                    </div>
+                    <div className="h-2 rounded-full mb-3" style={{ background: "rgba(255,255,255,0.06)" }}>
+                      <div className="h-2 rounded-full" style={{ width: `${ai.accuracy}%`, background: "linear-gradient(to right, #a855f7, #3b82f6)" }} />
+                    </div>
+                    <div className="text-white/30 text-xs">Обработано: <span className="text-white/60">{ai.processed}</span></div>
+                  </div>
+                ))}
+              </div>
+              <div className="p-5 rounded-2xl" style={{ background: "rgba(0,255,135,0.04)", border: "1px solid rgba(0,255,135,0.1)" }}>
+                <h3 className="font-display text-sm font-semibold text-white/70 uppercase tracking-wider mb-3">Принципы использования ИИ (ЕГСУ 2.0)</h3>
+                <div className="grid md:grid-cols-2 gap-2">
+                  {["Прозрачность: открытый исходный код алгоритмов", "Подотчётность: чёткая ответственность за ошибки", "Этика: запрет на слежку и дискриминацию", "Безопасность: многоуровневая защита данных", "Инклюзивность: поддержка разных языков", "Гибкость: возможность перехода на ручное управление"].map((p) => (
+                    <div key={p} className="flex items-start gap-2 text-xs text-white/50">
+                      <Icon name="Check" size={12} style={{ color: "#00ff87" }} className="mt-0.5 shrink-0" />
+                      {p}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ORGANS */}
+          {activeTab === "organs" && (
+            <div className="space-y-5 animate-fade-up">
+              <div>
+                <h1 className="font-display text-2xl font-bold text-white uppercase">Органы ЕГСУ</h1>
+                <p className="text-white/30 text-sm mt-0.5">Структура системы управления</p>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                {[
+                  { name: "Глобальный совет безопасности (ГСБ)", members: 45, color: "#a855f7", icon: "Shield", desc: "Стратегическое планирование, утверждение бюджета" },
+                  { name: "Международный суд справедливости (МС)", members: 15, color: "#3b82f6", icon: "Scale", desc: "Рассмотрение дел о нарушениях международного права" },
+                  { name: "Оперативная группа расследования (ОГР)", members: 120, color: "#f59e0b", icon: "Search", desc: "Фиксация фактов, сбор доказательств, расследования" },
+                  { name: "Силы быстрого реагирования (СБР)", members: 5000, color: "#f43f5e", icon: "Zap", desc: "Пресечение нарушений, защита гражданского населения" },
+                  { name: "Межпарламентский совет (МПСТУ)", members: 94, color: "#00ff87", icon: "Users", desc: "Мониторинг технологической устойчивости" },
+                  { name: "Комиссия по этике и науке (КЭН)", members: 24, color: "#06b6d4", icon: "Microscope", desc: "Оценка угроз, разработка стандартов ИИ" },
+                ].map((org) => (
+                  <div key={org.name} className="p-5 rounded-2xl"
+                    style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${org.color}20` }}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                        style={{ background: `${org.color}15` }}>
+                        <Icon name={org.icon as any} size={18} style={{ color: org.color }} />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold text-sm leading-tight">{org.name}</h3>
+                        <span className="text-xs" style={{ color: org.color }}>{org.members} участников</span>
+                      </div>
+                    </div>
+                    <p className="text-white/40 text-xs">{org.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-8 text-center">
+            <p className="text-white/15 text-[10px]">© 2024 Николаев Владимир Владимирович · Все права защищены · ЕГСУ 2.0</p>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
