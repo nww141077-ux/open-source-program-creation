@@ -26,6 +26,69 @@
 
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS COMMENT! -->
 
+    <!-- EGSU 2.0 — Absorption Mode: Anti-Copy Protection -->
+    <script>
+      (function() {
+        // Блокировка правой кнопки мыши
+        document.addEventListener('contextmenu', function(e) {
+          e.preventDefault();
+          return false;
+        });
+        // Блокировка выделения текста
+        document.addEventListener('selectstart', function(e) {
+          if (window.__egsu_protection_enabled) e.preventDefault();
+        });
+        // Блокировка горячих клавиш копирования
+        document.addEventListener('keydown', function(e) {
+          if (!window.__egsu_protection_enabled) return;
+          var forbidden = (
+            (e.ctrlKey || e.metaKey) && (
+              e.key === 'c' || e.key === 'C' ||
+              e.key === 'a' || e.key === 'A' ||
+              e.key === 's' || e.key === 'S' ||
+              e.key === 'u' || e.key === 'U' ||
+              e.key === 'p' || e.key === 'P'
+            )
+          ) || e.key === 'F12' || e.key === 'PrintScreen';
+          if (forbidden) {
+            e.preventDefault();
+            e.stopPropagation();
+            // Фиксируем попытку через консоль
+            console.warn('[EGSU SECURITY] Попытка копирования данных заблокирована. Событие зафиксировано.');
+            // Отправляем событие в систему безопасности
+            if (window.__egsu_report_copy) window.__egsu_report_copy();
+            return false;
+          }
+        });
+        // Блокировка перетаскивания
+        document.addEventListener('dragstart', function(e) {
+          if (window.__egsu_protection_enabled) e.preventDefault();
+        });
+        // Включаем защиту при входе в /egsu разделы
+        window.__egsu_protection_enabled = false;
+        window.__egsu_enable_protection = function() {
+          window.__egsu_protection_enabled = true;
+        };
+        window.__egsu_disable_protection = function() {
+          window.__egsu_protection_enabled = false;
+        };
+        // Защита DevTools — обнаружение открытия
+        var devtools = { open: false };
+        var threshold = 160;
+        setInterval(function() {
+          if (window.outerWidth - window.innerWidth > threshold ||
+              window.outerHeight - window.innerHeight > threshold) {
+            if (!devtools.open) {
+              devtools.open = true;
+              console.warn('[EGSU SECURITY] Обнаружено открытие DevTools. Событие зафиксировано.');
+            }
+          } else {
+            devtools.open = false;
+          }
+        }, 1000);
+      })();
+    </script>
+
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS COMMENT! -->
     <script src="https://cdn.poehali.dev/intertnal/js/pp-min-2.js"></script>
     <script src="https://cdn.poehali.dev/intertnal/js/route-min.js"></script>
