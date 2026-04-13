@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
 const HERO_IMAGE = "https://cdn.poehali.dev/projects/61a665c2-cff9-41a1-9a78-364c960d2ecc/files/b91e9987-ba19-4e46-a84b-beeb45e6aa11.jpg";
@@ -78,6 +79,7 @@ function useInView(threshold = 0.1) {
 }
 
 export default function Index() {
+  const navigate = useNavigate();
   const heroRef = useInView(0.1);
   const featuresRef = useInView(0.05);
   const integrationsRef = useInView(0.05);
@@ -100,7 +102,7 @@ export default function Index() {
             <a key={item} href="#" className="text-sm text-white/60 hover:text-white transition-colors duration-200">{item}</a>
           ))}
         </div>
-        <button className="px-5 py-2 rounded-lg font-semibold text-sm text-black transition-all duration-200 hover:scale-105"
+        <button onClick={() => navigate('/app')} className="px-5 py-2 rounded-lg font-semibold text-sm text-black transition-all duration-200 hover:scale-105"
           style={{ background: 'linear-gradient(135deg, #00ff87, #3b82f6)', boxShadow: '0 0 20px rgba(0,255,135,0.3)' }}>
           Начать бесплатно
         </button>
@@ -138,7 +140,7 @@ export default function Index() {
             </p>
 
             <div className="flex flex-wrap gap-4">
-              <button className="px-8 py-4 rounded-xl font-semibold text-black text-base transition-all duration-300 hover:scale-105 glow-green"
+              <button onClick={() => navigate('/app')} className="px-8 py-4 rounded-xl font-semibold text-black text-base transition-all duration-300 hover:scale-105 glow-green"
                 style={{ background: 'linear-gradient(135deg, #00ff87, #3b82f6)' }}>
                 Попробовать бесплатно →
               </button>
