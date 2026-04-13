@@ -226,4 +226,118 @@ def handler(event: dict, context) -> dict:
         db.commit()
         return ok({"id": new_id, "message": "Правило добавлено"}, 201)
 
+    # ── WITHDRAWALS — вывод средств со счёта поглощения ──────────────────────
+
+    if method == "GET" and "/withdrawals" in path:
+        cur.execute(f"""
+            SELECT w.id, w.from_account_id, w.to_account_id, w.to_account_details,
+                   w.amount, w.currency, w.description, w.status,
+                   w.confirmed_at, w.executed_at, w.created_at,
+                   fa.label as from_label, fa.balance as from_balance,
+                   ta.label as to_label, ta.account_number as to_number
+            FROM {S}.egsu_withdrawal_requests w
+            JOIN {S}.egsu_finance_accounts fa ON fa.id = w.from_account_id
+            LEFT JOIN {S}.egsu_finance_accounts ta ON ta.id = w.to_account_id
+            ORDER BY w.created_at DESC
+        """)
+        cols = ["id","from_account_id","to_account_id","to_account_details","amount","currency",
+                "description","status","confirmed_at","executed_at","created_at",
+                "from_label","from_balance","to_label","to_number"]
+        result = rows(cur, cols)
+        for r in result:
+            r["amount"] = float(r["amount"]) if r["amount"] else 0
+            r["from_balance"] = float(r["from_balance"]) if r["from_balance"] else 0
+        return ok(result)
+
+    if method == "POST" and "/withdrawals" in path and "/confirm" not in path and "/execute" not in path:
+        from_id = body.get("from_account_id")
+        to_id = body.get("to_account_id")
+        to_details = body.get("to_account_details", {})
+        amount = float(body.get("amount", 0))
+        currency = body.get("currency", "USD")
+        desc = body.get("description", "Вывод со счёта поглощения")
+        if not from_id or amount <= 0:
+            return err("from_account_id и amount > 0 обязательны")
+        # Проверяем баланс
+        cur.execute(f"SELECT balance FROM {S}.egsu_finance_accounts WHERE id=%s", (int(from_id),))
+        row = cur.fetchone()
+        if not row:
+            return err("Счёт-источник не найден")
+        balance = float(row[0])
+        if amount > balance:
+            return err(f"Недостаточно средств. Доступно: ${balance:.2f}")
+        cur.execute(f"""
+            INSERT INTO {S}.egsu_withdrawal_requests
+              (from_account_id, to_account_id, to_account_details, amount, currency, description, status)
+            VALUES (%s,%s,%s,%s,%s,%s,'pending') RETURNING id
+        """, (int(from_id), int(to_id) if to_id else None,
+              json.dumps(to_details), amount, currency, desc))
+        new_id = cur.fetchone()[0]
+        db.commit()
+        return ok({"id": new_id, "status": "pending",
+                   "message": f"Заявка на вывод ${amount:.2f} создана. Ожидает подтверждения."}, 201)
+
+    if method == "POST" and "/withdrawals/" in path and "/confirm" in path:
+        wid = int(path.split("/withdrawals/")[1].split("/")[0])
+        cur.execute(f"""
+            SELECT w.id, w.from_account_id, w.amount, w.status, w.to_account_id
+            FROM {S}.egsu_withdrawal_requests w WHERE w.id=%s
+        """, (wid,))
+        row = cur.fetchone()
+        if not row:
+            return err("Заявка не найдена")
+        if row[3] != "pending":
+            return err(f"Заявка уже в статусе: {row[3]}")
+        cur.execute(f"""
+            UPDATE {S}.egsu_withdrawal_requests
+            SET status='confirmed', confirmed_at=NOW() WHERE id=%s
+        """, (wid,))
+        db.commit()
+        return ok({"message": "Заявка подтверждена. Готова к исполнению."})
+
+    if method == "POST" and "/withdrawals/" in path and "/execute" in path:
+        wid = int(path.split("/withdrawals/")[1].split("/")[0])
+        cur.execute(f"""
+            SELECT w.id, w.from_account_id, w.to_account_id, w.amount, w.currency, w.description, w.status
+            FROM {S}.egsu_withdrawal_requests w WHERE w.id=%s
+        """, (wid,))
+        row = cur.fetchone()
+        if not row:
+            return err("Заявка не найдена")
+        if row[6] != "confirmed":
+            return err("Заявка должна быть подтверждена перед исполнением")
+        wid_, from_id, to_id, amount, currency, desc, status = row
+        amount = float(amount)
+        # Проверяем баланс повторно
+        cur.execute(f"SELECT balance FROM {S}.egsu_finance_accounts WHERE id=%s", (from_id,))
+        bal_row = cur.fetchone()
+        if not bal_row or float(bal_row[0]) < amount:
+            return err("Недостаточно средств на счёте поглощения")
+        # Списываем с absorption счёта
+        cur.execute(f"UPDATE {S}.egsu_finance_accounts SET balance=balance-%s, updated_at=NOW() WHERE id=%s",
+                    (amount, from_id))
+        # Если указан внутренний счёт-получатель — зачисляем
+        if to_id:
+            cur.execute(f"UPDATE {S}.egsu_finance_accounts SET balance=balance+%s, updated_at=NOW() WHERE id=%s",
+                        (amount, to_id))
+            cur.execute(f"""
+                INSERT INTO {S}.egsu_finance_transactions
+                  (account_id, tx_type, amount, currency, description, source, status)
+                VALUES (%s,'income',%s,%s,%s,'Absorption Withdrawal','completed')
+            """, (to_id, amount, currency, desc))
+        # Фиксируем расход на счёте поглощения
+        cur.execute(f"""
+            INSERT INTO {S}.egsu_finance_transactions
+              (account_id, tx_type, amount, currency, description, source, status)
+            VALUES (%s,'outcome',%s,%s,%s,'Withdrawal Execution','completed')
+        """, (from_id, amount, currency, desc))
+        # Закрываем заявку
+        cur.execute(f"""
+            UPDATE {S}.egsu_withdrawal_requests
+            SET status='executed', executed_at=NOW() WHERE id=%s
+        """, (wid,))
+        db.commit()
+        return ok({"message": f"Вывод ${amount:.2f} исполнен успешно.",
+                   "amount": amount, "currency": currency})
+
     return err("Маршрут не найден", 404)
