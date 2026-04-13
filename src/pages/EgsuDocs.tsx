@@ -12,6 +12,7 @@ const DOCS = [
   { id: "copyright", icon: "FileText", color: "#00ff87", label: "Свидетельство об авторском праве" },
   { id: "fips", icon: "Stamp", color: "#06b6d4", label: "Заявка в Роспатент (ФИПС)" },
   { id: "mincifra", icon: "Building2", color: "#f97316", label: "Заявка в реестр Минцифры" },
+  { id: "payment", icon: "CreditCard", color: "#10b981", label: "Настройка платёжной системы" },
   { id: "partnership", icon: "Handshake", color: "#a855f7", label: "Партнёрское соглашение" },
   { id: "privacy", icon: "Shield", color: "#3b82f6", label: "Политика конфиденциальности" },
   { id: "terms", icon: "Scale", color: "#f59e0b", label: "Пользовательское соглашение" },
@@ -505,7 +506,7 @@ function DocFips() {
             </tr>
             <tr>
               <td className="border border-gray-400 px-2 py-2 bg-gray-50 font-medium">1.4. Телефон / Email</td>
-              <td className="border border-gray-400 px-2 py-2 text-gray-400 italic">указать контактные данные</td>
+              <td className="border border-gray-400 px-2 py-2 font-semibold text-xs">nikolaevvladimir77@yandex.ru · welikan77@hotmail.com · nww141077@gmail.com</td>
             </tr>
             <tr>
               <td className="border border-gray-400 px-2 py-2 bg-gray-50 font-medium">1.5. СНИЛС / ИНН (для физ. лица)</td>
@@ -713,7 +714,7 @@ function DocMincifra() {
               ["1.4", "СНИЛС", "указать СНИЛС"],
               ["1.5", "Адрес регистрации", "указать адрес по паспорту"],
               ["1.6", "Контактный телефон", "указать телефон"],
-              ["1.7", "Адрес электронной почты", "указать email"],
+              ["1.7", "Адрес электронной почты", "nikolaevvladimir77@yandex.ru · welikan77@hotmail.com · nww141077@gmail.com"],
               ["1.8", "Сайт программы", "preview--open-source-program-creation.poehali.dev"],
             ].map(([n, k, v]) => (
               <tr key={n}>
@@ -923,10 +924,185 @@ function DocMincifra() {
   );
 }
 
+function DocPayment() {
+  const Row = ({ label, value, fill }: { label: string; value?: string; fill?: boolean }) => (
+    <tr>
+      <td className="border border-gray-300 px-2 py-1.5 bg-gray-50 font-medium text-xs w-2/5">{label}</td>
+      <td className={`border border-gray-300 px-2 py-1.5 text-xs ${fill ? "text-gray-400 italic" : "font-semibold"}`}>
+        {value || "________________"}
+      </td>
+    </tr>
+  );
+
+  const Check = ({ label, done }: { label: string; done?: boolean }) => (
+    <div className="flex items-start gap-2 text-xs mb-1">
+      <span className="shrink-0 font-bold">{done ? "☑" : "☐"}</span>
+      <span>{label}</span>
+    </div>
+  );
+
+  return (
+    <div className="doc-print text-sm">
+      <div className="text-center mb-6">
+        <div className="text-xs uppercase tracking-widest text-gray-500 mb-1">ЕЦСУ 2.0 — Единая Центральная Система Управления</div>
+        <div className="border-2 border-black inline-block px-6 py-2 mb-2">
+          <div className="font-bold text-base uppercase">Шаблон настройки платёжной системы</div>
+        </div>
+        <div className="text-xs text-gray-500">Правообладатель: {OWNER} · {TODAY}</div>
+      </div>
+
+      {/* Шаг 1 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">Шаг 1. Выбор платёжного сервиса</div>
+        <table className="w-full border-collapse mb-3"><tbody>
+          <Row label="Выбранный сервис" value="ЮKassa / CloudPayments / Robokassa" fill />
+        </tbody></table>
+        <div className="border border-gray-300 p-3 text-xs">
+          <div className="font-semibold mb-2">Поддерживаемые способы оплаты:</div>
+          <div className="grid grid-cols-2 gap-1">
+            {["Банковские карты (Visa, Mastercard, МИР)", "СБП (Система быстрых платежей)", "ЮMoney / электронные кошельки", "Оплата по QR-коду", "Рассрочка / кредит", "SberPay / T-Pay / Яндекс Пэй"].map((s, i) => (
+              <Check key={i} label={s} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Шаг 2 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">Шаг 2. Регистрация и подключение</div>
+        <table className="w-full border-collapse mb-3"><tbody>
+          <Row label="Сайт сервиса" fill />
+          <Row label="Логин" fill />
+          <Row label="Статус проверки" value="ожидает проверки / одобрено / отклонено" fill />
+          <Row label="Дата подписания договора" fill />
+          <Row label="Реквизиты договора (№ / дата)" fill />
+        </tbody></table>
+        <div className="border border-gray-300 p-3 text-xs">
+          <div className="font-semibold mb-2">Предоставленные документы:</div>
+          <div className="grid grid-cols-2 gap-1">
+            {["Свидетельство о регистрации юрлица/ИП", "Выписка из ЕГРЮЛ/ЕГРИП", "Паспорт руководителя/ИП", "Реквизиты расчётного счёта", "Информация о сайте", "Справка самозанятого (если применимо)"].map((d, i) => (
+              <Check key={i} label={d} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Шаг 3 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">Шаг 3. Интеграция с сайтом / приложением</div>
+        <table className="w-full border-collapse"><tbody>
+          <Row label="API-ключ" fill />
+          <Row label="Секретный ключ" fill />
+          <Row label="URL для уведомлений (callback)" fill />
+          <Row label="Тестовый режим включён" value="да / нет" fill />
+          <Row label="Платформа Mobile SDK" value="iOS / Android / не используется" fill />
+          <Row label="Версия SDK" fill />
+        </tbody></table>
+      </div>
+
+      {/* Шаг 4 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">Шаг 4. Активированные способы оплаты</div>
+        <div className="border border-gray-300 p-3 text-xs">
+          <div className="grid grid-cols-2 gap-1">
+            {["Карты Visa / Mastercard / МИР", "СБП", "Яндекс Пэй", "T-Pay", "SberPay", "Электронные кошельки", "Подписки (рекуррентные платежи)", "Холдирование средств"].map((m, i) => (
+              <Check key={i} label={`${m}: да / нет`} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Шаг 5 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">Шаг 5. Тестирование</div>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-xs">
+            <thead>
+              <tr style={{ background: "#f3f4f6" }}>
+                <th className="border border-gray-300 px-2 py-1.5 text-left">Тест</th>
+                <th className="border border-gray-300 px-2 py-1.5 text-left w-1/4">Результат</th>
+                <th className="border border-gray-300 px-2 py-1.5 text-left w-1/4">Примечания</th>
+              </tr>
+            </thead>
+            <tbody>
+              {["Платёж картой", "Оплата через СБП", "Формирование чека", "Ошибка (недостаток средств)", "Возврат средств", "Работа на мобильных устройствах", "Тестовый платёж"].map((t) => (
+                <tr key={t}>
+                  <td className="border border-gray-300 px-2 py-1.5">{t}</td>
+                  <td className="border border-gray-300 px-2 py-1.5 text-gray-400">___________</td>
+                  <td className="border border-gray-300 px-2 py-1.5 text-gray-400">___________</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-2 text-xs">Статус тестирования: <span className="font-semibold">завершено / в процессе / не начато</span></div>
+      </div>
+
+      {/* Шаг 6 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">Шаг 6. Законодательные требования</div>
+        <div className="border border-gray-300 p-3 text-xs">
+          <div className="grid grid-cols-2 gap-1">
+            <Check label="Онлайн-касса подключена" />
+            <Check label="Сайт работает по HTTPS" done />
+            <Check label="SSL-сертификат установлен" done />
+            <Check label="Соответствие PCI DSS" />
+            <Check label="Чеки выдаются автоматически" />
+            <Check label="Выдача чеков: email / SMS / в приложении" />
+          </div>
+        </div>
+      </div>
+
+      {/* Шаг 7–8 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">Шаги 7–8. Дополнительно и запуск в продакшн</div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="border border-gray-300 p-3 text-xs">
+            <div className="font-semibold mb-2">Уведомления и автообновления</div>
+            <Check label="Уведомления о платежах: email / Telegram / Slack" />
+            <Check label="Автообновления SDK" />
+            <Check label="Резервное копирование настроек" />
+          </div>
+          <div className="border border-gray-300 p-3 text-xs">
+            <div className="font-semibold mb-2">Продакшн</div>
+            <Check label="Тестовый режим отключён" />
+            <Check label="Первый реальный платёж получен" />
+            <Check label="Мониторинг запущен" />
+          </div>
+        </div>
+      </div>
+
+      {/* Контакты */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">Контакты поддержки</div>
+        <table className="w-full border-collapse"><tbody>
+          <Row label="Платёжный сервис (тел. / email)" fill />
+          <Row label="Разработчик / интегратор" value="Poehali.dev · help@poehali.dev" />
+          <Row label="Юрист / бухгалтер" fill />
+          <Row label="Ответственный по проекту ЕЦСУ" value={OWNER} />
+          <Row label="Email ответственного" value="nikolaevvladimir77@yandex.ru · welikan77@hotmail.com" />
+        </tbody></table>
+      </div>
+
+      {/* Подпись */}
+      <div className="border border-gray-300 p-4 text-xs">
+        <div className="grid grid-cols-3 gap-6 mt-2">
+          <div className="text-center"><div className="border-t border-black pt-1">Дата завершения</div><div className="text-gray-400 mt-1">___ . ___ . 2026</div></div>
+          <div className="text-center"><div className="border-t border-black pt-1">Подпись</div><div className="text-gray-300 mt-4 text-xl">__________</div></div>
+          <div className="text-center"><div className="border-t border-black pt-1">Ответственный</div><div className="text-gray-600 mt-1 font-semibold text-[10px]">Николаев В.В.</div></div>
+        </div>
+      </div>
+
+      <div className="mt-4 text-center text-[10px] text-gray-400">{APP} · {REG_NUM} · {TODAY}</div>
+    </div>
+  );
+}
+
 const DOC_COMPONENTS: Record<string, () => JSX.Element> = {
   copyright: DocCopyright,
   fips: DocFips,
   mincifra: DocMincifra,
+  payment: DocPayment,
   partnership: DocPartnership,
   privacy: DocPrivacy,
   terms: DocTerms,
