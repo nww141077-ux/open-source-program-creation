@@ -11,6 +11,7 @@ const REG_NUM = "ЕЦСУ-2026-001";
 const DOCS = [
   { id: "copyright", icon: "FileText", color: "#00ff87", label: "Свидетельство об авторском праве" },
   { id: "fips", icon: "Stamp", color: "#06b6d4", label: "Заявка в Роспатент (ФИПС)" },
+  { id: "mincifra", icon: "Building2", color: "#f97316", label: "Заявка в реестр Минцифры" },
   { id: "partnership", icon: "Handshake", color: "#a855f7", label: "Партнёрское соглашение" },
   { id: "privacy", icon: "Shield", color: "#3b82f6", label: "Политика конфиденциальности" },
   { id: "terms", icon: "Scale", color: "#f59e0b", label: "Пользовательское соглашение" },
@@ -684,9 +685,248 @@ function DocFips() {
   );
 }
 
+function DocMincifra() {
+  return (
+    <div className="doc-print text-sm">
+      {/* Шапка */}
+      <div className="text-center mb-6">
+        <div className="text-xs uppercase tracking-widest text-gray-500 mb-1">Министерство цифрового развития, связи и массовых коммуникаций Российской Федерации</div>
+        <div className="text-xs text-gray-500 mb-3">Единый реестр российских программ для ЭВМ и баз данных</div>
+        <div className="border-2 border-black inline-block px-6 py-2 mb-3">
+          <div className="font-bold text-base uppercase">Заявление</div>
+          <div className="text-xs">о включении сведений в реестр отечественного ПО</div>
+        </div>
+        <div className="text-xs text-gray-500">В соответствии с Постановлением Правительства РФ от 16.11.2015 № 1236</div>
+      </div>
+
+      {/* Раздел 1 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">
+          1. Сведения о заявителе (правообладателе)
+        </div>
+        <table className="w-full border-collapse text-xs">
+          <tbody>
+            {[
+              ["1.1", "Ф.И.О. правообладателя", "Николаев Владимир Владимирович"],
+              ["1.2", "Статус", "Физическое лицо — гражданин РФ"],
+              ["1.3", "ИНН", "указать ИНН"],
+              ["1.4", "СНИЛС", "указать СНИЛС"],
+              ["1.5", "Адрес регистрации", "указать адрес по паспорту"],
+              ["1.6", "Контактный телефон", "указать телефон"],
+              ["1.7", "Адрес электронной почты", "указать email"],
+              ["1.8", "Сайт программы", "preview--open-source-program-creation.poehali.dev"],
+            ].map(([n, k, v]) => (
+              <tr key={n}>
+                <td className="border border-gray-400 px-2 py-1.5 w-8 bg-gray-50 text-center text-gray-400">{n}</td>
+                <td className="border border-gray-400 px-2 py-1.5 w-2/5 bg-gray-50 font-medium">{k}</td>
+                <td className={`border border-gray-400 px-2 py-1.5 ${v.startsWith("указать") ? "text-gray-400 italic" : "font-semibold"}`}>{v}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Раздел 2 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">
+          2. Сведения о программном обеспечении
+        </div>
+        <table className="w-full border-collapse text-xs">
+          <tbody>
+            {[
+              ["2.1", "Наименование ПО", "ЕЦСУ 2.0 — Единая Центральная Система Управления"],
+              ["2.2", "Версия", "2.0"],
+              ["2.3", "Класс ПО (по реестру)", "Системы управления · Аналитические системы · Платформы данных"],
+              ["2.4", "Дата первого выпуска", "13 апреля 2026 г."],
+              ["2.5", "Язык интерфейса", "Русский (основной), многоязычный"],
+              ["2.6", "Тип лицензии", "Проприетарное ПО с лицензированием"],
+              ["2.7", "Способ распространения", "Веб-приложение (SaaS), доступ через браузер"],
+              ["2.8", "Поддерживаемые ОС", "Кроссплатформенное (Windows, macOS, Linux, Android, iOS)"],
+              ["2.9", "№ свидетельства о рег. ПО (ФИПС)", "ЕЦСУ-2026-001 (в процессе регистрации)"],
+            ].map(([n, k, v]) => (
+              <tr key={n}>
+                <td className="border border-gray-400 px-2 py-1.5 w-8 bg-gray-50 text-center text-gray-400">{n}</td>
+                <td className="border border-gray-400 px-2 py-1.5 w-2/5 bg-gray-50 font-medium">{k}</td>
+                <td className="border border-gray-400 px-2 py-1.5 font-semibold">{v}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Раздел 3 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">
+          3. Функциональные характеристики ПО
+        </div>
+        <div className="border border-gray-400 p-3 text-xs leading-relaxed">
+          <p className="mb-2 font-semibold">Назначение программы:</p>
+          <p className="mb-3">
+            «ЕЦСУ 2.0» — цифровая платформа для мониторинга, верификации и автоматизированного
+            реагирования на инциденты в сфере экологии, кибербезопасности и прав человека.
+            Реализует полный цикл управления инцидентами согласно международным правовым нормам.
+          </p>
+          <p className="mb-2 font-semibold">Ключевые функциональные модули:</p>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            {[
+              "Дашборд координатора с аналитикой в реальном времени",
+              "Модуль верификации инцидентов (алгоритм МГП, балл 0–100)",
+              "ИИ-ассистент на базе встроенной базы знаний",
+              "Система автоматического реагирования по регламенту",
+              "Голосовое управление (Яндекс SpeechKit)",
+              "База данных инцидентов (PostgreSQL)",
+              "Журнал применённых действий с правовым обоснованием",
+              "Публичный реестр решений и отчётов",
+              "API для интеграции с внешними системами",
+              "Многоязычный интерфейс (в разработке)",
+            ].map((f, i) => (
+              <div key={i} className="flex items-start gap-1">
+                <span className="text-gray-400 shrink-0">▸</span>
+                <span>{f}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Раздел 4 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">
+          4. Подтверждение российского происхождения ПО
+        </div>
+        <div className="border border-gray-400 p-3 text-xs space-y-2">
+          {[
+            ["☑", "Правообладатель является гражданином Российской Федерации"],
+            ["☑", "Исключительные права на ПО принадлежат российскому правообладателю (Николаев В.В.)"],
+            ["☑", "Программа разработана на территории РФ с использованием российской платформы (Poehali.dev)"],
+            ["☑", "Техническая поддержка осуществляется на территории РФ"],
+            ["☑", "Отсутствуют обязательные отчисления иностранным лицам более 30% от выручки"],
+            ["☐", "ПО включено в перечень стратегически значимых программ (планируется)"],
+          ].map(([check, text], i) => (
+            <div key={i} className="flex items-start gap-2">
+              <span className="font-bold shrink-0">{check}</span>
+              <span>{text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Раздел 5 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">
+          5. Преимущества и область применения
+        </div>
+        <div className="border border-gray-400 p-3 text-xs leading-relaxed">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="font-semibold mb-2">Область применения:</p>
+              <ul className="space-y-1 list-disc list-inside text-gray-700">
+                <li>Государственное управление</li>
+                <li>Международные организации</li>
+                <li>Экологический мониторинг</li>
+                <li>Кибербезопасность</li>
+                <li>НКО и гражданское общество</li>
+                <li>Образование и наука</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold mb-2">Конкурентные преимущества:</p>
+              <ul className="space-y-1 list-disc list-inside text-gray-700">
+                <li>Единственная в РФ система такого класса</li>
+                <li>Встроенная ИИ-верификация по нормам МГП</li>
+                <li>Голосовое управление на русском языке</li>
+                <li>Полностью отечественная разработка</li>
+                <li>Открытый реестр решений (прозрачность)</li>
+                <li>Готовая правовая база (7 разделов регламента)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Раздел 6 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">
+          6. Прилагаемые документы
+        </div>
+        <div className="border border-gray-400 p-3 text-xs">
+          <div className="space-y-1.5">
+            {[
+              ["☑", "Копия свидетельства о регистрации ПО (ФИПС) или уведомление о подаче заявки"],
+              ["☑", "Описание функциональных характеристик программы"],
+              ["☑", "Скриншоты интерфейса (не менее 5 экранов)"],
+              ["☑", "Документ, подтверждающий права правообладателя"],
+              ["☐", "Копия паспорта заявителя (физ. лица)"],
+              ["☐", "ИНН / СНИЛС заявителя"],
+              ["☑", "Партнёрское соглашение (подтверждение российского происхождения)"],
+            ].map(([check, text], i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="font-bold shrink-0 text-base leading-none">{check}</span>
+                <span>{text}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 p-2 bg-blue-50 border border-blue-300 rounded text-xs text-blue-800">
+            ℹ Заявку подать онлайн через портал: <strong>reestr.minsvyaz.ru</strong> или <strong>gosuslugi.ru</strong><br />
+            Срок рассмотрения: до <strong>65 рабочих дней</strong>. Госпошлина: <strong>не взимается</strong>.
+          </div>
+        </div>
+      </div>
+
+      {/* Льготы */}
+      <div className="mb-5 p-3 border-l-4 border-orange-400 bg-orange-50 text-xs">
+        <p className="font-bold text-orange-800 mb-1">Льготы после включения в реестр Минцифры:</p>
+        <div className="grid grid-cols-2 gap-2 text-orange-700">
+          {[
+            "НДС 0% при продаже лицензий (вместо 20%)",
+            "Налог на прибыль 3% (вместо 20%)",
+            "Пониженные страховые взносы 7,6%",
+            "Приоритет при государственных закупках",
+            "Субсидии и гранты от Минцифры",
+            "Статус «отечественного ПО» в госорганах",
+          ].map((l, i) => (
+            <div key={i} className="flex items-start gap-1">
+              <span className="shrink-0">✓</span>
+              <span>{l}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Подпись */}
+      <div className="border border-gray-400 p-4 text-xs">
+        <p className="mb-4">
+          Я подтверждаю достоверность сведений, указанных в настоящем заявлении, и даю согласие
+          на обработку персональных данных в целях ведения реестра отечественного ПО
+          в соответствии с ФЗ № 152-ФЗ «О персональных данных».
+        </p>
+        <div className="grid grid-cols-3 gap-6 mt-4">
+          <div className="text-center">
+            <div className="border-t border-black pt-1">Дата</div>
+            <div className="text-gray-400 mt-1">___ . ___ . 2026</div>
+          </div>
+          <div className="text-center">
+            <div className="border-t border-black pt-1">Подпись</div>
+            <div className="text-gray-300 mt-4 text-xl">___________</div>
+          </div>
+          <div className="text-center">
+            <div className="border-t border-black pt-1">Расшифровка</div>
+            <div className="text-gray-600 mt-1 font-semibold text-[10px]">Николаев В.В.</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 text-center text-[10px] text-gray-400">
+        Подать онлайн: <strong>reestr.minsvyaz.ru</strong> · Горячая линия Минцифры: 8-800-222-1900 (бесплатно)
+      </div>
+    </div>
+  );
+}
+
 const DOC_COMPONENTS: Record<string, () => JSX.Element> = {
   copyright: DocCopyright,
   fips: DocFips,
+  mincifra: DocMincifra,
   partnership: DocPartnership,
   privacy: DocPrivacy,
   terms: DocTerms,
