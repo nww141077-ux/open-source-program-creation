@@ -389,6 +389,18 @@ export default function EgsuDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => navigate("/egsu/legal")}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105"
+            style={{ background: "rgba(0,255,135,0.1)", color: "#00ff87", border: "1px solid rgba(0,255,135,0.2)" }}>
+            <Icon name="Scale" size={14} />
+            <span className="hidden md:block">Правовая база</span>
+          </button>
+          <button onClick={() => navigate("/egsu/api")}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105"
+            style={{ background: "rgba(59,130,246,0.12)", color: "#3b82f6", border: "1px solid rgba(59,130,246,0.25)" }}>
+            <Icon name="Plug" size={14} />
+            <span className="hidden md:block">API</span>
+          </button>
           <button onClick={() => navigate("/egsu/docs")}
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105"
             style={{ background: "rgba(168,85,247,0.15)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.3)" }}>

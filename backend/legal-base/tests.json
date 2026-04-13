@@ -1,0 +1,11 @@
+{
+  "tests": [
+    {
+      "name": "Статистика правовой базы",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    }
+  ]
+}
