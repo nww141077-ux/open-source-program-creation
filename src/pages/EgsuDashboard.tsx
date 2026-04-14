@@ -6,6 +6,10 @@ import DashboardLayout from "./egsu-dashboard/DashboardLayout";
 import DashboardOverview from "./egsu-dashboard/DashboardOverview";
 import DashboardIncidents from "./egsu-dashboard/DashboardIncidents";
 import PredictedTab from "./egsu-dashboard/PredictedTab";
+import SecurityTab from "./egsu-dashboard/SecurityTab";
+import LicenseTab from "./egsu-dashboard/LicenseTab";
+import LoaderTab from "./egsu-dashboard/LoaderTab";
+import SettingsTab from "./egsu-dashboard/SettingsTab";
 
 const API = "https://functions.poehali.dev/c71047de-6e10-499a-aa1c-e9fdba33e7bd";
 
@@ -36,7 +40,7 @@ function normalizeIncident(raw: any) {
   };
 }
 
-type NavTab = "overview" | "incidents" | "predicted" | "ai" | "organs";
+type NavTab = "overview" | "incidents" | "predicted" | "ai" | "organs" | "security" | "license" | "loader" | "settings";
 
 const AI_ALGORITHMS = [
   {
@@ -466,6 +470,18 @@ export default function EgsuDashboard() {
           )}
         </div>
       )}
+
+      {/* SECURITY */}
+      {activeTab === "security" && <SecurityTab />}
+
+      {/* LICENSE */}
+      {activeTab === "license" && <LicenseTab />}
+
+      {/* LOADER */}
+      {activeTab === "loader" && <LoaderTab />}
+
+      {/* SETTINGS */}
+      {activeTab === "settings" && <SettingsTab />}
 
       {/* Incident detail modal */}
       {selectedIncident && (

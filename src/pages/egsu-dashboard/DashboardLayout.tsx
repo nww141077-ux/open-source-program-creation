@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import AiChat from "@/components/AiChat";
 
-type NavTab = "overview" | "incidents" | "predicted" | "ai" | "organs";
+type NavTab = "overview" | "incidents" | "predicted" | "ai" | "organs" | "security" | "license" | "loader" | "settings";
 
 type Props = {
   activeTab: NavTab;
@@ -102,13 +102,17 @@ export default function DashboardLayout({ activeTab, setActiveTab, chatOpen, set
             { key: "predicted", icon: "BrainCircuit", label: "Прогнозы" },
             { key: "ai", icon: "Cpu", label: "ИИ-аналитика" },
             { key: "organs", icon: "Network", label: "Органы ЕЦСУ" },
-          ] as { key: NavTab; icon: string; label: string }[]).map((item) => (
+            { key: "security", icon: "ShieldCheck", label: "Безопасность", color: "#f43f5e" },
+            { key: "license", icon: "BadgeCheck", label: "Лицензия", color: "#f59e0b" },
+            { key: "loader", icon: "Terminal", label: "Загрузчик", color: "#00ff87" },
+            { key: "settings", icon: "Settings", label: "Настройки", color: "#3b82f6" },
+          ] as { key: NavTab; icon: string; label: string; color?: string }[]).map((item) => (
             <button key={item.key} onClick={() => setActiveTab(item.key)}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all w-full text-left"
               style={{
-                background: activeTab === item.key ? "rgba(168,85,247,0.12)" : "transparent",
-                color: activeTab === item.key ? "#a855f7" : "rgba(255,255,255,0.4)",
-                border: activeTab === item.key ? "1px solid rgba(168,85,247,0.25)" : "1px solid transparent",
+                background: activeTab === item.key ? `${item.color ? item.color + "18" : "rgba(168,85,247,0.12)"}` : "transparent",
+                color: activeTab === item.key ? (item.color ?? "#a855f7") : "rgba(255,255,255,0.4)",
+                border: activeTab === item.key ? `1px solid ${item.color ? item.color + "35" : "rgba(168,85,247,0.25)"}` : "1px solid transparent",
               }}>
               <Icon name={item.icon as any} size={17} />
               <span className="hidden md:block">{item.label}</span>
