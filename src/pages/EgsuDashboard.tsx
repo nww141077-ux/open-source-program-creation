@@ -38,6 +38,60 @@ function normalizeIncident(raw: any) {
 
 type NavTab = "overview" | "incidents" | "predicted" | "ai" | "organs";
 
+const AI_ALGORITHMS = [
+  {
+    name: "Классификатор инцидентов",
+    accuracy: 78,
+    status: "active",
+    model: "CNN v2.1",
+    processed: "12 847",
+    latency: "120мс",
+    icon: "ScanSearch",
+    description: "Нейросеть на базе свёрточной сети (CNN), обученная распознавать тип и категорию инцидента по входящим данным. Автоматически определяет: экологический, кибер-, гуманитарный или другой тип угрозы и направляет на нужный орган.",
+    functions: [
+      "Автоматическая классификация по 12 категориям угроз",
+      "Определение географической зоны инцидента",
+      "Присвоение уровня приоритета (низкий / средний / высокий / критический)",
+      "Маршрутизация на ответственный орган ЕЦСУ",
+      "Дедупликация — объединение похожих инцидентов",
+    ],
+  },
+  {
+    name: "Детектор аномалий",
+    accuracy: 84,
+    status: "active",
+    model: "LSTM v1.8",
+    processed: "9 203",
+    latency: "85мс",
+    icon: "Activity",
+    description: "Рекуррентная нейросеть (LSTM), которая непрерывно анализирует потоки данных с датчиков, спутников и агентов. Выявляет отклонения от нормы и предупреждает о надвигающихся угрозах до их эскалации.",
+    functions: [
+      "Мониторинг в реальном времени: 240+ потоков данных",
+      "Обнаружение аномальных паттернов в экологических показателях",
+      "Прогноз эскалации инцидента за 2–6 часов",
+      "Детекция кибератак и подозрительной активности в сети",
+      "Генерация предупреждений и тревог для операторов",
+    ],
+  },
+  {
+    name: "Генератор отчётов (NLP)",
+    accuracy: 91,
+    status: "active",
+    model: "Transformer v3",
+    processed: "4 512",
+    latency: "210мс",
+    icon: "FileText",
+    description: "Языковая модель на базе архитектуры Transformer, которая автоматически формирует официальные отчёты, сводки и правовые заключения по инцидентам на русском и английском языках.",
+    functions: [
+      "Генерация структурированных отчётов по шаблонам ЕЦСУ",
+      "Правовая квалификация нарушений по международным нормам",
+      "Перевод технических данных в понятный язык",
+      "Формирование рекомендаций для органов реагирования",
+      "Поддержка 8 языков (включая русский, английский, французский)",
+    ],
+  },
+];
+
 export default function EgsuDashboard() {
   const [activeTab, setActiveTab] = useState<NavTab>("overview");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -45,6 +99,7 @@ export default function EgsuDashboard() {
   const [chatOpen, setChatOpen] = useState(false);
   const [dbIncidents, setDbIncidents] = useState<any[]>([]);
   const [loadingDb, setLoadingDb] = useState(true);
+  const [selectedAi, setSelectedAi] = useState<typeof AI_ALGORITHMS[0] | null>(null);
 
   useEffect(() => {
     fetch(API)
@@ -98,31 +153,116 @@ export default function EgsuDashboard() {
             <h1 className="font-display text-2xl font-bold text-white uppercase">ИИ-аналитика</h1>
             <p className="text-white/30 text-sm mt-0.5">Состояние алгоритмов · Открытый код</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-4">
-            {[
-              { name: "Классификатор инцидентов", accuracy: 78, status: "active", model: "CNN v2.1", processed: "12 847" },
-              { name: "Детектор аномалий", accuracy: 84, status: "active", model: "LSTM v1.8", processed: "9 203" },
-              { name: "Генератор отчётов (NLP)", accuracy: 91, status: "active", model: "Transformer v3", processed: "4 512" },
-            ].map((ai) => (
-              <div key={ai.name} className="p-5 rounded-2xl"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(168,85,247,0.15)" }}>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#00ff87" }} />
-                  <span className="text-white/60 text-xs font-semibold uppercase">{ai.status}</span>
+          <>
+                <div className="grid md:grid-cols-3 gap-4">
+                  {AI_ALGORITHMS.map((ai) => (
+                    <button key={ai.name} onClick={() => setSelectedAi(ai)}
+                      className="p-5 rounded-2xl text-left transition-all hover:scale-[1.02] cursor-pointer"
+                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(168,85,247,0.15)" }}>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#00ff87" }} />
+                          <span className="text-white/60 text-xs font-semibold uppercase">{ai.status}</span>
+                        </div>
+                        <Icon name="Info" size={14} className="text-white/20" />
+                      </div>
+                      <h3 className="text-white font-semibold text-sm mb-1">{ai.name}</h3>
+                      <p className="text-white/30 text-xs mb-4">{ai.model}</p>
+                      <div className="mb-1 flex justify-between text-xs">
+                        <span className="text-white/40">Точность</span>
+                        <span style={{ color: ai.accuracy >= 85 ? "#00ff87" : "#f59e0b" }}>{ai.accuracy}%</span>
+                      </div>
+                      <div className="h-2 rounded-full mb-3" style={{ background: "rgba(255,255,255,0.06)" }}>
+                        <div className="h-2 rounded-full" style={{ width: `${ai.accuracy}%`, background: "linear-gradient(to right, #a855f7, #3b82f6)" }} />
+                      </div>
+                      <div className="text-white/30 text-xs">Обработано: <span className="text-white/60">{ai.processed}</span></div>
+                    </button>
+                  ))}
                 </div>
-                <h3 className="text-white font-semibold text-sm mb-1">{ai.name}</h3>
-                <p className="text-white/30 text-xs mb-4">{ai.model}</p>
-                <div className="mb-1 flex justify-between text-xs">
-                  <span className="text-white/40">Точность</span>
-                  <span style={{ color: ai.accuracy >= 85 ? "#00ff87" : "#f59e0b" }}>{ai.accuracy}%</span>
-                </div>
-                <div className="h-2 rounded-full mb-3" style={{ background: "rgba(255,255,255,0.06)" }}>
-                  <div className="h-2 rounded-full" style={{ width: `${ai.accuracy}%`, background: "linear-gradient(to right, #a855f7, #3b82f6)" }} />
-                </div>
-                <div className="text-white/30 text-xs">Обработано: <span className="text-white/60">{ai.processed}</span></div>
-              </div>
-            ))}
-          </div>
+
+                {/* Модальное окно */}
+                {selectedAi && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                    style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
+                    onClick={() => setSelectedAi(null)}>
+                    <div className="w-full max-w-md rounded-2xl p-6 relative"
+                      style={{ background: "#0d1220", border: "1px solid rgba(168,85,247,0.35)", boxShadow: "0 0 60px rgba(168,85,247,0.15)" }}
+                      onClick={e => e.stopPropagation()}>
+                      {/* Заголовок */}
+                      <div className="flex items-start justify-between mb-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                            style={{ background: "linear-gradient(135deg, #a855f7, #3b82f6)" }}>
+                            <Icon name={selectedAi.icon} size={18} className="text-white" />
+                          </div>
+                          <div>
+                            <h2 className="text-white font-bold text-base leading-tight">{selectedAi.name}</h2>
+                            <p className="text-white/30 text-xs mt-0.5">{selectedAi.model}</p>
+                          </div>
+                        </div>
+                        <button onClick={() => setSelectedAi(null)}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white/70 transition-colors"
+                          style={{ background: "rgba(255,255,255,0.05)" }}>
+                          <Icon name="X" size={14} />
+                        </button>
+                      </div>
+
+                      {/* Статус */}
+                      <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl"
+                        style={{ background: "rgba(0,255,135,0.06)", border: "1px solid rgba(0,255,135,0.12)" }}>
+                        <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#00ff87" }} />
+                        <span className="text-xs font-semibold uppercase" style={{ color: "#00ff87" }}>ACTIVE — работает в штатном режиме</span>
+                      </div>
+
+                      {/* Описание */}
+                      <p className="text-white/60 text-sm leading-relaxed mb-5">{selectedAi.description}</p>
+
+                      {/* Метрики */}
+                      <div className="grid grid-cols-3 gap-3 mb-5">
+                        <div className="rounded-xl p-3 text-center"
+                          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                          <div className="text-lg font-bold" style={{ color: selectedAi.accuracy >= 85 ? "#00ff87" : "#f59e0b" }}>{selectedAi.accuracy}%</div>
+                          <div className="text-white/30 text-[10px] mt-0.5">Точность</div>
+                        </div>
+                        <div className="rounded-xl p-3 text-center"
+                          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                          <div className="text-lg font-bold text-white">{selectedAi.processed}</div>
+                          <div className="text-white/30 text-[10px] mt-0.5">Обработано</div>
+                        </div>
+                        <div className="rounded-xl p-3 text-center"
+                          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                          <div className="text-lg font-bold" style={{ color: "#3b82f6" }}>{selectedAi.latency}</div>
+                          <div className="text-white/30 text-[10px] mt-0.5">Латентность</div>
+                        </div>
+                      </div>
+
+                      {/* Функции */}
+                      <div className="mb-4">
+                        <h4 className="text-white/40 text-[10px] uppercase tracking-widest mb-2">Основные функции</h4>
+                        <div className="space-y-1.5">
+                          {selectedAi.functions.map((fn) => (
+                            <div key={fn} className="flex items-start gap-2 text-sm text-white/65">
+                              <Icon name="Check" size={13} className="mt-0.5 shrink-0" style={{ color: "#a855f7" }} />
+                              {fn}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Прогресс */}
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-white/30">Точность модели</span>
+                          <span style={{ color: selectedAi.accuracy >= 85 ? "#00ff87" : "#f59e0b" }}>{selectedAi.accuracy}%</span>
+                        </div>
+                        <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+                          <div className="h-1.5 rounded-full transition-all" style={{ width: `${selectedAi.accuracy}%`, background: "linear-gradient(to right, #a855f7, #3b82f6)" }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+          </>
           <div className="p-5 rounded-2xl" style={{ background: "rgba(0,255,135,0.04)", border: "1px solid rgba(0,255,135,0.1)" }}>
             <h3 className="font-display text-sm font-semibold text-white/70 uppercase tracking-wider mb-3">Принципы использования ИИ (ЕЦСУ 2.0)</h3>
             <div className="grid md:grid-cols-2 gap-2">
