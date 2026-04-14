@@ -92,6 +92,99 @@ const AI_ALGORITHMS = [
   },
 ];
 
+const ORGANS = [
+  {
+    name: "Глобальный совет безопасности (ГСБ)", members: 45, color: "#a855f7", icon: "Shield",
+    desc: "Стратегическое планирование, утверждение бюджета",
+    description: "Высший орган ЕЦСУ, определяющий стратегию глобальной безопасности. Принимает решения о крупных операциях, утверждает бюджет системы и координирует действия всех подразделений в чрезвычайных ситуациях планетарного масштаба.",
+    location: "Женева, Швейцария",
+    founded: "2021",
+    functions: [
+      "Утверждение стратегических планов реагирования",
+      "Распределение бюджета между органами ЕЦСУ",
+      "Принятие решений о применении СБР",
+      "Ратификация международных соглашений",
+      "Надзор за соблюдением Устава ЕЦСУ",
+    ],
+    stats: [{ label: "Заседаний/год", value: "48" }, { label: "Резолюций", value: "312" }, { label: "Стран-членов", value: "195" }],
+  },
+  {
+    name: "Международный суд справедливости (МС)", members: 15, color: "#3b82f6", icon: "Scale",
+    desc: "Рассмотрение дел о нарушениях международного права",
+    description: "Независимый судебный орган ЕЦСУ, рассматривающий дела о грубых нарушениях международного права, экологических преступлениях и злоупотреблениях властью. Решения обязательны к исполнению для всех членов системы.",
+    location: "Гаага, Нидерланды",
+    founded: "2021",
+    functions: [
+      "Рассмотрение межгосударственных споров",
+      "Вынесение приговоров по экологическим преступлениям",
+      "Наложение санкций на нарушителей",
+      "Толкование норм международного права ЕЦСУ",
+      "Апелляционное рассмотрение решений ОГР",
+    ],
+    stats: [{ label: "Дел рассмотрено", value: "847" }, { label: "Приговоров", value: "203" }, { label: "Санкций", value: "91" }],
+  },
+  {
+    name: "Оперативная группа расследования (ОГР)", members: 120, color: "#f59e0b", icon: "Search",
+    desc: "Фиксация фактов, сбор доказательств, расследования",
+    description: "Специализированные следственные группы, действующие на местах инцидентов. Собирают доказательную базу, опрашивают свидетелей, берут пробы и передают материалы в МС ЕЦСУ для судебного разбирательства.",
+    location: "Полевые миссии по всему миру",
+    founded: "2021",
+    functions: [
+      "Выезд на место инцидента в течение 24 часов",
+      "Сбор физических и цифровых доказательств",
+      "Взаимодействие с местными властями и НКО",
+      "Формирование официальных протоколов расследования",
+      "Защита свидетелей и информаторов",
+    ],
+    stats: [{ label: "Расследований", value: "2 341" }, { label: "Активных миссий", value: "34" }, { label: "Стран присутствия", value: "87" }],
+  },
+  {
+    name: "Силы быстрого реагирования (СБР)", members: 5000, color: "#f43f5e", icon: "Zap",
+    desc: "Пресечение нарушений, защита гражданского населения",
+    description: "Международные силы немедленного реагирования, действующие по мандату ГСБ. Развёртываются в зонах активных экологических катастроф, гуманитарных кризисов и кибератак на критическую инфраструктуру.",
+    location: "Базы на 6 континентах",
+    founded: "2022",
+    functions: [
+      "Развёртывание в зонах кризиса за 6–72 часа",
+      "Защита гражданского населения в зонах катастроф",
+      "Ликвидация последствий экологических аварий",
+      "Обеспечение безопасности следственных миссий ОГР",
+      "Кибернетическая защита критической инфраструктуры",
+    ],
+    stats: [{ label: "Операций", value: "156" }, { label: "Время реакции", value: "6ч" }, { label: "Баз", value: "24" }],
+  },
+  {
+    name: "Межпарламентский совет (МПСТУ)", members: 94, color: "#00ff87", icon: "Users",
+    desc: "Мониторинг технологической устойчивости",
+    description: "Парламентский орган надзора, представляющий законодательные ассамблеи стран-членов. Обеспечивает демократический контроль над деятельностью ЕЦСУ, утверждает поправки к Уставу и защищает суверенные интересы государств.",
+    location: "Страсбург, Франция",
+    founded: "2021",
+    functions: [
+      "Парламентский контроль над бюджетом ЕЦСУ",
+      "Ратификация поправок к Уставу",
+      "Мониторинг соблюдения прав государств-членов",
+      "Публичные слушания по деятельности органов",
+      "Разработка рекомендаций по технологической политике",
+    ],
+    stats: [{ label: "Стран", value: "94" }, { label: "Заседаний", value: "36" }, { label: "Законопроектов", value: "128" }],
+  },
+  {
+    name: "Комиссия по этике и науке (КЭН)", members: 24, color: "#06b6d4", icon: "Microscope",
+    desc: "Оценка угроз, разработка стандартов ИИ",
+    description: "Экспертный орган, объединяющий ведущих учёных, этиков и технических специалистов. Оценивает риски применения новых технологий, разрабатывает стандарты ИИ-алгоритмов ЕЦСУ и проводит независимый аудит алгоритмических систем.",
+    location: "Цюрих, Швейцария",
+    founded: "2022",
+    functions: [
+      "Независимый аудит ИИ-алгоритмов ЕЦСУ",
+      "Разработка этических стандартов применения технологий",
+      "Оценка рисков новых инструментов мониторинга",
+      "Консультирование ГСБ по научным вопросам",
+      "Публикация открытых научных отчётов",
+    ],
+    stats: [{ label: "Аудитов ИИ", value: "47" }, { label: "Стандартов", value: "23" }, { label: "Публикаций", value: "312" }],
+  },
+];
+
 export default function EgsuDashboard() {
   const [activeTab, setActiveTab] = useState<NavTab>("overview");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -100,6 +193,7 @@ export default function EgsuDashboard() {
   const [dbIncidents, setDbIncidents] = useState<any[]>([]);
   const [loadingDb, setLoadingDb] = useState(true);
   const [selectedAi, setSelectedAi] = useState<typeof AI_ALGORITHMS[0] | null>(null);
+  const [selectedOrgan, setSelectedOrgan] = useState<typeof ORGANS[0] | null>(null);
 
   useEffect(() => {
     fetch(API)
@@ -285,30 +379,91 @@ export default function EgsuDashboard() {
             <p className="text-white/30 text-sm mt-0.5">Структура системы управления</p>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
-            {[
-              { name: "Глобальный совет безопасности (ГСБ)", members: 45, color: "#a855f7", icon: "Shield", desc: "Стратегическое планирование, утверждение бюджета" },
-              { name: "Международный суд справедливости (МС)", members: 15, color: "#3b82f6", icon: "Scale", desc: "Рассмотрение дел о нарушениях международного права" },
-              { name: "Оперативная группа расследования (ОГР)", members: 120, color: "#f59e0b", icon: "Search", desc: "Фиксация фактов, сбор доказательств, расследования" },
-              { name: "Силы быстрого реагирования (СБР)", members: 5000, color: "#f43f5e", icon: "Zap", desc: "Пресечение нарушений, защита гражданского населения" },
-              { name: "Межпарламентский совет (МПСТУ)", members: 94, color: "#00ff87", icon: "Users", desc: "Мониторинг технологической устойчивости" },
-              { name: "Комиссия по этике и науке (КЭН)", members: 24, color: "#06b6d4", icon: "Microscope", desc: "Оценка угроз, разработка стандартов ИИ" },
-            ].map((org) => (
-              <div key={org.name} className="p-5 rounded-2xl"
+            {ORGANS.map((org) => (
+              <button key={org.name} onClick={() => setSelectedOrgan(org)}
+                className="p-5 rounded-2xl text-left transition-all hover:scale-[1.02] cursor-pointer w-full"
                 style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${org.color}20` }}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{ background: `${org.color}15` }}>
-                    <Icon name={org.icon as any} size={18} style={{ color: org.color }} />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                      style={{ background: `${org.color}15` }}>
+                      <Icon name={org.icon as any} size={18} style={{ color: org.color }} />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold text-sm leading-tight">{org.name}</h3>
+                      <span className="text-xs" style={{ color: org.color }}>{org.members} участников</span>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-white font-semibold text-sm leading-tight">{org.name}</h3>
-                    <span className="text-xs" style={{ color: org.color }}>{org.members} участников</span>
-                  </div>
+                  <Icon name="Info" size={14} className="text-white/20 shrink-0" />
                 </div>
                 <p className="text-white/40 text-xs">{org.desc}</p>
-              </div>
+              </button>
             ))}
           </div>
+
+          {/* Модальное окно органа */}
+          {selectedOrgan && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
+              onClick={() => setSelectedOrgan(null)}>
+              <div className="w-full max-w-md rounded-2xl p-6 relative overflow-y-auto max-h-[90vh]"
+                style={{ background: "#0d1220", border: `1px solid ${selectedOrgan.color}40`, boxShadow: `0 0 60px ${selectedOrgan.color}20` }}
+                onClick={e => e.stopPropagation()}>
+                {/* Заголовок */}
+                <div className="flex items-start justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: `${selectedOrgan.color}20` }}>
+                      <Icon name={selectedOrgan.icon as any} size={22} style={{ color: selectedOrgan.color }} />
+                    </div>
+                    <div>
+                      <h2 className="text-white font-bold text-sm leading-tight">{selectedOrgan.name}</h2>
+                      <p className="text-white/30 text-xs mt-0.5">Основан в {selectedOrgan.founded} · {selectedOrgan.location}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setSelectedOrgan(null)}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white/70 transition-colors shrink-0 ml-2"
+                    style={{ background: "rgba(255,255,255,0.05)" }}>
+                    <Icon name="X" size={14} />
+                  </button>
+                </div>
+
+                {/* Бейдж участников */}
+                <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl"
+                  style={{ background: `${selectedOrgan.color}10`, border: `1px solid ${selectedOrgan.color}25` }}>
+                  <Icon name="Users" size={13} style={{ color: selectedOrgan.color }} />
+                  <span className="text-xs font-semibold" style={{ color: selectedOrgan.color }}>{selectedOrgan.members} участников · Действующий орган</span>
+                </div>
+
+                {/* Описание */}
+                <p className="text-white/60 text-sm leading-relaxed mb-5">{selectedOrgan.description}</p>
+
+                {/* Статистика */}
+                <div className="grid grid-cols-3 gap-3 mb-5">
+                  {selectedOrgan.stats.map(s => (
+                    <div key={s.label} className="rounded-xl p-3 text-center"
+                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                      <div className="text-base font-bold" style={{ color: selectedOrgan.color }}>{s.value}</div>
+                      <div className="text-white/30 text-[10px] mt-0.5 leading-tight">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Функции */}
+                <div>
+                  <h4 className="text-white/40 text-[10px] uppercase tracking-widest mb-2">Основные функции</h4>
+                  <div className="space-y-1.5">
+                    {selectedOrgan.functions.map(fn => (
+                      <div key={fn} className="flex items-start gap-2 text-sm text-white/65">
+                        <Icon name="Check" size={13} className="mt-0.5 shrink-0" style={{ color: selectedOrgan.color }} />
+                        {fn}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
