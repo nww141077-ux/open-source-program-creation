@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "Статус ИИ-ассистента",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {"status": "active"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Отправка сообщения (POST /)",
+      "method": "POST",
+      "path": "/",
+      "body": {"message": "Привет! Что ты умеешь?", "session_id": "test-001", "history": []},
+      "expectedStatus": 200,
+      "expectedBody": {"suggestions": []},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
