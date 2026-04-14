@@ -26,6 +26,7 @@ type Props = {
   setWForm: (f: WForm) => void;
   saving: boolean;
   onCreateWithdrawal: () => void;
+  onAutoWithdraw: (toAccountId?: number, toDetails?: Record<string, string>) => void;
   onConfirm: (id: number) => void;
   onExecute: (id: number) => void;
   fmt: (n: number) => string;
@@ -34,7 +35,7 @@ type Props = {
 export default function SecurityWithdraw({
   stats, accounts, withdrawals,
   wMode, setWMode, wForm, setWForm,
-  saving, onCreateWithdrawal, onConfirm, onExecute, fmt,
+  saving, onCreateWithdrawal, onAutoWithdraw, onConfirm, onExecute, fmt,
 }: Props) {
   return (
     <div>
@@ -42,6 +43,38 @@ export default function SecurityWithdraw({
         <h1 className="font-display text-2xl font-bold text-white uppercase">Вывод средств</h1>
         <p className="text-white/30 text-sm mt-1">Перевод со счёта Поглощения на ваш официальный счёт</p>
       </div>
+
+      {/* АВТО-ВЫВОД */}
+      {stats && stats.absorption_balance_usd > 0 && accounts.length > 0 && (
+        <div className="mb-6 p-5 rounded-2xl"
+          style={{ background: "rgba(0,255,135,0.06)", border: "2px solid rgba(0,255,135,0.25)" }}>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: "rgba(0,255,135,0.15)" }}>
+              <Icon name="Zap" size={18} style={{ color: "#00ff87" }} />
+            </div>
+            <div>
+              <div className="text-white font-bold">Авто-вывод штрафов</div>
+              <div className="text-white/40 text-xs">Мгновенный перевод всего баланса поглощения</div>
+            </div>
+            <div className="ml-auto font-bold text-lg" style={{ color: "#00ff87" }}>{fmt(stats.absorption_balance_usd)}</div>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {accounts.map(a => (
+              <button key={a.id} onClick={() => onAutoWithdraw(a.id)}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-105 disabled:opacity-40"
+                style={{ background: "rgba(0,255,135,0.15)", color: "#00ff87", border: "1px solid rgba(0,255,135,0.3)" }}>
+                <Icon name="ArrowDownToLine" size={14} />
+                На: {a.label || a.owner_name}
+              </button>
+            ))}
+          </div>
+          <p className="text-white/25 text-xs mt-2">
+            Средства мгновенно зачисляются без ожидания подтверждения
+          </p>
+        </div>
+      )}
 
       {stats && (
         <div className="mb-6 p-5 rounded-2xl flex items-center justify-between"

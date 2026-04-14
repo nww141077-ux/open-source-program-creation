@@ -144,10 +144,7 @@ export default function Index() {
                 style={{ background: 'linear-gradient(135deg, #00ff87, #3b82f6)' }}>
                 Попробовать бесплатно →
               </button>
-              <button className="px-8 py-4 rounded-xl font-semibold text-white text-base transition-all duration-300 hover:scale-105 gradient-border"
-                style={{ background: 'rgba(255,255,255,0.05)' }}>
-                Смотреть демо
-              </button>
+
             </div>
 
             <div className="flex items-center gap-6 pt-2">

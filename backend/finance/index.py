@@ -69,6 +69,8 @@ def handler(event: dict, context) -> dict:
             FROM {S}.egsu_finance_accounts a
             LEFT JOIN {S}.egsu_finance_cards c ON c.account_id = a.id AND c.is_active = true
             WHERE a.is_active = true
+              AND a.label NOT LIKE '[DEMO]%'
+              AND a.account_number NOT IN ('EGSU-SYS-0001','EGSU-RSV-0002','EGSU-OPS-0003','EGSU-DEV-0004')
             GROUP BY a.id ORDER BY a.is_primary DESC, a.created_at
         """)
         cols = ["id","owner_name","account_type","account_number","bank_name",
@@ -170,9 +172,11 @@ def handler(event: dict, context) -> dict:
                    a.label as account_label
             FROM {S}.egsu_finance_transactions t
             JOIN {S}.egsu_finance_accounts a ON a.id = t.account_id
+            WHERE t.status != 'demo_hidden'
+              AND a.label NOT LIKE '[DEMO]%'
         """
         if acc_id:
-            q += f" WHERE t.account_id = {int(acc_id)}"
+            q += f" AND t.account_id = {int(acc_id)}"
         q += f" ORDER BY t.created_at DESC LIMIT {limit}"
         cur.execute(q)
         cols = ["id","account_id","tx_type","amount","currency","description","source","status","created_at","account_label"]
@@ -342,6 +346,58 @@ def handler(event: dict, context) -> dict:
         db.commit()
         return ok({"message": f"Вывод ${amount:.2f} исполнен успешно.",
                    "amount": amount, "currency": currency})
+
+    # ── POST /auto-withdraw — автоматический вывод штрафов на счёт владельца ──
+    # Списывает весь баланс со счёта поглощения на указанный счёт или внешние реквизиты
+    if method == "POST" and "/auto-withdraw" in path:
+        to_id = body.get("to_account_id")           # внутренний счёт (необязательно)
+        to_details = body.get("to_account_details", {})  # внешние реквизиты
+        min_amount = float(body.get("min_amount", 1))    # минимальная сумма для вывода
+        desc = body.get("description", "Авто-вывод штрафных начислений")
+
+        # Получаем баланс счёта поглощения
+        cur.execute(f"SELECT id, balance FROM {S}.egsu_finance_accounts WHERE account_number='EGSU-ABS-9999'")
+        row = cur.fetchone()
+        if not row:
+            return err("Счёт поглощения не найден")
+        abs_id, balance = row[0], float(row[1])
+
+        if balance < min_amount:
+            return ok({"status": "skipped", "message": f"Баланс ${balance:.2f} ниже минимума ${min_amount:.2f}", "balance": balance})
+
+        # Создаём и сразу исполняем вывод
+        cur.execute(f"""
+            INSERT INTO {S}.egsu_withdrawal_requests
+              (from_account_id, to_account_id, to_account_details, amount, currency, description, status, confirmed_at, executed_at)
+            VALUES (%s,%s,%s,%s,'USD',%s,'executed',NOW(),NOW()) RETURNING id
+        """, (abs_id, int(to_id) if to_id else None, json.dumps(to_details), balance, desc))
+        wid = cur.fetchone()[0]
+
+        # Списываем с absorption
+        cur.execute(f"UPDATE {S}.egsu_finance_accounts SET balance=0, updated_at=NOW() WHERE id=%s", (abs_id,))
+        # Зачисляем на внутренний счёт если указан
+        if to_id:
+            cur.execute(f"UPDATE {S}.egsu_finance_accounts SET balance=balance+%s, updated_at=NOW() WHERE id=%s",
+                        (balance, int(to_id)))
+            cur.execute(f"""
+                INSERT INTO {S}.egsu_finance_transactions
+                  (account_id, tx_type, amount, currency, description, source, status)
+                VALUES (%s,'income',%s,'USD',%s,'Auto-Withdrawal Absorption','completed')
+            """, (int(to_id), balance, desc))
+        # Расход на absorption
+        cur.execute(f"""
+            INSERT INTO {S}.egsu_finance_transactions
+              (account_id, tx_type, amount, currency, description, source, status)
+            VALUES (%s,'outcome',%s,'USD',%s,'Auto-Withdrawal','completed')
+        """, (abs_id, balance, desc))
+
+        db.commit()
+        return ok({
+            "status": "executed",
+            "withdrawal_id": wid,
+            "amount_usd": balance,
+            "message": f"${balance:.2f} USD автоматически выведено со счёта поглощения.",
+        }, 201)
 
     # ══════════════════════════════════════════════════════════════════════════
     # АНАЛИТИКА

@@ -164,6 +164,22 @@ export default function EgsuSecurity() {
     }
   };
 
+  const autoWithdraw = async (toAccountId?: number, toDetails?: Record<string, string>) => {
+    setSaving(true);
+    const payload: Record<string, unknown> = {
+      from_account_id: ABSORPTION_ACC_ID,
+      description: "Авто-вывод штрафных начислений — Режим Поглощения",
+    };
+    if (toAccountId) payload.to_account_id = toAccountId;
+    if (toDetails) payload.to_account_details = toDetails;
+    const r = await fetch(`${FINANCE_API}/auto-withdraw`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const d = parse(await r.json()) as { status: string; amount_usd?: number; message: string; error?: string };
+    setSaving(false);
+    if (d.error) { showToast(`✗ ${d.error}`); return; }
+    showToast(`✓ ${d.message}`);
+    load();
+  };
+
   const confirmWithdrawal = async (id: number) => {
     const r = await fetch(`${FINANCE_API}/withdrawals/${id}/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
     const d = parse(await r.json()) as { message: string; error?: string };
@@ -314,6 +330,7 @@ export default function EgsuSecurity() {
           setWForm={setWForm}
           saving={saving}
           onCreateWithdrawal={createWithdrawal}
+          onAutoWithdraw={autoWithdraw}
           onConfirm={confirmWithdrawal}
           onExecute={executeWithdrawal}
           fmt={fmt}
