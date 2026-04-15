@@ -1416,6 +1416,186 @@ function DocGrafium() {
   );
 }
 
+function DocCpvoa() {
+  return (
+    <div className="doc-print text-sm">
+      <div className="text-center mb-6">
+        <div className="text-xs uppercase tracking-widest text-gray-500 mb-1">Техническое задание</div>
+        <div className="border-2 border-black inline-block px-6 py-2 mb-3">
+          <div className="font-bold text-base uppercase">ЦПВОА</div>
+          <div className="text-xs">Центральная Платформа Всеканального Обнаружения Аномалий</div>
+        </div>
+        <div className="text-xs text-gray-500">Интерфейс навигации в формате поисковика · Версия 1.0 · {TODAY}</div>
+        <div className="text-xs text-gray-500 mt-1">Правообладатель: {OWNER}</div>
+      </div>
+
+      {/* Раздел 1 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">
+          1. Цель и назначение системы
+        </div>
+        <div className="border border-gray-400 p-3 text-xs leading-relaxed">
+          <p className="mb-2">Создать интуитивно понятный интерфейс, сочетающий функционал поисковой строки с инструментами мониторинга аномалий и инцидентов. Система обеспечивает: интуитивный доступ для неопытных пользователей; полный функционал в офлайн‑режиме; быстрый доступ к экстренным функциям; соответствие требованиям безопасности и конфиденциальности.</p>
+        </div>
+      </div>
+
+      {/* Раздел 2 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">
+          2. Основные элементы интерфейса
+        </div>
+        <div className="border border-gray-400 p-3 text-xs leading-relaxed space-y-3">
+          <div>
+            <p className="font-bold mb-1">2.1. Поисковая строка ЦПВОА</p>
+            <p>Расположение: верхняя часть экрана (по центру). Префикс активации: <code className="bg-gray-100 px-1 rounded">ЦПВОА:</code> — появляется автоматически при фокусе. Placeholder: «Введите запрос для анализа через ЦПВОА (например: "ЦПВОА: проверить аномалии в эфире на 101.2 МГц")». Поддерживает автодополнение с подсказками по форматам запросов.</p>
+          </div>
+          <div>
+            <p className="font-bold mb-1">2.2. Панель быстрого доступа</p>
+            <p>Расположена под строкой поиска. Кнопки: <strong>📻 Мониторинг эфира</strong> — запуск сканирования радиочастот; <strong>📷 Визуальный анализ</strong> — активация камеры для детектирования световых сигналов; <strong>🌐 Меш‑сеть</strong> — подключение к локальной сети ЦПВОА; <strong>🔒 Оффлайн‑режим</strong> — переключение в автономный режим; <strong>⚠️ Экстренный сигнал</strong> — генерация SOS‑сообщения.</p>
+          </div>
+          <div>
+            <p className="font-bold mb-1">2.3. Область результатов</p>
+            <p>Отображается под панелью быстрого доступа. Содержит: сводку по инцидентам (категория, уровень угрозы, геолокация); источники данных (радио, ТВ, соцсети и др.); рекомендации по реагированию; таймлайн событий (хронология аномалий).</p>
+          </div>
+          <div>
+            <p className="font-bold mb-1">2.4. Статусная панель (правый верхний угол)</p>
+            <p>Индикатор связи (интернет / меш / офлайн); уровень заряда батареи; статус датчиков (активны/неактивны); индикатор обработки (круговой прогресс‑бар).</p>
+          </div>
+          <div>
+            <p className="font-bold mb-1">2.5. Боковая панель (слева, свёрнута по умолчанию)</p>
+            <p>«История запросов» — журнал последних операций; «Кэшированные данные» — доступ к офлайн‑базам; «Настройки мониторинга» — выбор частот, источников, фильтров; «Буфер сообщений» — неотправленные экстренные сигналы.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Раздел 3 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">
+          3. Форматы запросов поисковой строки
+        </div>
+        <div className="border border-gray-400 p-3">
+          <table className="w-full border-collapse text-xs">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="border border-gray-300 px-2 py-1 text-left">Запрос</th>
+                <th className="border border-gray-300 px-2 py-1 text-left">Действие</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["ЦПВОА: проверить аномалии на частоте 101.2 МГц", "Сканирование радиоэфира"],
+                ["ЦПВОА: проанализировать световые сигналы", "Активация Li‑Fi‑модуля"],
+                ["ЦПВОА: отправить SOS через меш", "Генерация экстренного сообщения"],
+                ["ЦПВОА: показать последние инциденты в радиусе 5 км", "Запрос к локальному журналу"],
+                ["ЦПВОА: синхронизировать буфер", "Отправка накопленных данных при появлении связи"],
+              ].map(([q, a]) => (
+                <tr key={q}>
+                  <td className="border border-gray-300 px-2 py-1.5 font-mono text-[10px] text-blue-700">{q}</td>
+                  <td className="border border-gray-300 px-2 py-1.5 text-gray-600">{a}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Раздел 4 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">
+          4. Режимы отображения интерфейса
+        </div>
+        <div className="border border-gray-400 p-3">
+          <table className="w-full border-collapse text-xs">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="border border-gray-300 px-2 py-1 text-left">Режим</th>
+                <th className="border border-gray-300 px-2 py-1 text-left">Условие</th>
+                <th className="border border-gray-300 px-2 py-1 text-left">Описание</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["Стандартный", "По умолчанию", "Поисковая строка + панель быстрого доступа"],
+                ["Расширенный", "При вводе «ЦПВОА:»", "Появляются фильтры, таймлайн, статус датчиков"],
+                ["Экстренный", "Критическая угроза", "Полноэкранное оповещение (красный фон), кнопка SOS в центре, автовключение датчиков"],
+                ["Оффлайн", "Отсутствие связи", "Индикатор «Оффлайн», приоритет локальных данных, кнопка «Синхронизировать»"],
+              ].map(([m, c, d]) => (
+                <tr key={m}>
+                  <td className="border border-gray-300 px-2 py-1.5 font-semibold">{m}</td>
+                  <td className="border border-gray-300 px-2 py-1.5 text-gray-500 text-[10px]">{c}</td>
+                  <td className="border border-gray-300 px-2 py-1.5 text-gray-600">{d}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Раздел 5 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">
+          5. Визуальное оформление
+        </div>
+        <div className="border border-gray-400 p-3 text-xs">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="font-bold mb-2">Цветовая схема:</p>
+              {[
+                { color: "#2B2B2B", label: "Фон", hex: "#2B2B2B" },
+                { color: "#FFFFFF", label: "Текст", hex: "#FFFFFF", dark: true },
+                { color: "#4CAF50", label: "Нормальный режим", hex: "#4CAF50" },
+                { color: "#FFC107", label: "Предупреждение", hex: "#FFC107" },
+                { color: "#F44336", label: "Критическая угроза", hex: "#F44336" },
+                { color: "#2196F3", label: "Служебные сообщения", hex: "#2196F3" },
+              ].map(({ color, label, hex, dark }) => (
+                <div key={hex} className="flex items-center gap-2 mb-1">
+                  <div className="w-5 h-5 rounded border border-gray-300 flex-shrink-0" style={{ background: color }} />
+                  <span className="text-gray-600">{label}</span>
+                  <span className="text-gray-400 font-mono text-[10px]">{hex}</span>
+                </div>
+              ))}
+            </div>
+            <div>
+              <p className="font-bold mb-2">Шрифты:</p>
+              <p className="mb-1">• Основной: Roboto, 14 px</p>
+              <p className="mb-1">• Заголовки: Roboto Bold, 18 px</p>
+              <p className="mb-3">• Предупреждения: Roboto Medium, 16 px</p>
+              <p className="font-bold mb-2">Иконки:</p>
+              <p className="mb-1">📻 Радио / Мониторинг эфира</p>
+              <p className="mb-1">📷 Камера / Визуальный анализ</p>
+              <p className="mb-1">🌐 Меш‑сеть</p>
+              <p className="mb-1">⚠️ SOS / Экстренный сигнал</p>
+              <p>🔒 Оффлайн‑режим</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Раздел 6 */}
+      <div className="mb-5">
+        <div className="bg-gray-100 border border-gray-400 px-3 py-1 font-bold text-xs uppercase mb-3">
+          6. Технические требования
+        </div>
+        <div className="border border-gray-400 p-3 text-xs leading-relaxed space-y-1">
+          <p><strong>Платформы:</strong> Android 10+; iOS 14+; Windows 10+; веб (Chrome, Firefox, Safari)</p>
+          <p><strong>Производительность:</strong> отклик ≤ 200 мс · загрузка модулей ≤ 1 сек · потребление ОЗУ ≤ 200 МБ</p>
+          <p><strong>Безопасность:</strong> анонимизация данных в интерфейсе; шифрование служебных сообщений (AES‑256); защита от несанкционированного доступа (PIN/биометрия)</p>
+          <p><strong>Адаптивность:</strong> мобильная версия — вертикальная компоновка, свайпы для боковой панели; десктоп — горизонтальная компоновка, drag‑and‑drop элементов</p>
+        </div>
+      </div>
+
+      <div className="border border-gray-300 p-4 text-xs mt-6">
+        <div className="grid grid-cols-3 gap-6">
+          <div className="text-center"><div className="border-t border-black pt-1">Дата</div><div className="text-gray-400 mt-1">___ . ___ . 2026</div></div>
+          <div className="text-center"><div className="border-t border-black pt-1">Подпись</div><div className="text-gray-300 mt-4 text-lg">_______________</div></div>
+          <div className="text-center"><div className="border-t border-black pt-1">Правообладатель</div><div className="text-gray-600 mt-1 font-semibold text-[10px]">Николаев В.В.</div></div>
+        </div>
+      </div>
+      <div className="mt-4 text-center text-[10px] text-gray-400">{APP} · {REG_NUM} · {TODAY}</div>
+    </div>
+  );
+}
+
 const DOC_COMPONENTS: Record<string, () => JSX.Element> = {
   copyright: DocCopyright,
   modification: DocModification,
@@ -1428,6 +1608,7 @@ const DOC_COMPONENTS: Record<string, () => JSX.Element> = {
   legalization: DocLegalization,
   aihub: DocAiHub,
   grafium: DocGrafium,
+  cpvoa: DocCpvoa,
 };
 
 export default function EgsuDocs() {

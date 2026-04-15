@@ -37,6 +37,12 @@ export default function DashboardLayout({ activeTab, setActiveTab, chatOpen, set
         </div>
         <div className="flex items-center gap-2">
           <EgsuSearch />
+          <button onClick={() => navigate("/egsu/cpvoa")}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105"
+            style={{ background: "rgba(76,175,80,0.12)", color: "#4CAF50", border: "1px solid rgba(76,175,80,0.25)" }}>
+            <Icon name="Radio" size={14} />
+            <span className="hidden md:block">ЦПВОА</span>
+          </button>
           <button onClick={() => navigate("/egsu/notifications")}
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105"
             style={{ background: "rgba(168,85,247,0.12)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.25)" }}>
@@ -98,6 +104,9 @@ export default function DashboardLayout({ activeTab, setActiveTab, chatOpen, set
         {/* SIDEBAR */}
         <aside className="fixed left-0 top-14 bottom-0 w-14 md:w-52 flex flex-col py-4 gap-1 px-2"
           style={{ background: "rgba(6,10,18,0.95)", borderRight: "1px solid rgba(255,255,255,0.05)" }}>
+          <div className="mb-2 px-1">
+            <EgsuSearch />
+          </div>
           {([
             { key: "overview", icon: "BarChart3", label: "Обзор" },
             { key: "incidents", icon: "AlertTriangle", label: "Инциденты" },

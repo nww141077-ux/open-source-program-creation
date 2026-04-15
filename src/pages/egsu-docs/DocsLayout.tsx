@@ -15,6 +15,7 @@ const DOCS = [
   { id: "legalization", icon: "Globe",      color: "#f43f5e", label: "Заявление о легализации проекта" },
   { id: "aihub",        icon: "Bot",        color: "#06b6d4", label: "ТЗ: ИИ‑хаб командный центр" },
   { id: "grafium",      icon: "BookOpen",   color: "#f59e0b", label: "ТЗ: Ежедневник «Графиум»" },
+  { id: "cpvoa",        icon: "Radio",      color: "#4CAF50", label: "ТЗ: ЦПВОА — интерфейс поисковика" },
 ];
 
 type Props = {
