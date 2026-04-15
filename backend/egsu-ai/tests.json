@@ -1,7 +1,7 @@
 {
   "tests": [
     {
-      "name": "Статус ИИ-ассистента",
+      "name": "Статус — список провайдеров",
       "method": "GET",
       "path": "/",
       "expectedStatus": 200,
@@ -9,12 +9,21 @@
       "bodyMatcher": "contains"
     },
     {
-      "name": "Диалог с ИИ",
+      "name": "Диалог — авто-выбор провайдера",
       "method": "POST",
       "path": "/",
-      "body": {"message": "Привет", "session_id": "test-001", "history": []},
+      "body": {"message": "Привет", "session_id": "test-001", "history": [], "provider": "auto"},
       "expectedStatus": 200,
-      "expectedBody": "reply",
+      "expectedBody": "suggestions",
+      "bodyMatcher": "contains"
+    },
+    {
+      "name": "Диалог — session_id в ответе",
+      "method": "POST",
+      "path": "/",
+      "body": {"message": "Что такое УПК?", "session_id": "test-002", "history": []},
+      "expectedStatus": 200,
+      "expectedBody": "test-002",
       "bodyMatcher": "contains"
     },
     {
@@ -22,13 +31,18 @@
       "method": "POST",
       "path": "/",
       "body": {
-        "message": "Анализ",
+        "message": "Анализируй инциденты",
         "session_id": "test-cpvoa",
         "history": [],
-        "cpvoa_context": {"incidents": [], "sensors": {}, "connection": "online", "mode": "advanced"}
+        "cpvoa_context": {
+          "incidents": [{"id": "1", "category": "Кибер", "threat": "critical", "location": "IP: 1.2.3.4", "source": "Брандмауэр", "time": "10:00", "description": "Атака"}],
+          "sensors": {"radio": true, "camera": false},
+          "connection": "online",
+          "mode": "advanced"
+        }
       },
       "expectedStatus": 200,
-      "expectedBody": "reply",
+      "expectedBody": "test-cpvoa",
       "bodyMatcher": "contains"
     }
   ]
