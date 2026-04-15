@@ -91,6 +91,15 @@ export default function FinanceLayout({
               </div>
             </div>
           )}
+          <a
+            href="https://m.dzen.ru/id/63dca6f0b2189a531c500a7b?donate=true"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-105"
+            style={{ background: "linear-gradient(135deg, #f59e0b, #f97316)", color: "black", textDecoration: "none" }}>
+            <Icon name="Heart" size={13} />
+            <span className="hidden md:inline">Поддержать</span>
+          </a>
           <button onClick={() => setModal("transaction")}
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-105"
             style={{ background: G("#00ff87, #3b82f6"), color: "black" }}>
