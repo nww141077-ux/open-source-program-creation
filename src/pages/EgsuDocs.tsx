@@ -4,7 +4,7 @@ import DocsLayout from "./egsu-docs/DocsLayout";
 
 const TODAY = "13 апреля 2026 г.";
 const OWNER = "Николаев Владимир Владимирович";
-const PARTNER = "Poehali.dev (платформа разработки SPA-приложений)";
+const PARTNER = "—";
 const APP = "ЕЦСУ 2.0 — Единая Центральная Система Управления";
 const REG_NUM = "ЕЦСУ-2026-001";
 
@@ -675,7 +675,7 @@ function DocFips() {
             </tr>
             <tr>
               <td className="border border-gray-400 px-2 py-2 bg-gray-50 font-medium">3.6. Тип программы</td>
-              <td className="border border-gray-400 px-2 py-2">Веб-приложение (SPA — Single Page Application), облачный сервис</td>
+              <td className="border border-gray-400 px-2 py-2">Веб-приложение (SPA — Single Page Application), облачный сервис; поддерживает автономный режим работы (PWA — Progressive Web App) без подключения к интернету</td>
             </tr>
             <tr>
               <td className="border border-gray-400 px-2 py-2 bg-gray-50 font-medium">3.7. Объём программы</td>
@@ -683,7 +683,7 @@ function DocFips() {
             </tr>
             <tr>
               <td className="border border-gray-400 px-2 py-2 bg-gray-50 font-medium">3.8. Операционная система / среда</td>
-              <td className="border border-gray-400 px-2 py-2">Кроссплатформенная (Windows, macOS, Linux, Android, iOS) — работает в браузере</td>
+              <td className="border border-gray-400 px-2 py-2">Кроссплатформенная (Windows, macOS, Linux, Android, iOS) — работает в браузере и автономно в режиме PWA (без подключения к интернету, с локальным кэшированием данных)</td>
             </tr>
           </tbody>
         </table>

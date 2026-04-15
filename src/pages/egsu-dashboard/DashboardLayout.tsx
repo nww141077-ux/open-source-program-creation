@@ -2,6 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import AiChat from "@/components/AiChat";
+import EgsuSearch from "@/components/EgsuSearch";
 
 type NavTab = "overview" | "incidents" | "predicted" | "ai" | "organs" | "security" | "license" | "loader" | "settings";
 
@@ -35,6 +36,7 @@ export default function DashboardLayout({ activeTab, setActiveTab, chatOpen, set
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <EgsuSearch />
           <button onClick={() => navigate("/egsu/notifications")}
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105"
             style={{ background: "rgba(168,85,247,0.12)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.25)" }}>
