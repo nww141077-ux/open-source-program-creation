@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ЕЦСУ 2.0 — Офлайн-режим</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #060a12; color: #e0e8ff; font-family: 'Roboto', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+  .header { background: rgba(0,255,135,0.08); border-bottom: 1px solid rgba(0,255,135,0.2); padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
+  .logo { width: 36px; height: 36px; background: linear-gradient(135deg, #00ff87, #3b82f6); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; color: #000; }
+  .title { font-size: 16px; font-weight: 700; letter-spacing: 2px; }
+  .subtitle { font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 1px; }
+  .status { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 11px; color: #f59e0b; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  main { flex: 1; padding: 20px; max-width: 600px; margin: 0 auto; width: 100%; }
+  h2 { font-size: 22px; margin: 20px 0 8px; color: #fff; }
+  p { color: rgba(255,255,255,0.5); font-size: 13px; margin-bottom: 20px; line-height: 1.6; }
+  .section { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,0.3); margin-bottom: 12px; }
+  .contact { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .contact:last-child { border-bottom: none; }
+  .contact-icon { font-size: 20px; width: 32px; text-align: center; }
+  .contact-name { font-size: 13px; font-weight: 600; color: #e0e8ff; }
+  .contact-num { font-size: 18px; font-weight: 900; color: #00ff87; letter-spacing: 2px; }
+  .contact-desc { font-size: 11px; color: rgba(255,255,255,0.35); }
+  a.call-btn { display: block; background: rgba(0,255,135,0.12); border: 1px solid rgba(0,255,135,0.3); border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 700; color: #00ff87; text-decoration: none; margin-top: 6px; text-align: center; }
+  .morse { background: rgba(255,193,7,0.08); border: 1px solid rgba(255,193,7,0.2); border-radius: 10px; padding: 12px; margin-top: 10px; }
+  .morse-title { font-size: 11px; color: #ffc107; margin-bottom: 8px; font-weight: 700; }
+  .morse-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .morse-char { background: rgba(255,255,255,0.04); border-radius: 6px; padding: 4px; text-align: center; }
+  .morse-letter { font-size: 14px; font-weight: 700; color: #fff; }
+  .morse-code { font-size: 9px; color: rgba(255,255,255,0.4); font-family: monospace; }
+  .sos-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, rgba(244,63,94,0.3), rgba(244,63,94,0.1)); border: 2px solid rgba(244,63,94,0.6); border-radius: 12px; font-size: 18px; font-weight: 900; color: #f43f5e; cursor: pointer; letter-spacing: 4px; margin-bottom: 10px; }
+  .retry-btn { width: 100%; padding: 12px; background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.3); border-radius: 10px; font-size: 14px; font-weight: 700; color: #3b82f6; cursor: pointer; }
+  footer { text-align: center; padding: 16px; color: rgba(255,255,255,0.15); font-size: 11px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">Ц</div>
+  <div>
+    <div class="title">ЕЦСУ 2.0</div>
+    <div class="subtitle">ОФЛАЙН-РЕЖИМ · БАЗОВЫЕ ФУНКЦИИ</div>
+  </div>
+  <div class="status">
+    <div class="dot"></div>
+    НЕТ СЕТИ
+  </div>
+</div>
+
+<main>
+  <h2>Режим автономной работы</h2>
+  <p>Интернет недоступен. Система работает в автономном режиме. Базовые функции активны. Используйте экстренные номера ниже.</p>
+
+  <button class="sos-btn" onclick="playSOS()">📡 SOS · · · — — — · · ·</button>
+  <button class="retry-btn" onclick="window.location.reload()">🔄 Повторить подключение</button>
+
+  <div class="section">
+    <div class="section-title">🆘 Экстренные номера РФ</div>
+    <div class="contact">
+      <div class="contact-icon">🔥</div>
+      <div>
+        <div class="contact-name">МЧС — Единая служба спасения</div>
+        <div class="contact-num">112</div>
+        <div class="contact-desc">Пожар, ЧС, спасение</div>
+        <a class="call-btn" href="tel:112">📞 Позвонить 112</a>
+      </div>
+    </div>
+    <div class="contact">
+      <div class="contact-icon">👮</div>
+      <div>
+        <div class="contact-name">Полиция</div>
+        <div class="contact-num">102</div>
+        <div class="contact-desc">Правопорядок, преступления</div>
+        <a class="call-btn" href="tel:102">📞 Позвонить 102</a>
+      </div>
+    </div>
+    <div class="contact">
+      <div class="contact-icon">🚑</div>
+      <div>
+        <div class="contact-name">Скорая помощь</div>
+        <div class="contact-num">103</div>
+        <a class="call-btn" href="tel:103">📞 Позвонить 103</a>
+      </div>
+    </div>
+    <div class="contact">
+      <div class="contact-icon">⚡</div>
+      <div>
+        <div class="contact-name">Газ (аварийная)</div>
+        <div class="contact-num">104</div>
+        <a class="call-btn" href="tel:104">📞 Позвонить 104</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📡 Азбука Морзе — SOS</div>
+    <div class="morse">
+      <div class="morse-title">SOS: · · · — — — · · · (три точки, три тире, три точки)</div>
+      <div class="morse-grid">
+        <div class="morse-char"><div class="morse-letter">S</div><div class="morse-code">· · ·</div></div>
+        <div class="morse-char"><div class="morse-letter">O</div><div class="morse-code">— — —</div></div>
+        <div class="morse-char"><div class="morse-letter">S</div><div class="morse-code">· · ·</div></div>
+        <div class="morse-char"><div class="morse-letter">A</div><div class="morse-code">· —</div></div>
+        <div class="morse-char"><div class="morse-letter">B</div><div class="morse-code">— · · ·</div></div>
+        <div class="morse-char"><div class="morse-letter">C</div><div class="morse-code">— · — ·</div></div>
+        <div class="morse-char"><div class="morse-letter">D</div><div class="morse-code">— · ·</div></div>
+        <div class="morse-char"><div class="morse-letter">E</div><div class="morse-code">·</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📋 Действия при ЧС (офлайн)</div>
+    <p style="color:rgba(255,255,255,0.6);font-size:12px;margin:0">
+      1. Сохраняйте спокойствие<br>
+      2. Позвоните 112 (работает без интернета)<br>
+      3. Сообщите: что случилось, где, сколько пострадавших<br>
+      4. Не отключайтесь от оператора 112<br>
+      5. При пожаре — эвакуируйтесь, не тушите сами<br>
+      6. При угрозе жизни — подайте сигнал SOS
+    </p>
+  </div>
+</main>
+
+<footer>ЕЦСУ 2.0 · Автономный режим · © Николаев В.В. · Базовые функции активны без интернета</footer>
+
+<script>
+function playSOS() {
+  if (!window.AudioContext && !window.webkitAudioContext) {
+    alert('SOS · · · — — — · · ·\nПозвоните 112');
+    return;
+  }
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const DOT = 0.1, DASH = 0.3, GAP = 0.1, LETTER_GAP = 0.3;
+  const SOS = [DOT,GAP,DOT,GAP,DOT, LETTER_GAP, DASH,GAP,DASH,GAP,DASH, LETTER_GAP, DOT,GAP,DOT,GAP,DOT];
+  let t = ctx.currentTime;
+  SOS.forEach((dur) => {
+    if (dur === LETTER_GAP || dur === GAP) { t += dur; return; }
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 800;
+    osc.start(t);
+    osc.stop(t + dur);
+    t += dur + GAP;
+  });
+}
+
+// Проверяем сеть каждые 5 сек
+setInterval(() => {
+  if (navigator.onLine) {
+    fetch('/').then(() => window.location.reload()).catch(() => {});
+  }
+}, 5000);
+</script>
+</body>
+</html>
