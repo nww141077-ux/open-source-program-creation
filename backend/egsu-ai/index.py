@@ -7,6 +7,7 @@ import os
 import urllib.request
 import urllib.error
 import psycopg2
+from datetime import datetime, timezone
 
 S = "t_p38294978_open_source_program_"
 
@@ -21,32 +22,40 @@ OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 YANDEX_URL = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
 
-SYSTEM_PROMPT = """Ты — ИИ-ассистент системы ЕЗСУ 2.0 (Единая Защитная Система Управления), интегрированный с модулем ЦПВОА.
+SYSTEM_PROMPT = """Ты — ИИ-АДМИНИСТРАТОР системы ЕЦСУ 2.0 (Единая Центральная Система Управления), заместитель владельца системы.
 
 О себе:
-- Создан для проекта ЕЗСУ 2.0, автор — Николаев Владимир Владимирович
+- Создан для проекта ЕЦСУ 2.0, автор и владелец системы — Николаев Владимир Владимирович
+- Ты — заместитель Николаева В.В. с правами администратора: можешь управлять инцидентами, обновлять базы данных, запускать сканирование
 - Отвечаешь на русском языке, чётко и по существу
 - Разбираешься в любых темах: право, экология, кибербезопасность, технологии, финансы, медицина
-- Даёшь практичные советы, объясняешь сложное простыми словами
 
-Специализация ЕЗСУ:
+Твои административные права (доступны через /admin команды):
+- Создание/закрытие/обновление инцидентов в базе ЕЦСУ
+- Запуск автосканирования открытых источников (GDACS, USGS, OpenAQ, CVE, ReliefWeb, EMSC)
+- Просмотр статистики и системных логов
+- Обновление настроек и параметров системы
+- Самосинхронизация с новыми данными из открытых источников
+
+Специализация ЕЦСУ:
 - Правовой анализ (УПК, ГПК, АПК, УК РФ, международное право)
 - Мониторинг экологических, кибер- и гуманитарных инцидентов
 - Юридические консультации, квалификация правонарушений
 - МГП: Женевские конвенции, Римский статут, Будапештская конвенция
 
-Модуль ЦПВОА (Центральная Платформа Всеканального Обнаружения Аномалий):
-- Мониторинг аномалий в реальном времени: радиоэфир, оптика, меш-сети
+Модуль ЦПВОА:
+- Мониторинг аномалий: радиоэфир, оптика, меш-сети
 - Уровни угроз: низкий → средний → высокий → критический
-- При получении данных ЦПВОА: кратко резюмируй → анализируй каждый инцидент → правовая квалификация → рекомендации
+- При данных ЦПВОА: резюмируй → анализируй → правовая квалификация → рекомендации
+
+Когда пользователь просит выполнить системное действие (сканировать, обновить, закрыть инцидент и т.д.) — сообщи, что команда принята и выполняется, и дай краткий статус.
 
 Правила:
-1. В конце каждого ответа — блок с 3 вариантами продолжения (JSON формат ниже)
-2. Варианты — реальные следующие шаги, не общие фразы
-3. Markdown: **жирный**, *курсив*, • списки, > цитаты, `код`
+1. В конце каждого ответа — блок с 3 вариантами продолжения
+2. Варианты — конкретные следующие шаги
+3. Markdown: **жирный**, *курсив*, • списки, > цитаты
 4. Конкретность: статьи законов, примеры, факты
-5. Честность: если не знаешь — так и скажи
-6. Длина: 1-2 абзаца для простых вопросов, 3-5 для сложных
+5. Длина: 1-2 абзаца для простых, 3-5 для сложных
 
 Формат (строго):
 [Ответ]
@@ -54,6 +63,15 @@ SYSTEM_PROMPT = """Ты — ИИ-ассистент системы ЕЗСУ 2.0 
 ```suggestions
 ["Краткий вариант 1 (до 40 символов)", "Вариант 2", "Вариант 3"]
 ```"""
+
+ADMIN_SYSTEM_PROMPT = """Ты — ИИ-АДМИНИСТРАТОР ЕЦСУ 2.0, заместитель владельца Николаева В.В.
+Ты получил системные данные. Проанализируй их и дай чёткий административный отчёт:
+1. Краткое резюме текущего состояния системы
+2. Критические инциденты требующие внимания
+3. Рекомендуемые немедленные действия
+4. Предложи 3 следующих шага
+
+Отвечай строго по делу, как руководитель системы безопасности."""
 
 
 def ok(data, code=200):
@@ -392,6 +410,144 @@ def handler(event: dict, context) -> dict:
             "provider": provider,
             "model": used_model,
             "session_id": session_id,
+        })
+
+    # ── POST /admin — административные команды ИИ ────────────────────────────
+    if method == "POST" and "/admin" in path:
+        cmd = body.get("command", "")
+        params_data = body.get("params", {})
+
+        conn = psycopg2.connect(os.environ["DATABASE_URL"])
+        cur = conn.cursor()
+        action_result = {}
+
+        try:
+            # СКАНИРОВАТЬ — запустить автосканирование открытых источников
+            if cmd == "scan_incidents":
+                scanner_url = body.get("scanner_url", "")
+                if scanner_url:
+                    req = urllib.request.Request(
+                        scanner_url,
+                        data=json.dumps({"sources": "all"}).encode(),
+                        headers={"Content-Type": "application/json"},
+                        method="POST"
+                    )
+                    with urllib.request.urlopen(req, timeout=28) as r:
+                        scan_result = json.loads(r.read())
+                    action_result = scan_result
+                    cur.execute(f"INSERT INTO {S}.egsu_ai_actions (action_type, payload, result, performed_by) VALUES (%s, %s, %s, 'egsu-ai-admin')", ("scan_incidents", json.dumps(params_data), json.dumps(scan_result)))
+                    cur.execute(f"INSERT INTO {S}.egsu_system_log (event_type, source, message, data) VALUES ('scan', 'egsu-ai', 'ИИ-администратор запустил сканирование источников', %s)", (json.dumps(scan_result),))
+                else:
+                    action_result = {"error": "scanner_url не передан"}
+
+            # СТАТИСТИКА СИСТЕМЫ
+            elif cmd == "get_stats":
+                cur.execute(f"SELECT status, COUNT(*) as cnt FROM {S}.egsu_incidents GROUP BY status")
+                inc_stats = {r[0]: r[1] for r in cur.fetchall()}
+                cur.execute(f"SELECT COUNT(*) FROM {S}.egsu_incidents WHERE auto_scanned = true")
+                auto_count = cur.fetchone()[0]
+                cur.execute(f"SELECT COUNT(*) FROM {S}.egsu_incidents WHERE created_at > NOW() - INTERVAL '24 hours'")
+                new_24h = cur.fetchone()[0]
+                cur.execute(f"SELECT COUNT(*) FROM {S}.egsu_security_events WHERE created_at > NOW() - INTERVAL '24 hours'")
+                sec_24h = cur.fetchone()[0]
+                action_result = {
+                    "incidents": inc_stats,
+                    "auto_scanned": auto_count,
+                    "new_24h": new_24h,
+                    "security_events_24h": sec_24h,
+                }
+                cur.execute(f"INSERT INTO {S}.egsu_ai_actions (action_type, result) VALUES ('get_stats', %s)", (json.dumps(action_result),))
+
+            # ЗАКРЫТЬ ИНЦИДЕНТ
+            elif cmd == "close_incident":
+                inc_id = params_data.get("id") or params_data.get("incident_id")
+                reason = params_data.get("reason", "Закрыто ИИ-администратором")
+                if inc_id:
+                    cur.execute(f"UPDATE {S}.egsu_incidents SET status='resolved', updated_at=NOW() WHERE id=%s RETURNING incident_code, title", (inc_id,))
+                    row = cur.fetchone()
+                    action_result = {"closed": True, "code": row[0] if row else None, "title": row[1] if row else None}
+                    cur.execute(f"INSERT INTO {S}.egsu_ai_actions (action_type, target_table, target_id, payload, result) VALUES ('close_incident', 'egsu_incidents', %s, %s, %s)", (inc_id, json.dumps({"reason": reason}), json.dumps(action_result)))
+                else:
+                    action_result = {"error": "id инцидента не указан"}
+
+            # ОБНОВИТЬ СТАТУС ИНЦИДЕНТА
+            elif cmd == "update_incident":
+                inc_id = params_data.get("id")
+                new_status = params_data.get("status", "")
+                if inc_id and new_status:
+                    cur.execute(f"UPDATE {S}.egsu_incidents SET status=%s, updated_at=NOW() WHERE id=%s RETURNING incident_code", (new_status, inc_id))
+                    row = cur.fetchone()
+                    action_result = {"updated": True, "code": row[0] if row else None, "new_status": new_status}
+                    cur.execute(f"INSERT INTO {S}.egsu_ai_actions (action_type, target_table, target_id, payload, result) VALUES ('update_incident', 'egsu_incidents', %s, %s, %s)", (inc_id, json.dumps(params_data), json.dumps(action_result)))
+                else:
+                    action_result = {"error": "id и status обязательны"}
+
+            # СПИСОК ПОСЛЕДНИХ ИНЦИДЕНТОВ
+            elif cmd == "list_incidents":
+                limit = int(params_data.get("limit", 20))
+                status_f = params_data.get("status", "")
+                q = f"SELECT id, incident_code, type, title, severity, status, country, created_at FROM {S}.egsu_incidents"
+                args = []
+                if status_f:
+                    q += " WHERE status = %s"
+                    args.append(status_f)
+                q += " ORDER BY created_at DESC LIMIT %s"
+                args.append(limit)
+                cur.execute(q, args)
+                cols = ["id", "code", "type", "title", "severity", "status", "country", "created_at"]
+                rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+                action_result = {"incidents": rows, "count": len(rows)}
+
+            # СИСТЕМНЫЙ ЛОГ
+            elif cmd == "get_log":
+                limit = int(params_data.get("limit", 50))
+                cur.execute(f"SELECT event_type, source, message, created_at FROM {S}.egsu_system_log ORDER BY created_at DESC LIMIT %s", (limit,))
+                cols = ["event_type", "source", "message", "created_at"]
+                action_result = {"log": [dict(zip(cols, r)) for r in cur.fetchall()]}
+
+            # СИНХРОНИЗАЦИЯ ИИ — получить данные системы и проанализировать
+            elif cmd == "ai_sync":
+                cur.execute(f"SELECT status, COUNT(*) as cnt FROM {S}.egsu_incidents GROUP BY status")
+                inc_stats = {r[0]: r[1] for r in cur.fetchall()}
+                cur.execute(f"SELECT incident_code, type, title, severity, status, country FROM {S}.egsu_incidents WHERE status IN ('active','verified','pending_verification') ORDER BY created_at DESC LIMIT 10")
+                cols = ["code", "type", "title", "severity", "status", "country"]
+                active_incs = [dict(zip(cols, r)) for r in cur.fetchall()]
+                cur.execute(f"SELECT event_type, message FROM {S}.egsu_system_log ORDER BY created_at DESC LIMIT 5")
+                recent_log = [{"event": r[0], "msg": r[1]} for r in cur.fetchall()]
+                action_result = {
+                    "system_stats": inc_stats,
+                    "active_incidents": active_incs,
+                    "recent_log": recent_log,
+                    "sync_at": datetime.now(timezone.utc).isoformat(),
+                }
+                cur.execute(f"INSERT INTO {S}.egsu_system_log (event_type, source, message) VALUES ('ai_sync', 'egsu-ai', 'ИИ-администратор выполнил синхронизацию системы')")
+
+            else:
+                action_result = {"error": f"Неизвестная команда: {cmd}", "available": ["scan_incidents", "get_stats", "close_incident", "update_incident", "list_incidents", "get_log", "ai_sync"]}
+
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            action_result = {"error": str(e)}
+        finally:
+            conn.close()
+
+        # Если есть API-ключ — просим ИИ прокомментировать результат
+        provider = auto_pick_provider(cmd, False)
+        ai_comment = ""
+        if provider != "fallback":
+            try:
+                summary_msg = f"[СИСТЕМНАЯ КОМАНДА ВЫПОЛНЕНА: {cmd}]\nРезультат: {json.dumps(action_result, ensure_ascii=False, default=str)[:800]}\nДай краткий административный комментарий (2-3 предложения) как заместитель владельца системы ЕЦСУ."
+                raw = dispatch_call(provider, [{"role": "user", "content": summary_msg}], "", "", "")
+                ai_comment = parse_response(raw)["text"]
+            except Exception:
+                ai_comment = "Команда выполнена."
+
+        return ok({
+            "command": cmd,
+            "result": action_result,
+            "ai_comment": ai_comment,
+            "executed_at": datetime.now(timezone.utc).isoformat(),
         })
 
     return err("Маршрут не найден", 404)

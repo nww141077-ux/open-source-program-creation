@@ -1,0 +1,20 @@
+{
+  "tests": [
+    {
+      "name": "Список источников",
+      "method": "GET",
+      "path": "/sources",
+      "expectedStatus": 200,
+      "expectedBody": "gdacs",
+      "bodyMatcher": "contains"
+    },
+    {
+      "name": "Превью инцидентов (без сохранения)",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": "scanned_at",
+      "bodyMatcher": "contains"
+    }
+  ]
+}

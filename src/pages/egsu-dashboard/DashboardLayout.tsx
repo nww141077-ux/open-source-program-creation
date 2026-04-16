@@ -91,6 +91,12 @@ export default function DashboardLayout({ activeTab, setActiveTab, chatOpen, set
             <Icon name="FileText" size={14} />
             <span className="hidden md:block">Документы</span>
           </button>
+          <button onClick={() => navigate("/egsu/install")}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105"
+            style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)" }}>
+            <Icon name="Download" size={14} />
+            <span className="hidden md:block">Установить</span>
+          </button>
           <button onClick={() => navigate("/egsu/report")}
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-black transition-all hover:scale-105"
             style={{ background: "linear-gradient(135deg, #f43f5e, #f59e0b)" }}>

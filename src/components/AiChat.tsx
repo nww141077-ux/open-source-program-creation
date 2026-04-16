@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 
 const DEFAULT_API = "https://functions.poehali.dev/daefa87e-0693-4de5-9191-bbc918e1d241";
+const SCANNER_API = "https://functions.poehali.dev/b3ae5ea9-0780-4337-b7b0-e19f144a63fb";
 
 // ─── Типы провайдеров ───────────────────────────────────────────────────────
 type ProviderId = "auto" | "gemini" | "openai" | "anthropic" | "yandex" | "custom";
@@ -148,7 +149,7 @@ const LS_MODELS = "ezsu_ai_models";
 const LS_CUSTOM_URL = "ezsu_ai_custom_url";
 
 export default function AiChat({ onClose, initialCpvoaContext, initialMessage }: Props) {
-  const [tab, setTab] = useState<"chat" | "cpvoa" | "settings">(initialCpvoaContext ? "cpvoa" : "chat");
+  const [tab, setTab] = useState<"chat" | "cpvoa" | "admin" | "settings">(initialCpvoaContext ? "cpvoa" : "chat");
   const [cpvoaContext, setCpvoaContext] = useState<CpvoaContext | null>(initialCpvoaContext ?? null);
   const [cpvoaSynced, setCpvoaSynced] = useState(!!initialCpvoaContext);
 
@@ -332,6 +333,31 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
 
   const currentProvider = PROVIDERS.find(p => p.id === selectedProvider)!;
 
+  const [adminLoading, setAdminLoading] = useState(false);
+
+  const runAdminCmd = async (cmd: string, label: string) => {
+    setAdminLoading(true);
+    try {
+      let actionResult = "";
+      if (cmd === "scan_incidents") {
+        const r = await fetch(SCANNER_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sources: "all" }) });
+        const d = await r.json();
+        const parsed = typeof d === "string" ? JSON.parse(d) : d;
+        actionResult = `Сканирование завершено: найдено ${parsed.total_scanned ?? 0}, добавлено ${parsed.created ?? 0} новых инцидентов.`;
+      } else {
+        const r = await fetch(DEFAULT_API + "/admin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ command: cmd, params: {}, scanner_url: SCANNER_API }) });
+        const d = await r.json();
+        const parsed = typeof d === "string" ? JSON.parse(d) : d;
+        actionResult = parsed.ai_comment || JSON.stringify(parsed.result ?? parsed, null, 2).slice(0, 300);
+      }
+      setMessages(prev => [...prev, { role: "assistant", text: `**[ИИ-АДМИНИСТРАТОР]** ${label}\n\n${actionResult}`, time: getTime(), suggestions: ["Запустить снова", "Показать инциденты", "Статистика системы"] }]);
+    } catch {
+      setMessages(prev => [...prev, { role: "assistant", text: "⚠️ Ошибка выполнения команды администратора.", time: getTime(), suggestions: ["Повторить", "Проверить статус"] }]);
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
   return (
     <div
       className="fixed bottom-6 right-6 z-50 flex flex-col rounded-2xl overflow-hidden"
@@ -405,6 +431,7 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
         {([
           { id: "chat", label: "💬 Диалог" },
           { id: "cpvoa", label: "📡 ЦПВОА" },
+          { id: "admin", label: "🛡️ Админ" },
           { id: "settings", label: "⚙️ ИИ" },
         ] as { id: typeof tab; label: string }[]).map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
@@ -446,6 +473,42 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
               ))}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── TAB: АДМИНИСТРАТОР ── */}
+      {tab === "admin" && (
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(168,85,247,0.3) transparent" }}>
+          <div className="text-[10px] uppercase tracking-widest text-white/30 mb-2">ИИ-Администратор ЕЦСУ · Заместитель владельца</div>
+
+          {[
+            { cmd: "ai_sync", label: "Синхронизация системы", icon: "RefreshCw", color: "#a855f7", desc: "ИИ получает текущие данные всей системы и анализирует" },
+            { cmd: "scan_incidents", label: "Сканировать источники", icon: "Radar", color: "#22c55e", desc: "GDACS, USGS, OpenAQ, CVE, ReliefWeb, EMSC → БД" },
+            { cmd: "get_stats", label: "Статистика системы", icon: "BarChart3", color: "#3b82f6", desc: "Инциденты, события безопасности, транзакции за 24ч" },
+            { cmd: "list_incidents", label: "Активные инциденты", icon: "AlertTriangle", color: "#f59e0b", desc: "Список всех активных инцидентов из БД ЕЦСУ" },
+            { cmd: "get_log", label: "Системный журнал", icon: "FileText", color: "#64748b", desc: "Последние события и действия в системе" },
+          ].map(({ cmd, label, icon, color, desc }) => (
+            <button
+              key={cmd}
+              onClick={() => { runAdminCmd(cmd, label); setTab("chat"); }}
+              disabled={adminLoading}
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all hover:scale-[1.01]"
+              style={{ background: `rgba(${color === "#22c55e" ? "34,197,94" : color === "#3b82f6" ? "59,130,246" : color === "#f59e0b" ? "245,158,11" : color === "#a855f7" ? "168,85,247" : "100,116,139"},0.1)`, border: `1px solid ${color}22` }}
+            >
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${color}22` }}>
+                <Icon name={icon} size={15} style={{ color }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-white/90">{label}</div>
+                <div className="text-[11px] text-white/40 truncate">{desc}</div>
+              </div>
+              <Icon name="ChevronRight" size={14} className="text-white/20 shrink-0" />
+            </button>
+          ))}
+
+          <div className="mt-4 p-3 rounded-xl text-[11px] text-white/30" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+            Все действия выполняются от имени ИИ-администратора и записываются в системный журнал ЕЦСУ.
+          </div>
         </div>
       )}
 
