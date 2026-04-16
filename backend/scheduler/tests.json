@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "Статус планировщика",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": "active",
+      "bodyMatcher": "contains"
+    },
+    {
+      "name": "Запуск задач по расписанию",
+      "method": "POST",
+      "path": "/run",
+      "body": {"tasks": "all", "force": false},
+      "expectedStatus": 200,
+      "expectedBody": "results",
+      "bodyMatcher": "contains"
+    }
+  ]
+}

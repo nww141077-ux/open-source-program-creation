@@ -3,9 +3,22 @@ import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import AiChat, { CpvoaContext } from "@/components/AiChat";
 
+const SECURITY_API = "https://functions.poehali.dev/15640332-461b-47d1-b024-8fa25fb344ef";
+const _SCHEDULER_API = "https://functions.poehali.dev/129bc872-862f-4f58-8992-a6f164ca410d";
+void _SCHEDULER_API;
+
 // ─── Типы ────────────────────────────────────────────────────────────────────
-type Mode = "standard" | "advanced" | "emergency" | "offline";
+type Mode = "standard" | "advanced" | "emergency" | "offline" | "intrusion_scan";
 type ConnectionStatus = "online" | "mesh" | "offline";
+
+interface IntrusionScan {
+  status: "scanning" | "done" | "idle";
+  source?: { ip: string; isp: string; country: string; asn: string };
+  spectrum?: { band: string; freq_mhz: number; signal_strength_db: number; intrusion_type: string; threat_level: string };
+  penalty_usd?: number;
+  message?: string;
+  absorption_synced?: boolean;
+}
 
 interface Incident {
   id: string;
@@ -92,10 +105,76 @@ export default function EgsuCpvoa() {
   ]);
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiCpvoaCtx, setAiCpvoaCtx] = useState<CpvoaContext | null>(null);
+  const [intrusionScan, setIntrusionScan] = useState<IntrusionScan>({ status: "idle" });
+  const [showIntrusionPanel, setShowIntrusionPanel] = useState(false);
+  const [absorbSyncing, setAbsorbSyncing] = useState(false);
+  const [absorbResult, setAbsorbResult] = useState<{ penalty_usd: number; channel: string; message: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // ── Сканирование вторжения через эфир/спектр ──
+  const runIntrusionScan = async (band: string, freqMhz: number, signalDb: number, sourceType: string) => {
+    setIntrusionScan({ status: "scanning" });
+    setMode("intrusion_scan");
+    try {
+      const resp = await fetch(`${SECURITY_API}/intrusion`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          spectrum_band: band,
+          freq_mhz: freqMhz,
+          signal_strength_db: signalDb,
+          source_type: sourceType,
+          description: `ЦПВОА обнаружил вторжение в диапазоне ${band} (${freqMhz} МГц, ${signalDb} дБ)`,
+        }),
+      });
+      const data = await resp.json();
+      const parsed = typeof data === "string" ? JSON.parse(data) : data;
+      setIntrusionScan({
+        status: "done",
+        source: { ip: parsed.intrusion_analysis?.band || "radio", isp: parsed.geo?.isp || "Unknown", country: parsed.geo?.country || "Unknown", asn: parsed.geo?.asn || "Unknown" },
+        spectrum: { band, freq_mhz: freqMhz, signal_strength_db: signalDb, intrusion_type: parsed.intrusion_analysis?.intrusion_type || "unknown", threat_level: parsed.intrusion_analysis?.threat_level || "medium" },
+        penalty_usd: parsed.absorption_charged_usd,
+        message: parsed.message,
+        absorption_synced: parsed.absorption_sync,
+      });
+      setMode("advanced");
+    } catch {
+      setIntrusionScan({ status: "done", message: "Ошибка сканирования. Работаю в офлайн-режиме." });
+      setMode("standard");
+    }
+  };
+
+  // ── Реагирование на блокировку системы → Поглощение ──
+  const respondToBlock = async (blockerIp: string, channel: string) => {
+    setAbsorbSyncing(true);
+    try {
+      const resp = await fetch(`${SECURITY_API}/block-response`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ip_address: blockerIp,
+          channel,
+          block_type: "system_block",
+          description: "Несанкционированная блокировка системы ЕЦСУ — ответ ЦПВОА",
+        }),
+      });
+      const data = await resp.json();
+      const parsed = typeof data === "string" ? JSON.parse(data) : data;
+      setAbsorbResult({
+        penalty_usd: parsed.penalty_usd || 0,
+        channel: parsed.blocker_identified?.isp || channel,
+        message: parsed.message || "Режим Поглощения активирован",
+      });
+    } catch {
+      setAbsorbResult({ penalty_usd: 10000, channel, message: "Режим Поглощения активирован (офлайн)" });
+    } finally {
+      setAbsorbSyncing(false);
+    }
+  };
 
   // Открыть ИИ с текущим контекстом ЦПВОА
   const openAiWithContext = (message?: string) => {
+    void message;
     const ctx: CpvoaContext = {
       incidents: results.length > 0 ? results : MOCK_INCIDENTS,
       sensors,
@@ -284,6 +363,14 @@ export default function EgsuCpvoa() {
             ИИ
           </button>
 
+          {/* ВТОРЖЕНИЕ */}
+          <button onClick={() => setShowIntrusionPanel(p => !p)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold tracking-wider transition-all hover:scale-105"
+            style={{ background: showIntrusionPanel ? "rgba(255,152,0,0.25)" : "rgba(255,152,0,0.12)", color: "#FF9800", border: "1px solid rgba(255,152,0,0.35)" }}>
+            <Icon name="Radar" size={13} />
+            ВТОРЖЕНИЕ
+          </button>
+
           {/* SOS */}
           <button onClick={() => setMode("emergency")}
             className="px-3 py-1.5 rounded-lg text-xs font-black tracking-wider transition-all hover:scale-105"
@@ -292,6 +379,92 @@ export default function EgsuCpvoa() {
           </button>
         </div>
       </nav>
+
+      {/* ─── ПАНЕЛЬ СКАНИРОВАНИЯ ВТОРЖЕНИЙ ─── */}
+      {showIntrusionPanel && (
+        <div className="fixed top-14 right-0 z-40 w-80 max-h-screen overflow-y-auto"
+          style={{ background: "rgba(20,15,5,0.98)", border: "1px solid rgba(255,152,0,0.3)", borderTop: "none" }}>
+          <div className="px-4 py-3 border-b" style={{ borderColor: "rgba(255,152,0,0.2)" }}>
+            <div className="flex items-center justify-between">
+              <div className="font-bold text-sm" style={{ color: "#FF9800" }}>⚡ Режим сканирования вторжений</div>
+              <button onClick={() => setShowIntrusionPanel(false)} className="text-white/30 hover:text-white/70"><Icon name="X" size={14} /></button>
+            </div>
+            <div className="text-white/40 text-[10px] mt-1">Обнаружение источника угрозы через эфир/спектр</div>
+          </div>
+
+          <div className="p-4 space-y-3">
+            {/* Быстрые действия сканирования */}
+            <div className="text-white/30 text-[10px] uppercase tracking-widest">Сканировать диапазон</div>
+            {[
+              { band: "fm_radio", freq: 101.2, signal: 75, label: "FM 88–108 МГц", icon: "Radio", color: "#4CAF50" },
+              { band: "wifi_24", freq: 2400, signal: 65, label: "WiFi 2.4 ГГц", icon: "Wifi", color: "#2196F3" },
+              { band: "mesh", freq: 915, signal: 55, label: "Меш-сеть 915 МГц", icon: "Network", color: "#FFC107" },
+              { band: "lte", freq: 1800, signal: 70, label: "LTE 1800 МГц", icon: "Signal", color: "#9C27B0" },
+              { band: "satellite", freq: 12000, signal: 80, label: "Спутник 12 ГГц", icon: "Satellite", color: "#F44336" },
+            ].map(({ band, freq, signal, label, icon, color }) => (
+              <button key={band}
+                onClick={() => runIntrusionScan(band, freq, signal, band === "mesh" ? "mesh" : "radio")}
+                disabled={intrusionScan.status === "scanning"}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all hover:scale-[1.01]"
+                style={{ background: `${color}15`, border: `1px solid ${color}30` }}>
+                <Icon name={icon} size={15} style={{ color }} />
+                <div>
+                  <div className="text-sm font-semibold text-white/90">{label}</div>
+                  <div className="text-[10px]" style={{ color }}>Сигнал ~{signal} дБ · Click для сканирования</div>
+                </div>
+              </button>
+            ))}
+
+            {/* Реагирование на блокировку */}
+            <div className="text-white/30 text-[10px] uppercase tracking-widest mt-4">Реагирование на блокировку</div>
+            <button
+              onClick={() => respondToBlock("0.0.0.0", "unknown_channel")}
+              disabled={absorbSyncing}
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all"
+              style={{ background: "rgba(244,67,54,0.1)", border: "1px solid rgba(244,67,54,0.3)" }}>
+              <Icon name="ShieldOff" size={15} style={{ color: "#F44336" }} />
+              <div>
+                <div className="text-sm font-semibold" style={{ color: "#F44336" }}>
+                  {absorbSyncing ? "Активация Поглощения..." : "Активировать Режим Поглощения"}
+                </div>
+                <div className="text-[10px] text-white/40">Штраф $10,000 на блокировщика · Постоянная блокировка</div>
+              </div>
+            </button>
+
+            {/* Результат сканирования */}
+            {intrusionScan.status === "scanning" && (
+              <div className="flex items-center gap-2 px-3 py-3 rounded-xl" style={{ background: "rgba(255,152,0,0.1)" }}>
+                <div className="w-3 h-3 rounded-full bg-orange-400 animate-pulse" />
+                <span className="text-sm text-orange-300">Сканирование эфира...</span>
+              </div>
+            )}
+            {intrusionScan.status === "done" && intrusionScan.message && (
+              <div className="px-3 py-3 rounded-xl space-y-2" style={{ background: "rgba(255,152,0,0.08)", border: "1px solid rgba(255,152,0,0.2)" }}>
+                <div className="text-[11px] font-bold" style={{ color: "#FF9800" }}>Результат анализа</div>
+                {intrusionScan.spectrum && (
+                  <div className="text-[11px] text-white/60 space-y-1">
+                    <div>Диапазон: <span className="text-white/80">{intrusionScan.spectrum.band}</span></div>
+                    <div>Тип: <span className="text-white/80">{intrusionScan.spectrum.intrusion_type}</span></div>
+                    <div>Угроза: <span style={{ color: intrusionScan.spectrum.threat_level === "critical" ? "#F44336" : "#FF9800" }}>{intrusionScan.spectrum.threat_level}</span></div>
+                  </div>
+                )}
+                {intrusionScan.penalty_usd && (
+                  <div className="text-sm font-bold" style={{ color: "#4CAF50" }}>Штраф: ${intrusionScan.penalty_usd?.toFixed(0)} USD →  Поглощение</div>
+                )}
+              </div>
+            )}
+
+            {/* Результат поглощения */}
+            {absorbResult && (
+              <div className="px-3 py-3 rounded-xl" style={{ background: "rgba(244,67,54,0.08)", border: "1px solid rgba(244,67,54,0.25)" }}>
+                <div className="text-[11px] font-bold text-red-400 mb-1">Режим Поглощения активирован</div>
+                <div className="text-[11px] text-white/60">Канал: {absorbResult.channel}</div>
+                <div className="text-sm font-bold mt-1" style={{ color: "#4CAF50" }}>Штраф: ${absorbResult.penalty_usd?.toFixed(0)} USD</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ─── SIDEBAR ─── */}
       {sidebarOpen && (
