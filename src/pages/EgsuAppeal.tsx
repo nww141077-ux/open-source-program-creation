@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
 const AI_API = "https://functions.poehali.dev/daefa87e-0693-4de5-9191-bbc918e1d241";
+const SMS_API = "https://functions.poehali.dev/65523c0c-db23-4d8b-9c7e-6bae200b3318";
+const GATEWAY_API = "https://functions.poehali.dev/417cb87f-8717-4563-a698-6e3f5bb17500";
 
 const OWNER = {
   name: "Николаев Владимир Владимирович",
@@ -161,13 +163,38 @@ ${OWNER.name}
     setStep(3);
   };
 
-  const sendByEmail = (agencyId: string) => {
+  const sendByEmail = async (agencyId: string) => {
     const agency = AGENCIES_SHORT.find(a => a.id === agencyId);
     if (!agency) return;
     const subject = encodeURIComponent(`Обращение граждан РФ: ${form.incident_title || "Уведомление о нарушении"}`);
     const body = encodeURIComponent(generatedText);
     window.open(`mailto:${agency.email}?subject=${subject}&body=${body}`);
     setSent(prev => [...prev, agencyId]);
+
+    // Регистрируем в gateway и запускаем SMS-мониторинг
+    try {
+      await fetch(GATEWAY_API + "/appeal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          incident_type: incidentType || "default",
+          title: form.incident_title,
+          description: form.incident_description.slice(0, 500),
+          country: "RUS",
+        }),
+      });
+      await fetch(SMS_API + "/notify-agencies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agency_ids: [agencyId],
+          message: `ЕЦСУ 2.0: Обращение направлено. ${form.incident_title || "Уведомление о нарушении"}. От: ${OWNER.name}`,
+          incident_type: incidentType || "default",
+        }),
+      });
+    } catch {
+      // Тихая ошибка — email уже отправлен
+    }
   };
 
   const copyText = () => {

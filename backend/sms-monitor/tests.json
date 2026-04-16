@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "Статус SMS и мониторинга",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": "sms_sent",
+      "bodyMatcher": "contains"
+    },
+    {
+      "name": "Проверка бездействия",
+      "method": "POST",
+      "path": "/check-inaction",
+      "body": {"agency_id": "mvd", "agency_name": "МВД России", "incident_type": "cyber", "inaction_days": 45},
+      "expectedStatus": 200,
+      "expectedBody": "inaction_detected",
+      "bodyMatcher": "contains"
+    }
+  ]
+}

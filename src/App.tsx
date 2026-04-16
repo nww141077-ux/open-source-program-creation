@@ -22,6 +22,7 @@ import EgsuCpvoa from "./pages/EgsuCpvoa";
 import EgsuInstall from "./pages/EgsuInstall";
 import EgsuEmergency from "./pages/EgsuEmergency";
 import EgsuAppeal from "./pages/EgsuAppeal";
+import EgsuRewards from "./pages/EgsuRewards";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => (
           <Route path="/egsu/install" element={<EgsuInstall />} />
           <Route path="/egsu/emergency" element={<EgsuEmergency />} />
           <Route path="/egsu/appeal" element={<EgsuAppeal />} />
+          <Route path="/egsu/rewards" element={<EgsuRewards />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

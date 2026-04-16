@@ -1,4 +1,6 @@
 {
+  "sms-monitor": "https://functions.poehali.dev/65523c0c-db23-4d8b-9c7e-6bae200b3318",
+  "gateway": "https://functions.poehali.dev/417cb87f-8717-4563-a698-6e3f5bb17500",
   "scheduler": "https://functions.poehali.dev/129bc872-862f-4f58-8992-a6f164ca410d",
   "incident-scanner": "https://functions.poehali.dev/b3ae5ea9-0780-4337-b7b0-e19f144a63fb",
   "egsu-ai": "https://functions.poehali.dev/daefa87e-0693-4de5-9191-bbc918e1d241",

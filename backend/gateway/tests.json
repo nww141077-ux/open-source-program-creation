@@ -1,0 +1,44 @@
+{
+  "tests": [
+    {
+      "name": "Публичный ключ и инфо о системе",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": "ЕЦСУ",
+      "bodyMatcher": "contains"
+    },
+    {
+      "name": "Статус модулей",
+      "method": "GET",
+      "path": "/status",
+      "expectedStatus": 200,
+      "expectedBody": "active",
+      "bodyMatcher": "contains"
+    },
+    {
+      "name": "Публичные инциденты",
+      "method": "GET",
+      "path": "/incidents",
+      "expectedStatus": 200,
+      "expectedBody": "incidents",
+      "bodyMatcher": "contains"
+    },
+    {
+      "name": "Страны-участницы",
+      "method": "GET",
+      "path": "/countries",
+      "expectedStatus": 200,
+      "expectedBody": "countries",
+      "bodyMatcher": "contains"
+    },
+    {
+      "name": "Типы вознаграждений",
+      "method": "GET",
+      "path": "/rewards",
+      "expectedStatus": 200,
+      "expectedBody": "reward_types",
+      "bodyMatcher": "contains"
+    }
+  ]
+}
