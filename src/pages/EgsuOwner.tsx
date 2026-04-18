@@ -182,6 +182,14 @@ export default function EgsuOwner() {
               <span className="hidden md:block text-xs">{t.label}</span>
             </button>
           ))}
+          <div style={{ marginTop: "auto", padding: "8px 4px 4px" }}>
+            <button onClick={() => navigate("/egsu/ark")}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
+              style={{ background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.3)", color: "#f43f5e" }}>
+              <Icon name="Anchor" size={16} />
+              <span className="hidden md:block text-xs">⚓ Ковчег</span>
+            </button>
+          </div>
         </aside>
 
         <main className="flex-1 ml-14 md:ml-56 p-4 md:p-6">
