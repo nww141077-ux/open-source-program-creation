@@ -63,7 +63,7 @@ function DocCopyright() {
       <div className="mb-6">
         <h3 className="font-bold mb-2">Состав программного обеспечения</h3>
         <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
-          <li>Модуль мониторинга и дашборда координатора ECSU</li>
+          <li>Модуль мониторинга и центра задач (ЦЗ) координатора ECSU</li>
           <li>Модуль верификации инцидентов по алгоритму МГП</li>
           <li>Модуль ИИ-ассистента (встроенная база знаний)</li>
           <li>Система управления инцидентами (REST API, PostgreSQL)</li>

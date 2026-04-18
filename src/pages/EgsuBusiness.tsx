@@ -63,7 +63,7 @@ export default function EgsuBusiness() {
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-black transition-colors"
             style={{ background: "linear-gradient(135deg, #a855f7, #3b82f6)" }}>
             <Icon name="LayoutDashboard" size={13} />
-            <span className="hidden md:inline">Дашборд</span>
+            <span className="hidden md:inline">ЦЗ</span>
           </button>
         </div>
       </nav>

@@ -86,7 +86,7 @@ export function SectionAudience() {
 
 export function SectionRevenue() {
   const rows = [
-    { source: "Платные подписки",      desc: "Доступ к аналитике, дашбордам, отчётам",           share: 35, color: "#f59e0b" },
+    { source: "Платные подписки",      desc: "Доступ к аналитике, центрам задач, отчётам",       share: 35, color: "#f59e0b" },
     { source: "Транзакционные сборы",  desc: "0,01% от сделок с цифровыми и углеродными активами", share: 25, color: "#3b82f6" },
     { source: "Лицензирование ИИ",     desc: "Продажа лицензий на ИИ-модули и блокчейн",           share: 20, color: "#a855f7" },
     { source: "Гранты и субсидии",     desc: "Финансирование от международных фондов",              share: 15, color: "#00ff87" },

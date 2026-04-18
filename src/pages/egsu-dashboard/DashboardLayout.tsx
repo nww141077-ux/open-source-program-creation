@@ -31,7 +31,7 @@ export default function DashboardLayout({ activeTab, setActiveTab, chatOpen, set
             <Icon name="LayoutDashboard" size={14} className="text-white" />
           </div>
           <div>
-            <div className="font-display text-base font-bold text-white tracking-wide leading-none">ДАШБОРД КООРДИНАТОРА</div>
+            <div className="font-display text-base font-bold text-white tracking-wide leading-none">ЦЕНТР ЗАДАЧ (ЦЗ)</div>
             <div className="text-white/30 text-[10px]">ECSU 2.0 · Аналитика</div>
           </div>
         </div>

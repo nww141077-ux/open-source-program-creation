@@ -78,7 +78,7 @@ export default function GlobalLaw() {
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-white/60 hover:text-white transition-colors"
             style={{ background: "rgba(255,255,255,0.05)" }}>
             <Icon name="LayoutDashboard" size={14} />
-            <span className="hidden md:block">Дашборд</span>
+            <span className="hidden md:block">ЦЗ</span>
           </button>
         </div>
       </nav>

@@ -157,7 +157,7 @@ export default function EgsuReport() {
             <button onClick={() => navigate("/egsu/dashboard")}
               className="w-full py-3 rounded-xl font-semibold text-black text-sm"
               style={{ background: "linear-gradient(135deg, #00ff87, #3b82f6)" }}>
-              Перейти в дашборд
+              Перейти в ЦЗ
             </button>
             <button onClick={() => { setResult(null); setStep(1); setForm(EMPTY_FORM); }}
               className="w-full py-3 rounded-xl font-semibold text-white/60 text-sm"
