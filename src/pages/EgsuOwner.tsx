@@ -196,7 +196,7 @@ export default function EgsuOwner() {
           {loading && <div className="text-center py-20 text-white/30">Загружаю...</div>}
 
           {/* PROFILE */}
-          {!loading && tab === "profile" && owner && (
+          {!loading && tab === "profile" && (
             <div className="space-y-6">
               <div>
                 <h1 className="font-display text-2xl font-bold text-white uppercase">Профиль владельца</h1>
@@ -214,8 +214,8 @@ export default function EgsuOwner() {
                     <Icon name="Crown" size={28} className="text-white" />
                   </div>
                   <div>
-                    <div className="font-display text-xl font-bold text-white">{owner.owner_name}</div>
-                    <div className="text-white/40 text-sm mt-0.5">Владелец · {owner.system_name}</div>
+                    <div className="font-display text-xl font-bold text-white">{owner?.owner_name ?? "Николаев Владимир Владимирович"}</div>
+                    <div className="text-white/40 text-sm mt-0.5">Владелец · {owner?.system_name ?? "ECSU 2.0"}</div>
                     <div className="flex items-center gap-2 mt-3">
                       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
                         style={{ background: "rgba(0,255,135,0.12)", border: "1px solid rgba(0,255,135,0.25)" }}>
@@ -232,9 +232,9 @@ export default function EgsuOwner() {
               {/* Статистика */}
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: "Непрочитанных\nуведомлений", val: owner.stats.unread_notifications, icon: "Bell", color: "#f59e0b" },
-                  { label: "Угроз за 24ч", val: owner.stats.threats_today, icon: "ShieldAlert", color: "#f43f5e" },
-                  { label: "Транзакций за 24ч", val: owner.stats.transactions_today, icon: "ArrowLeftRight", color: "#3b82f6" },
+                  { label: "Непрочитанных\nуведомлений", val: owner?.stats?.unread_notifications ?? 0, icon: "Bell", color: "#f59e0b" },
+                  { label: "Угроз за 24ч", val: owner?.stats?.threats_today ?? 0, icon: "ShieldAlert", color: "#f43f5e" },
+                  { label: "Транзакций за 24ч", val: owner?.stats?.transactions_today ?? 0, icon: "ArrowLeftRight", color: "#3b82f6" },
                 ].map(k => (
                   <div key={k.label} className="p-4 rounded-2xl"
                     style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${k.color}20` }}>
@@ -248,11 +248,11 @@ export default function EgsuOwner() {
               </div>
 
               {/* Последний доступ */}
-              {owner.last_access.length > 0 && (
+              {(owner?.last_access?.length ?? 0) > 0 && (
                 <div className="p-5 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   <div className="font-display text-sm font-bold text-white/50 uppercase tracking-widest mb-3">Последние действия</div>
                   <div className="space-y-2">
-                    {owner.last_access.map((a, i) => (
+                    {(owner?.last_access ?? []).map((a, i) => (
                       <div key={i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
                         <div className="flex items-center gap-2">
                           <Icon name="Activity" size={13} className="text-purple-400/60" />
