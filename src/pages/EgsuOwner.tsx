@@ -64,33 +64,36 @@ export default function EgsuOwner() {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3500); };
 
+  const safeFetch = async (url: string) => {
+    try {
+      const r = await fetch(url);
+      const d = await r.json();
+      return parse(d);
+    } catch { return null; }
+  };
+
   const load = async () => {
     setLoading(true);
-    try {
-      const [o, s, al] = await Promise.all([
-        fetch(`${API}/owner`).then(r => r.json()).then(parse),
-        fetch(`${API}/owner/settings`).then(r => r.json()).then(parse),
-        fetch(`${API}/owner/access-log`).then(r => r.json()).then(parse),
-      ]);
-      setOwner(o as OwnerData);
-      if (Array.isArray(s)) {
-        setSettings(s);
-        const vals: Record<string, string> = {};
-        s.forEach((st: Setting) => { vals[st.key] = st.value; });
-        setEditVal(vals);
-      }
-      setAccessLog(Array.isArray(al) ? al : []);
 
-      // Загружаем статистику поглощения
-      const abs = await fetch(SECURITY_API).then(r => r.json()).then(parse);
-      setAbsorption(abs as AbsorptionStats);
+    const [o, s, al, abs, sched] = await Promise.all([
+      safeFetch(`${API}/owner`),
+      safeFetch(`${API}/owner/settings`),
+      safeFetch(`${API}/owner/access-log`),
+      safeFetch(SECURITY_API),
+      safeFetch(SCHEDULER_URL),
+    ]);
 
-      // Статус планировщика
-      const sched = await fetch(SCHEDULER_URL).then(r => r.json()).then(parse).catch(() => null);
-      if (sched) setScanStatus(sched as ScanStatus);
-    } catch {
-      // Тихая ошибка — покажем что загрузилось
+    if (o && typeof o === "object" && "owner_name" in o) setOwner(o as OwnerData);
+    if (Array.isArray(s)) {
+      setSettings(s);
+      const vals: Record<string, string> = {};
+      s.forEach((st: Setting) => { vals[st.key] = st.value; });
+      setEditVal(vals);
     }
+    setAccessLog(Array.isArray(al) ? al : []);
+    if (abs) setAbsorption(abs as AbsorptionStats);
+    if (sched && typeof sched === "object") setScanStatus(sched as ScanStatus);
+
     setLoading(false);
   };
 
