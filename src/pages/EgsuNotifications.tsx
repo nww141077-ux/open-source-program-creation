@@ -34,9 +34,12 @@ export default function EgsuNotifications() {
 
   const load = async () => {
     setLoading(true);
-    const data = await fetch(`${API}/notifications`).then(r => r.json()).then(parse);
-    setNotifications(Array.isArray(data) ? data : []);
-    setLoading(false);
+    try {
+      const data = await fetch(`${API}/notifications`).then(r => r.json()).then(parse).catch(() => []);
+      setNotifications(Array.isArray(data) ? data : []);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);

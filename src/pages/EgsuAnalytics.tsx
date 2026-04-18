@@ -58,15 +58,20 @@ export default function EgsuAnalytics() {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3500); };
 
+  const sf = (url: string) => fetch(url).then(r => r.json()).then(parse).catch(() => null);
+
   const load = async () => {
     setLoading(true);
-    const [a, s] = await Promise.all([
-      fetch(`${API}/analytics`).then(r => r.json()).then(parse),
-      fetch(`${API}/analytics/snapshots`).then(r => r.json()).then(parse),
-    ]);
-    setData(a as AnalyticsData);
-    setSnapshots(Array.isArray(s) ? s : []);
-    setLoading(false);
+    try {
+      const [a, s] = await Promise.all([
+        sf(`${API}/analytics`),
+        sf(`${API}/analytics/snapshots`),
+      ]);
+      if (a) setData(a as AnalyticsData);
+      setSnapshots(Array.isArray(s) ? s : []);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);

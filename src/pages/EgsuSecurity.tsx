@@ -83,21 +83,22 @@ export default function EgsuSecurity() {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 4000); };
 
+  const sf = (url: string) => fetch(url).then(r => r.json()).then(parse).catch(() => null);
+
   const load = async () => {
-    const [s, e, b, w, a] = await Promise.all([
-      fetch(API).then(r => r.json()).then(parse),
-      fetch(`${API}/events`).then(r => r.json()).then(parse),
-      fetch(`${API}/blocked`).then(r => r.json()).then(parse),
-      fetch(`${FINANCE_API}/withdrawals`).then(r => r.json()).then(parse),
-      fetch(`${FINANCE_API}/accounts`).then(r => r.json()).then(parse),
-    ]);
-    setStats(s as Stats);
-    setEvents(Array.isArray(e) ? e : []);
-    setBlocked(Array.isArray(b) ? b : []);
-    setWithdrawals(Array.isArray(w) ? w : []);
-    setAccounts(Array.isArray(a) ? a.filter((acc: Account) => acc.id !== ABSORPTION_ACC_ID) : []);
-    setPulse(true);
-    setTimeout(() => setPulse(false), 600);
+    try {
+      const [s, e, b, w, a] = await Promise.all([
+        sf(API), sf(`${API}/events`), sf(`${API}/blocked`),
+        sf(`${FINANCE_API}/withdrawals`), sf(`${FINANCE_API}/accounts`),
+      ]);
+      if (s) setStats(s as Stats);
+      setEvents(Array.isArray(e) ? e : []);
+      setBlocked(Array.isArray(b) ? b : []);
+      setWithdrawals(Array.isArray(w) ? w : []);
+      setAccounts(Array.isArray(a) ? a.filter((acc: Account) => acc.id !== ABSORPTION_ACC_ID) : []);
+      setPulse(true);
+      setTimeout(() => setPulse(false), 600);
+    } catch { /* тихая ошибка */ }
   };
 
   useEffect(() => {

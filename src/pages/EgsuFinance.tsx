@@ -62,21 +62,23 @@ export default function EgsuFinance() {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
 
+  const sf = (url: string) => fetch(url).then(r => r.json()).then(parse).catch(() => null);
+
   const load = async () => {
     setLoading(true);
-    const [s, a, c, t, r] = await Promise.all([
-      fetch(API).then(r => r.json()).then(parse),
-      fetch(`${API}/accounts`).then(r => r.json()).then(parse),
-      fetch(`${API}/cards`).then(r => r.json()).then(parse),
-      fetch(`${API}/transactions`).then(r => r.json()).then(parse),
-      fetch(`${API}/rules`).then(r => r.json()).then(parse),
-    ]);
-    setStats(s);
-    setAccounts(Array.isArray(a) ? a : []);
-    setCards(Array.isArray(c) ? c : []);
-    setTransactions(Array.isArray(t) ? t : []);
-    setRules(Array.isArray(r) ? r : []);
-    setLoading(false);
+    try {
+      const [s, a, c, t, r] = await Promise.all([
+        sf(API), sf(`${API}/accounts`), sf(`${API}/cards`),
+        sf(`${API}/transactions`), sf(`${API}/rules`),
+      ]);
+      if (s) setStats(s);
+      setAccounts(Array.isArray(a) ? a : []);
+      setCards(Array.isArray(c) ? c : []);
+      setTransactions(Array.isArray(t) ? t : []);
+      setRules(Array.isArray(r) ? r : []);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);

@@ -49,12 +49,12 @@ export default function EgsuLegal() {
   useEffect(() => {
     fetch(API).then(r => r.json()).then(d => {
       const data = typeof d === "string" ? JSON.parse(d) : d;
-      setStats(data.stats);
-    });
+      if (data?.stats) setStats(data.stats);
+    }).catch(() => {});
     fetch(`${API}/jurisdictions`).then(r => r.json()).then(d => {
       const data = typeof d === "string" ? JSON.parse(d) : d;
       setJurisdictions(Array.isArray(data) ? data : []);
-    });
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -65,8 +65,7 @@ export default function EgsuLegal() {
     fetch(url).then(r => r.json()).then(d => {
       const data = typeof d === "string" ? JSON.parse(d) : d;
       setDocs(Array.isArray(data) ? data : []);
-      setLoading(false);
-    });
+    }).catch(() => {}).finally(() => setLoading(false));
   }, [selectedJur, selectedCat]);
 
   const loadArticles = (doc: LegalDoc) => {
@@ -75,8 +74,7 @@ export default function EgsuLegal() {
     fetch(`${API}/articles?document_id=${doc.id}`).then(r => r.json()).then(d => {
       const data = typeof d === "string" ? JSON.parse(d) : d;
       setArticles(Array.isArray(data) ? data : []);
-      setLoading(false);
-    });
+    }).catch(() => {}).finally(() => setLoading(false));
   };
 
   const doSearch = () => {

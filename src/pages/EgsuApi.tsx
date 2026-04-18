@@ -73,12 +73,14 @@ export default function EgsuApi() {
   const [newKey, setNewKey] = useState<{ api_key: string; id: number } | null>(null);
   const [registering, setRegistering] = useState(false);
 
-  useEffect(() => {
+  const loadIntegrations = () => {
     fetch(`${API}/integrations`).then(r => r.json()).then(d => {
       const data = typeof d === "string" ? JSON.parse(d) : d;
       setIntegrations(Array.isArray(data) ? data : []);
-    });
-  }, []);
+    }).catch(() => {});
+  };
+
+  useEffect(() => { loadIntegrations(); }, []);
 
   const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -89,19 +91,19 @@ export default function EgsuApi() {
   const register = async () => {
     if (!form.platform_name.trim()) return;
     setRegistering(true);
-    const r = await fetch(`${API}/integrations`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    const d = await r.json();
-    const data = typeof d === "string" ? JSON.parse(d) : d;
-    setNewKey(data);
-    setRegistering(false);
-    fetch(`${API}/integrations`).then(r => r.json()).then(d => {
+    try {
+      const r = await fetch(`${API}/integrations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const d = await r.json();
       const data = typeof d === "string" ? JSON.parse(d) : d;
-      setIntegrations(Array.isArray(data) ? data : []);
-    });
+      setNewKey(data);
+      loadIntegrations();
+    } catch { /* тихая ошибка */ } finally {
+      setRegistering(false);
+    }
   };
 
   const togglePerm = (perm: string) => {

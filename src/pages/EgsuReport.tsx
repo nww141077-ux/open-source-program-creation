@@ -114,7 +114,7 @@ export default function EgsuReport() {
 
   // Успешная отправка
   if (result) {
-    const inc = result.incident;
+    const inc = result.incident ?? {};
     const isVerified = inc.status === "verified";
     return (
       <div className="min-h-screen font-body flex items-center justify-center px-4" style={{ background: "#060a12" }}>
@@ -141,10 +141,10 @@ export default function EgsuReport() {
           </div>
 
           {/* Автоматические действия */}
-          {result.actions_applied?.length > 0 && (
+          {(result.actions_applied?.length ?? 0) > 0 && (
             <div className="p-4 rounded-2xl mb-4 text-left" style={{ background: "rgba(168,85,247,0.06)", border: "1px solid rgba(168,85,247,0.15)" }}>
               <div className="text-white/50 text-xs uppercase tracking-wider font-semibold mb-2">Автоматически применено</div>
-              {result.actions_applied.map((a: any) => (
+              {(result.actions_applied ?? []).map((a: any) => (
                 <div key={a.id} className="flex items-start gap-2 mb-1.5">
                   <Icon name="CheckCircle" size={12} style={{ color: "#00ff87" }} className="mt-0.5 shrink-0" />
                   <span className="text-white/60 text-xs">{a.action_label}</span>
