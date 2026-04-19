@@ -246,28 +246,119 @@ export default function EgsuOwner() {
                 <p className="text-white/30 text-sm mt-1">Системная информация и статус</p>
               </div>
 
-              {/* Карточка владельца */}
-              <div className="p-6 rounded-2xl relative overflow-hidden"
-                style={{ background: "rgba(168,85,247,0.07)", border: "2px solid rgba(168,85,247,0.25)" }}>
-                <div className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-5"
+              {/* Карточка владельца — ТОЛЬКО ДЛЯ ВЛАДЕЛЬЦА */}
+              <div className="rounded-2xl relative overflow-hidden"
+                style={{ background: "rgba(168,85,247,0.07)", border: "2px solid rgba(168,85,247,0.3)" }}>
+                <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-5"
                   style={{ background: G("#a855f7,#3b82f6"), transform: "translate(30%,-30%)" }} />
-                <div className="flex items-start gap-4 relative z-10">
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0"
-                    style={{ background: G("#a855f7,#3b82f6") }}>
-                    <Icon name="Crown" size={28} className="text-white" />
-                  </div>
-                  <div>
-                    <div className="font-display text-xl font-bold text-white">{owner?.owner_name ?? "Николаев Владимир Владимирович"}</div>
-                    <div className="text-white/40 text-sm mt-0.5">Владелец · {owner?.system_name ?? "ECSU 2.0"}</div>
-                    <div className="flex items-center gap-2 mt-3">
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
-                        style={{ background: "rgba(0,255,135,0.12)", border: "1px solid rgba(0,255,135,0.25)" }}>
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                        <span className="text-green-400 text-xs font-bold">ACTIVE</span>
+
+                {/* Шапка карточки */}
+                <div className="p-5 pb-4 relative z-10">
+                  <div className="flex items-start gap-4">
+                    {/* Фото из паспорта */}
+                    <div className="shrink-0 relative">
+                      <div className="w-20 h-20 rounded-2xl overflow-hidden"
+                        style={{ border: "2px solid rgba(168,85,247,0.5)" }}>
+                        <img
+                          src="https://cdn.poehali.dev/projects/61a665c2-cff9-41a1-9a78-364c960d2ecc/bucket/8394a58b-517e-4ae4-924e-14396c94f5a9.jpg"
+                          alt="Николаев В.В."
+                          className="w-full h-full object-cover object-top"
+                          style={{ objectPosition: "15% 15%" }}
+                        />
                       </div>
-                      <div className="px-2.5 py-1 rounded-full text-xs font-bold"
-                        style={{ background: "rgba(168,85,247,0.15)", color: "#a855f7" }}>OWNER ROLE</div>
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
+                        style={{ background: "#00ff87" }}>
+                        <Icon name="Check" size={10} className="text-black" />
+                      </div>
                     </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="font-display text-xl font-bold text-white leading-tight">Николаев Владимир Владимирович</div>
+                      <div className="text-white/40 text-xs mt-1">14.10.1977 · Гражданин РФ</div>
+                      <div className="text-white/30 text-xs">Владелец · {owner?.system_name ?? "ECSU 2.0"}</div>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full"
+                          style={{ background: "rgba(0,255,135,0.12)", border: "1px solid rgba(0,255,135,0.25)" }}>
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                          <span className="text-green-400 text-[10px] font-bold">АКТИВЕН</span>
+                        </div>
+                        <div className="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                          style={{ background: "rgba(168,85,247,0.15)", color: "#a855f7" }}>OWNER</div>
+                        <div className="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                          style={{ background: "rgba(59,130,246,0.12)", color: "#3b82f6" }}>🔒 PRIVATE</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Документы в карточке */}
+                <div className="px-5 pb-5 relative z-10 space-y-3">
+                  <div className="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-2">Подтверждающие документы</div>
+
+                  {/* Паспорт */}
+                  <div className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:opacity-90 transition-all"
+                    style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)" }}
+                    onClick={() => window.open("https://cdn.poehali.dev/projects/61a665c2-cff9-41a1-9a78-364c960d2ecc/bucket/8394a58b-517e-4ae4-924e-14396c94f5a9.jpg", "_blank")}>
+                    <img
+                      src="https://cdn.poehali.dev/projects/61a665c2-cff9-41a1-9a78-364c960d2ecc/bucket/8394a58b-517e-4ae4-924e-14396c94f5a9.jpg"
+                      alt="Паспорт"
+                      className="w-12 h-9 object-cover rounded-lg shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-white/80">Паспорт РФ</div>
+                      <div className="text-[10px] text-white/35">Серия 01 22 № 949898 · ГУ МВД по Алт. кр.</div>
+                      <div className="text-[10px] text-white/25">Выдан 31.10.2022</div>
+                    </div>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold shrink-0"
+                      style={{ background: "rgba(0,255,135,0.12)", color: "#00ff87" }}>✓ ВЕРИФИЦИРОВАН</span>
+                  </div>
+
+                  {/* УФИЦ */}
+                  <div className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:opacity-90 transition-all"
+                    style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}
+                    onClick={() => window.open("https://cdn.poehali.dev/projects/61a665c2-cff9-41a1-9a78-364c960d2ecc/bucket/f3a6e990-8e9c-4247-a447-45ccd7c4497e.jpg", "_blank")}>
+                    <img
+                      src="https://cdn.poehali.dev/projects/61a665c2-cff9-41a1-9a78-364c960d2ecc/bucket/f3a6e990-8e9c-4247-a447-45ccd7c4497e.jpg"
+                      alt="УФИЦ"
+                      className="w-12 h-9 object-cover rounded-lg shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-white/80">Документ УФИЦ · ст. 124</div>
+                      <div className="text-[10px] text-white/35">ФКУ ЛИУ-1 УФСИН по Алт. кр. · Барнаул</div>
+                      <div className="text-[10px] text-white/25">Действителен до 18.07.2028</div>
+                    </div>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold shrink-0"
+                      style={{ background: "rgba(245,158,11,0.12)", color: "#f59e0b" }}>✓ АКТИВЕН</span>
+                  </div>
+
+                  {/* Загруженные дополнительные документы */}
+                  {Object.entries(uploadedDocs).map(([docId, doc]) => {
+                    const meta = EXTRA_DOCS.find(d => d.id === docId);
+                    if (!meta) return null;
+                    return (
+                      <div key={docId} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:opacity-90 transition-all"
+                        style={{ background: `${meta.color}08`, border: `1px solid ${meta.color}25` }}
+                        onClick={() => window.open(doc.url, "_blank")}>
+                        <div className="w-12 h-9 rounded-lg flex items-center justify-center shrink-0"
+                          style={{ background: `${meta.color}15` }}>
+                          <Icon name={meta.icon as "Hash"} size={18} style={{ color: meta.color }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-white/80">{meta.label}</div>
+                          <div className="text-[10px] text-white/35 truncate">{doc.name}</div>
+                          <div className="text-[10px] text-white/25">Загружено: {doc.date}</div>
+                        </div>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold shrink-0"
+                          style={{ background: `${meta.color}15`, color: meta.color }}>✓</span>
+                      </div>
+                    );
+                  })}
+
+                  {/* Уникальный ID */}
+                  <div className="flex items-center justify-between px-3 py-2 rounded-xl mt-1"
+                    style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <span className="text-[10px] text-white/25 font-mono">ID: OWNER-NVV-19771014-ECSU2</span>
+                    <Icon name="Lock" size={10} className="text-white/20" />
                   </div>
                 </div>
               </div>
