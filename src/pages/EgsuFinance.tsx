@@ -43,6 +43,278 @@ function fmt(n: number, cur = "USD") {
   return new Intl.NumberFormat("ru-RU", { style: "currency", currency: cur, maximumFractionDigits: 0 }).format(n);
 }
 
+// ─── Платёжные системы ──────────────────────────────────────────────────────
+const WM_WALLET = "Z605142647127";
+const WM_BALANCE = "0.00";
+
+function PaymentSystems() {
+  const [qiwiTab, setQiwiTab] = useState<"rub" | "kzt">("rub");
+  const [wmCopied, setWmCopied] = useState(false);
+  const [activeModal, setActiveModal] = useState<"webmoney-topup" | "qiwi-topup" | "qiwi-info" | null>(null);
+  const [topupAmount, setTopupAmount] = useState("");
+
+  const copyWallet = () => {
+    navigator.clipboard.writeText(WM_WALLET).then(() => { setWmCopied(true); setTimeout(() => setWmCopied(false), 2000); });
+  };
+
+  return (
+    <>
+      {/* Модальные окна */}
+      {activeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(10px)" }}
+          onClick={() => setActiveModal(null)}>
+          <div className="w-full max-w-sm rounded-2xl overflow-hidden"
+            style={{ background: "#0a0f1a", border: "1px solid rgba(255,255,255,0.1)" }}
+            onClick={e => e.stopPropagation()}>
+            {/* WebMoney пополнение */}
+            {activeModal === "webmoney-topup" && (
+              <>
+                <div className="px-5 py-4 flex items-center justify-between"
+                  style={{ background: "linear-gradient(135deg, #1a3a2a, #0d2a1a)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(255,215,0,0.15)" }}>
+                      <span className="text-base">👁</span>
+                    </div>
+                    <div>
+                      <div className="text-white font-bold text-sm">Пополнить WebMoney</div>
+                      <div className="text-white/40 text-xs">{WM_WALLET}</div>
+                    </div>
+                  </div>
+                  <button onClick={() => setActiveModal(null)} className="text-white/30 hover:text-white/70">
+                    <Icon name="X" size={16} />
+                  </button>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div className="p-4 rounded-xl text-center" style={{ background: "rgba(255,215,0,0.06)", border: "1px solid rgba(255,215,0,0.2)" }}>
+                    <div className="text-white/40 text-xs mb-1">Кошелёк WMZ</div>
+                    <div className="text-yellow-400 font-mono font-bold text-lg">{WM_WALLET}</div>
+                    <button onClick={copyWallet} className="mt-2 text-xs text-white/40 hover:text-white/70 flex items-center gap-1 mx-auto">
+                      <Icon name={wmCopied ? "Check" : "Copy"} size={11} />
+                      {wmCopied ? "Скопировано!" : "Скопировать"}
+                    </button>
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/40 mb-1 block">Сумма пополнения (USD)</label>
+                    <input value={topupAmount} onChange={e => setTopupAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                  </div>
+                  <a href="https://www.webmoney.ru/purse/new-purse.aspx" target="_blank" rel="noopener noreferrer"
+                    className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg, #2d6a4f, #1b4332)", color: "#ffd700" }}>
+                    <Icon name="ExternalLink" size={14} />
+                    Перейти на WebMoney.ru
+                  </a>
+                  <div className="text-xs text-white/25 text-center">
+                    Переводы через WebMoney WMZ · Без комиссии внутри системы
+                  </div>
+                </div>
+              </>
+            )}
+            {/* QIWI пополнение */}
+            {(activeModal === "qiwi-topup" || activeModal === "qiwi-info") && (
+              <>
+                <div className="px-5 py-4 flex items-center justify-between"
+                  style={{ background: "linear-gradient(135deg, #ff6b00, #e55a00)", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/20">
+                      <span className="text-sm font-black text-white">Q</span>
+                    </div>
+                    <div>
+                      <div className="text-white font-bold text-sm">QIWI Кошелёк</div>
+                      <div className="text-white/70 text-xs">{qiwiTab === "rub" ? "Для оплаты в рублях" : "Для оплаты в тенге"}</div>
+                    </div>
+                  </div>
+                  <button onClick={() => setActiveModal(null)} className="text-white/60 hover:text-white">
+                    <Icon name="X" size={16} />
+                  </button>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+                    {(["rub", "kzt"] as const).map(t => (
+                      <button key={t} onClick={() => setQiwiTab(t)}
+                        className="flex-1 py-2 text-xs font-bold transition-all"
+                        style={{ background: qiwiTab === t ? "#ff6b00" : "transparent", color: qiwiTab === t ? "white" : "rgba(255,255,255,0.4)" }}>
+                        {t === "rub" ? "₽ Рубли" : "₸ Тенге"}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="p-4 rounded-xl text-center" style={{ background: "rgba(255,107,0,0.08)", border: "1px solid rgba(255,107,0,0.25)" }}>
+                    <div className="text-white/40 text-xs mb-1">{qiwiTab === "rub" ? "Баланс в рублях" : "Баланс в тенге"}</div>
+                    <div className="text-orange-400 font-bold text-2xl">0 {qiwiTab === "rub" ? "₽" : "₸"}</div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/40 mb-1 block">Сумма ({qiwiTab === "rub" ? "₽" : "₸"})</label>
+                    <input value={topupAmount} onChange={e => setTopupAmount(e.target.value)}
+                      placeholder="0"
+                      className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                  </div>
+                  <a href="https://qiwi.com" target="_blank" rel="noopener noreferrer"
+                    className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg, #ff6b00, #e55a00)", color: "white" }}>
+                    <Icon name="ExternalLink" size={14} />
+                    Открыть QIWI.com
+                  </a>
+                  {qiwiTab === "kzt" && (
+                    <div className="p-3 rounded-xl text-xs text-orange-300" style={{ background: "rgba(255,107,0,0.08)", border: "1px solid rgba(255,107,0,0.2)" }}>
+                      ⚠ Лимиты на счёте в тенге изменились — уточните актуальные лимиты на сайте QIWI
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <h2 className="font-display text-sm font-bold text-white/50 uppercase tracking-widest mb-3">Платёжные системы</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* ── WebMoney ── */}
+          <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #0d2a1a 0%, #1a3a2a 60%, #0d2a20 100%)", border: "1px solid rgba(45,106,79,0.5)", boxShadow: "0 4px 30px rgba(45,106,79,0.15)" }}>
+            {/* Шапка */}
+            <div className="px-5 pt-5 pb-4 relative">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,215,0,0.15)", border: "1px solid rgba(255,215,0,0.3)" }}>
+                    <span className="text-2xl">🔺</span>
+                  </div>
+                  <div>
+                    <div className="text-white font-bold text-base">WebMoney</div>
+                    <div className="text-white/40 text-xs">Международная система</div>
+                  </div>
+                </div>
+                <span className="text-[10px] px-2 py-1 rounded-full font-bold" style={{ background: "rgba(0,255,135,0.15)", color: "#00ff87" }}>Активен</span>
+              </div>
+              {/* Баланс */}
+              <div className="flex items-baseline gap-2 mb-3">
+                <span className="font-bold text-3xl text-white">{WM_BALANCE}</span>
+                <span className="text-yellow-400 font-bold text-lg">WMZ</span>
+              </div>
+              {/* Кошелёк */}
+              <div className="flex items-center gap-2 mb-4">
+                <span className="font-mono text-white/80 text-sm tracking-wider">{WM_WALLET}</span>
+                <button onClick={copyWallet}
+                  className="w-6 h-6 rounded-md flex items-center justify-center transition-all"
+                  style={{ background: "rgba(255,255,255,0.1)" }}>
+                  <Icon name={wmCopied ? "Check" : "Copy"} size={12} className={wmCopied ? "text-green-400" : "text-white/50"} />
+                </button>
+                <button className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: "rgba(255,255,255,0.1)" }}>
+                  <Icon name="Info" size={12} className="text-white/50" />
+                </button>
+              </div>
+              {/* Кнопки */}
+              <div className="flex gap-2">
+                <button onClick={() => setActiveModal("webmoney-topup")}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all hover:opacity-90 hover:scale-[1.02]"
+                  style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", color: "white" }}>
+                  ПОПОЛНИТЬ КОШЕЛЁК
+                </button>
+                <button className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                  <Icon name="ChevronDown" size={16} className="text-white/60" />
+                </button>
+              </div>
+            </div>
+            {/* Декор-линия снизу */}
+            <div className="h-1" style={{ background: "linear-gradient(90deg, #2d6a4f, #ffd700, #2d6a4f)" }} />
+          </div>
+
+          {/* ── QIWI ── */}
+          <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #1a0a00 0%, #2d1500 60%, #1a0900 100%)", border: "1px solid rgba(255,107,0,0.4)", boxShadow: "0 4px 30px rgba(255,107,0,0.12)" }}>
+            <div className="px-5 pt-5 pb-4">
+              {/* Шапка */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,107,0,0.2)", border: "1px solid rgba(255,107,0,0.4)" }}>
+                    <span className="text-2xl font-black text-orange-400">Q</span>
+                  </div>
+                  <div>
+                    <div className="text-white font-bold text-base">QIWI Кошелёк</div>
+                    <div className="text-white/40 text-xs">Россия · Казахстан</div>
+                  </div>
+                </div>
+                <span className="text-[10px] px-2 py-1 rounded-full font-bold" style={{ background: "rgba(0,255,135,0.15)", color: "#00ff87" }}>Активен</span>
+              </div>
+
+              {/* Два счёта */}
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <button onClick={() => setQiwiTab("rub")}
+                  className="p-3 rounded-xl text-left transition-all"
+                  style={{ background: qiwiTab === "rub" ? "rgba(255,107,0,0.25)" : "rgba(255,107,0,0.1)", border: `1px solid ${qiwiTab === "rub" ? "rgba(255,107,0,0.6)" : "rgba(255,107,0,0.2)"}` }}>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "#d32f2f" }}>
+                      <span className="text-[10px] text-white font-bold">₽</span>
+                    </div>
+                    <span className="text-white/60 text-[10px]">Рублёвый</span>
+                  </div>
+                  <div className="text-orange-400 font-bold text-sm">Для оплаты</div>
+                  <div className="text-white/50 text-[10px]">в рублях</div>
+                  <button className="mt-2 text-[10px] text-white font-bold px-2 py-1 rounded-lg w-full"
+                    style={{ background: "rgba(255,255,255,0.2)" }}>Открыть</button>
+                </button>
+                <button onClick={() => setQiwiTab("kzt")}
+                  className="p-3 rounded-xl text-left transition-all"
+                  style={{ background: qiwiTab === "kzt" ? "rgba(255,107,0,0.25)" : "rgba(255,107,0,0.1)", border: `1px solid ${qiwiTab === "kzt" ? "rgba(255,107,0,0.6)" : "rgba(255,107,0,0.2)"}` }}>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "#00acc1" }}>
+                      <span className="text-[10px] text-white font-bold">₸</span>
+                    </div>
+                    <span className="text-white/60 text-[10px]">Тенге</span>
+                  </div>
+                  <div className="text-orange-400 font-bold text-sm">Для оплаты</div>
+                  <div className="text-white/50 text-[10px]">в тенге</div>
+                  <div className="mt-2 text-center font-bold text-orange-300 text-sm">0 ₸</div>
+                </button>
+              </div>
+
+              {/* Кнопки */}
+              <div className="flex gap-2">
+                <button onClick={() => setActiveModal("qiwi-topup")}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all hover:opacity-90 hover:scale-[1.02]"
+                  style={{ background: "linear-gradient(135deg, #ff6b00, #e55a00)", color: "white" }}>
+                  ПОПОЛНИТЬ
+                </button>
+                <button onClick={() => setActiveModal("qiwi-info")}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                  <Icon name="Info" size={15} className="text-orange-400" />
+                </button>
+              </div>
+            </div>
+            <div className="h-1" style={{ background: "linear-gradient(90deg, #ff6b00, #ffc107, #ff6b00)" }} />
+          </div>
+        </div>
+
+        {/* Другие платёжные системы (мелкие) */}
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {[
+            { name: "ЮMoney", icon: "💛", color: "#8b00ff", sub: "Яндекс Деньги", href: "https://yoomoney.ru" },
+            { name: "СБП", icon: "⚡", color: "#00aaff", sub: "Быстрые платежи", href: "https://sbp.nspk.ru" },
+            { name: "Сбер Пэй", icon: "💚", color: "#00c853", sub: "SberPay", href: "https://www.sberbank.ru" },
+            { name: "Тинькофф", icon: "🟡", color: "#ffdd00", sub: "T-Pay", href: "https://www.tbank.ru" },
+          ].map(ps => (
+            <a key={ps.name} href={ps.href} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2.5 p-3 rounded-xl transition-all hover:scale-[1.02] hover:opacity-90"
+              style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${ps.color}20` }}>
+              <span className="text-xl shrink-0">{ps.icon}</span>
+              <div className="min-w-0">
+                <div className="text-white text-xs font-semibold truncate">{ps.name}</div>
+                <div className="text-white/30 text-[10px] truncate">{ps.sub}</div>
+              </div>
+              <Icon name="ExternalLink" size={10} className="text-white/20 shrink-0 ml-auto" />
+            </a>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function EgsuFinance() {
   const [tab, setTab] = useState<"overview" | "accounts" | "cards" | "transactions" | "rules">("overview");
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -213,6 +485,9 @@ export default function EgsuFinance() {
               </div>
             </div>
           )}
+
+          {/* ── Платёжные системы ── */}
+          <PaymentSystems />
 
           <div>
             <h2 className="font-display text-sm font-bold text-white/50 uppercase tracking-widest mb-3">Последние операции</h2>
