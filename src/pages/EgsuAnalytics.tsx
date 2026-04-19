@@ -5,6 +5,12 @@ import Icon from "@/components/ui/icon";
 const API = "https://functions.poehali.dev/e610af8a-f8c5-4c04-8d9b-092391fb0c70";
 const G = (s: string) => `linear-gradient(135deg, ${s})`;
 
+const EMPTY_DATA: AnalyticsData = {
+  finance: { total_balance_usd: 0, total_income_usd: 0, total_outcome_usd: 0, net_usd: 0, absorption_balance: 0 },
+  security: { total_events: 0, total_penalties_usd: 0, blocked_ips: 0 },
+  charts: { daily_finance: [], daily_attacks: [], accounts_distribution: [], top_transactions: [], attack_types: [] },
+};
+
 type AnalyticsData = {
   finance: { total_balance_usd: number; total_income_usd: number; total_outcome_usd: number; net_usd: number; absorption_balance: number };
   security: { total_events: number; total_penalties_usd: number; blocked_ips: number };
@@ -48,12 +54,6 @@ function MiniBar({ data, height = 60, colorKey }: { data: number[]; height?: num
 export default function EgsuAnalytics() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<"overview" | "finance" | "security" | "export" | "snapshots">("overview");
-  const EMPTY_DATA: AnalyticsData = {
-    finance: { total_balance_usd: 0, total_income_usd: 0, total_outcome_usd: 0, net_usd: 0, absorption_balance: 0 },
-    security: { total_events: 0, total_penalties_usd: 0, blocked_ips: 0 },
-    charts: { daily_finance: [], daily_attacks: [], accounts_distribution: [], top_transactions: [], attack_types: [] },
-  };
-
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [loading, setLoading] = useState(false);
