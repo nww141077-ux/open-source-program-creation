@@ -302,6 +302,65 @@ def fallback_answer(user_text: str) -> dict:
     return {"text": "⚠️ ИИ временно недоступен. Работаю в базовом режиме.\n\nЗадайте вопрос о праве, инцидентах или системе ECSU.", "suggestions": ["Правовые вопросы", "Инциденты системы", "Попробовать снова"]}
 
 
+# ── Правовая база из БД ───────────────────────────────────────────────────────
+
+def search_legal_db(user_text: str) -> str:
+    """Ищет релевантные статьи и документы в правовой БД по ключевым словам."""
+    lower = user_text.lower()
+    keywords = []
+
+    # Определяем ключевые слова из запроса
+    law_map = {
+        "убийств": ["убийство", "105"], "краж": ["кража", "158"], "мошенни": ["мошенничество", "159"],
+        "хулиган": ["хулиганство", "213"], "наркотик": ["наркотики", "228"],
+        "упк": ["упк", "уголовный процесс"], "гпк": ["гпк", "гражданский процесс"],
+        "конституц": ["конституция"], "право": ["право", "закон"],
+        "арест": ["арест", "задержание"], "суд": ["суд", "судопроизводство"],
+        "обвиняем": ["обвиняемый", "подозреваемый"], "адвокат": ["адвокат", "защитник"],
+        "иск": ["иск", "гражданский"], "штраф": ["штраф", "административный"],
+        "экология": ["экология", "окружающая среда"], "трудов": ["труд", "трудовой"],
+        "международн": ["международное право", "мгп"], "женевск": ["женевская конвенция"],
+    }
+    for key, words in law_map.items():
+        if key in lower:
+            keywords.extend(words)
+
+    if not keywords:
+        return ""
+
+    try:
+        conn = psycopg2.connect(os.environ["DATABASE_URL"])
+        cur = conn.cursor()
+
+        # Ищем статьи по тегам и содержимому
+        search_terms = keywords[:3]
+        conditions = " OR ".join([
+            f"(a.content ILIKE '%{t}%' OR a.title ILIKE '%{t}%' OR '{t}' = ANY(a.tags))"
+            for t in search_terms
+        ])
+        cur.execute(f"""
+            SELECT a.article_number, a.title, a.content, d.title as doc_title, d.code as doc_code
+            FROM {S}.egsu_legal_articles a
+            JOIN {S}.egsu_legal_documents d ON d.id = a.document_id
+            WHERE {conditions}
+            LIMIT 4
+        """)
+        rows = cur.fetchall()
+        conn.close()
+
+        if not rows:
+            return ""
+
+        lines = ["[ПРАВОВАЯ БАЗА ECSU — НАЙДЕННЫЕ НОРМЫ]"]
+        for art_num, title, content, doc_title, doc_code in rows:
+            lines.append(f"\n📖 {doc_title} ({doc_code}), {art_num}: {title}")
+            lines.append(f"   {content[:300]}{'...' if len(content) > 300 else ''}")
+        lines.append("[КОНЕЦ ПРАВОВОЙ БАЗЫ]")
+        return "\n".join(lines)
+    except Exception as e:
+        return ""
+
+
 # ── Сохранение истории ────────────────────────────────────────────────────────
 
 def save_message(cur, session_id: str, role: str, content: str):
@@ -395,7 +454,17 @@ def handler(event: dict, context) -> dict:
             if msg.get("role") in ("user", "assistant") and msg.get("content"):
                 messages.append({"role": msg["role"], "content": msg["content"]})
 
-        full_msg = f"{cpvoa_block}\n\n{user_message}" if cpvoa_block else user_message
+        # Ищем релевантные статьи в правовой БД
+        legal_block = search_legal_db(user_message)
+
+        # Собираем финальное сообщение: ЦПВОА + правовая база + вопрос
+        parts = []
+        if cpvoa_block:
+            parts.append(cpvoa_block)
+        if legal_block:
+            parts.append(legal_block)
+        parts.append(user_message)
+        full_msg = "\n\n".join(parts)
         messages.append({"role": "user", "content": full_msg})
 
         # Определяем провайдера
