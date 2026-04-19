@@ -21,6 +21,7 @@ GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:ge
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 YANDEX_URL = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 SYSTEM_PROMPT = """Ты — ИИ-АДМИНИСТРАТОР системы ECSU 2.0 (Единая Центральная Система Управления), заместитель владельца системы.
 
@@ -174,6 +175,19 @@ def call_yandex(messages: list, api_key: str, model: str = "yandexgpt-lite") -> 
     return result["result"]["alternatives"][0]["message"]["text"]
 
 
+def call_groq(messages: list, api_key: str, model: str = "llama3-8b-8192") -> str:
+    """Groq API — бесплатный быстрый провайдер (Llama 3, Mixtral)."""
+    msgs = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for msg in messages:
+        msgs.append({"role": msg["role"], "content": msg["content"]})
+    payload = {"model": model, "messages": msgs, "max_tokens": 1500, "temperature": 0.85}
+    result = http_post(GROQ_URL, payload, {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    })
+    return result["choices"][0]["message"]["content"]
+
+
 def call_custom(messages: list, api_key: str, custom_url: str, model: str = "gpt-3.5-turbo") -> str:
     """OpenAI-совместимый кастомный эндпоинт."""
     msgs = [{"role": "system", "content": SYSTEM_PROMPT}]
@@ -194,18 +208,19 @@ def auto_pick_provider(text: str, has_cpvoa: bool) -> str:
     lower = text.lower()
     # Предпочтения по типу запроса
     if has_cpvoa or any(w in lower for w in ["цпвоа", "аномал", "сигнал", "частот", "датчик"]):
-        preferred = ["gemini", "openai", "anthropic"]
+        preferred = ["groq", "gemini", "openai", "anthropic"]
     elif any(w in lower for w in ["документ", "контракт", "договор", "анализ текст", "составь"]):
-        preferred = ["anthropic", "gemini", "openai"]
+        preferred = ["groq", "anthropic", "gemini", "openai"]
     elif any(w in lower for w in ["код", "программ", "api", "json", "python", "javascript"]):
-        preferred = ["openai", "anthropic", "gemini"]
+        preferred = ["groq", "openai", "anthropic", "gemini"]
     elif any(w in lower for w in ["право", "закон", "упк", "мгп", "судеб", "иск"]):
-        preferred = ["gemini", "yandex", "anthropic"]
+        preferred = ["groq", "gemini", "yandex", "anthropic"]
     else:
-        preferred = ["gemini", "openai", "anthropic", "yandex"]
+        preferred = ["groq", "gemini", "openai", "anthropic", "yandex"]
 
-    # Выбираем первый доступный (YANDEX_SPEECHKIT — это SpeechKit, не GPT, не используем)
+    # Выбираем первый доступный
     available = {
+        "groq": bool(os.environ.get("GROQ_API_KEY")),
         "gemini": bool(os.environ.get("GEMINI_API_KEY")),
         "openai": bool(os.environ.get("OPENAI_API_KEY")),
         "anthropic": bool(os.environ.get("ANTHROPIC_API_KEY")),
@@ -214,11 +229,18 @@ def auto_pick_provider(text: str, has_cpvoa: bool) -> str:
     for p in preferred:
         if available.get(p):
             return p
+    # Groq — бесплатный резерв, если ничего не подходит
+    if available.get("groq"):
+        return "groq"
     return "fallback"
 
 
 def dispatch_call(provider: str, messages: list, client_key: str, model: str, custom_url: str) -> str:
     """Вызов нужного провайдера с приоритетом клиентского ключа над серверным."""
+    if provider == "groq":
+        key = client_key or os.environ.get("GROQ_API_KEY", "")
+        m = model or "llama3-8b-8192"
+        return call_groq(messages, key, m)
     if provider == "gemini":
         key = client_key or os.environ.get("GEMINI_API_KEY", "")
         m = model or "gemini-1.5-flash-latest"
@@ -307,6 +329,7 @@ def handler(event: dict, context) -> dict:
 
     if method == "GET":
         available = {
+            "groq": bool(os.environ.get("GROQ_API_KEY")),
             "gemini": bool(os.environ.get("GEMINI_API_KEY")),
             "openai": bool(os.environ.get("OPENAI_API_KEY")),
             "anthropic": bool(os.environ.get("ANTHROPIC_API_KEY")),
@@ -379,7 +402,7 @@ def handler(event: dict, context) -> dict:
             raw = dispatch_call(provider, messages, client_key, client_model, custom_url)
             result = parse_response(raw)
             if not used_model:
-                defaults = {"gemini": "gemini-1.5-flash", "openai": "gpt-4o", "anthropic": "claude-3-5-sonnet", "yandex": "yandexgpt-lite"}
+                defaults = {"groq": "llama3-8b-8192", "gemini": "gemini-1.5-flash", "openai": "gpt-4o", "anthropic": "claude-3-5-sonnet", "yandex": "yandexgpt-lite"}
                 used_model = defaults.get(provider, provider)
         except urllib.error.HTTPError as e:
             if e.code == 429:

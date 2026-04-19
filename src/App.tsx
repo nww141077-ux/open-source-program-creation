@@ -3,10 +3,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
-import GlobalLaw from "./pages/GlobalLaw";
 import EgsuDashboard from "./pages/EgsuDashboard";
 import EgsuReport from "./pages/EgsuReport";
 import EgsuDocs from "./pages/EgsuDocs";
@@ -43,7 +42,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/app" element={<Dashboard />} />
-          <Route path="/egsu" element={<GlobalLaw />} />
+          <Route path="/egsu" element={<Navigate to="/egsu/dashboard" replace />} />
           <Route path="/egsu/dashboard" element={<EgsuDashboard />} />
           <Route path="/egsu/report" element={<EgsuReport />} />
           <Route path="/egsu/docs" element={<EgsuDocs />} />
