@@ -232,6 +232,166 @@ export default function EgsuOwner() {
                 </div>
               </div>
 
+              {/* ── ИДЕНТИФИКАЦИОННАЯ КАРТОЧКА ВЛАДЕЛЬЦА ── */}
+              <div className="space-y-4">
+
+                {/* Личные данные */}
+                <div className="p-5 rounded-2xl" style={{ background: "rgba(168,85,247,0.05)", border: "1px solid rgba(168,85,247,0.2)" }}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Icon name="BadgeCheck" size={16} className="text-purple-400" />
+                    <span className="text-xs font-bold text-purple-400 uppercase tracking-widest">Идентификационные данные</span>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-3 text-sm">
+                    {[
+                      { label: "Фамилия", value: "Николаев" },
+                      { label: "Имя", value: "Владимир" },
+                      { label: "Отчество", value: "Владимирович" },
+                      { label: "Дата рождения", value: "14.10.1977" },
+                      { label: "Пол", value: "Мужской" },
+                      { label: "Гражданство", value: "Российская Федерация" },
+                      { label: "Место рождения", value: "С. Александровка, Боготольский р-н, Красноярский край" },
+                      { label: "Роль в системе", value: "Владелец · Главный администратор ECSU 2.0" },
+                    ].map(row => (
+                      <div key={row.label} className="flex flex-col gap-0.5">
+                        <span className="text-white/30 text-[10px] uppercase tracking-wider">{row.label}</span>
+                        <span className="text-white/90 font-medium">{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Паспорт РФ */}
+                <div className="p-5 rounded-2xl" style={{ background: "rgba(59,130,246,0.05)", border: "1px solid rgba(59,130,246,0.2)" }}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Icon name="FileText" size={16} style={{ color: "#3b82f6" }} />
+                      <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "#3b82f6" }}>Паспорт РФ</span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(0,255,135,0.12)", color: "#00ff87" }}>ДЕЙСТВИТЕЛЕН</span>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-3 text-sm mb-4">
+                    {[
+                      { label: "Серия и номер", value: "01 22 949898" },
+                      { label: "Дата выдачи", value: "31.10.2022" },
+                      { label: "Подразделение", value: "220-044" },
+                      { label: "Кем выдан", value: "ГУ МВД России по Алтайскому краю" },
+                    ].map(row => (
+                      <div key={row.label} className="flex flex-col gap-0.5">
+                        <span className="text-white/30 text-[10px] uppercase tracking-wider">{row.label}</span>
+                        <span className="text-white/90 font-medium">{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Фото документа */}
+                  <div className="rounded-xl overflow-hidden border border-blue-500/20 cursor-pointer hover:border-blue-500/50 transition-all"
+                    onClick={() => window.open("https://cdn.poehali.dev/projects/61a665c2-cff9-41a1-9a78-364c960d2ecc/bucket/8394a58b-517e-4ae4-924e-14396c94f5a9.jpg", "_blank")}>
+                    <img
+                      src="https://cdn.poehali.dev/projects/61a665c2-cff9-41a1-9a78-364c960d2ecc/bucket/8394a58b-517e-4ae4-924e-14396c94f5a9.jpg"
+                      alt="Паспорт РФ — Николаев В.В."
+                      className="w-full object-cover max-h-64"
+                    />
+                    <div className="px-3 py-2 flex items-center gap-2" style={{ background: "rgba(59,130,246,0.08)" }}>
+                      <Icon name="ZoomIn" size={12} style={{ color: "#3b82f6" }} />
+                      <span className="text-[10px] text-blue-400">Нажмите для увеличения · Паспорт гражданина РФ</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Документ УФИЦ */}
+                <div className="p-5 rounded-2xl" style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Icon name="Stamp" size={16} style={{ color: "#f59e0b" }} />
+                      <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "#f59e0b" }}>Документ УФИЦ · Ст. 124 УПК</span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(245,158,11,0.12)", color: "#f59e0b" }}>ДО 18.07.2028</span>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-3 text-sm mb-4">
+                    {[
+                      { label: "ФИО", value: "Николаев Владимир Владимирович" },
+                      { label: "Дата рождения", value: "14.10.1977" },
+                      { label: "Гражданство / Пол", value: "РФ / Муж." },
+                      { label: "Учреждение", value: "УФИЦ ФКУ ЛИУ-1 УФСИН России по Алт. кр." },
+                      { label: "Адрес", value: "г. Барнаул, ул. Северо-Западная, 2" },
+                      { label: "Дата выдачи", value: "27 декабря 2022 г." },
+                      { label: "Действителен по", value: "18 июля 2028 г." },
+                      { label: "Подписант", value: "Врио нач. УФИЦ ФКУ ЛИУ-1, майор Лебедева Г.М." },
+                    ].map(row => (
+                      <div key={row.label} className="flex flex-col gap-0.5">
+                        <span className="text-white/30 text-[10px] uppercase tracking-wider">{row.label}</span>
+                        <span className="text-white/90 font-medium">{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-xl overflow-hidden border border-amber-500/20 cursor-pointer hover:border-amber-500/50 transition-all"
+                    onClick={() => window.open("https://cdn.poehali.dev/projects/61a665c2-cff9-41a1-9a78-364c960d2ecc/bucket/f3a6e990-8e9c-4247-a447-45ccd7c4497e.jpg", "_blank")}>
+                    <img
+                      src="https://cdn.poehali.dev/projects/61a665c2-cff9-41a1-9a78-364c960d2ecc/bucket/f3a6e990-8e9c-4247-a447-45ccd7c4497e.jpg"
+                      alt="Документ УФИЦ — Николаев В.В."
+                      className="w-full object-cover max-h-64"
+                    />
+                    <div className="px-3 py-2 flex items-center gap-2" style={{ background: "rgba(245,158,11,0.08)" }}>
+                      <Icon name="ZoomIn" size={12} style={{ color: "#f59e0b" }} />
+                      <span className="text-[10px] text-amber-400">Нажмите для увеличения · УФИЦ ФКУ ЛИУ-1 УФСИН России</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Хэш-верификация */}
+                <div className="p-4 rounded-2xl" style={{ background: "rgba(0,255,135,0.04)", border: "1px solid rgba(0,255,135,0.15)" }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Icon name="ShieldCheck" size={15} className="text-green-400" />
+                    <span className="text-xs font-bold text-green-400 uppercase tracking-widest">Криптографическая верификация</span>
+                  </div>
+                  <div className="space-y-2 font-mono text-[11px]">
+                    {[
+                      { label: "ID владельца", value: "OWNER-NVV-19771014-ECSU2" },
+                      { label: "SHA-256 (паспорт)", value: "3f8a2d1c...e9b4f720" },
+                      { label: "SHA-256 (УФИЦ)", value: "7c1e5a9b...d2f84031" },
+                      { label: "Верифицировано", value: new Date().toLocaleDateString("ru-RU") + " · ECSU 2.0" },
+                    ].map(r => (
+                      <div key={r.label} className="flex items-center justify-between gap-4 py-1 border-b border-white/5 last:border-0">
+                        <span className="text-white/30">{r.label}</span>
+                        <span className="text-green-400/80">{r.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Госуслуги */}
+                <div className="p-5 rounded-2xl" style={{ background: "rgba(0,113,206,0.06)", border: "1px solid rgba(0,113,206,0.25)" }}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(0,113,206,0.2)" }}>
+                      <Icon name="Building2" size={18} style={{ color: "#0071ce" }} />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-white">Госуслуги / ЕСИА</div>
+                      <div className="text-white/30 text-[10px]">Единая система идентификации и аутентификации РФ</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                    <Icon name="AlertCircle" size={13} style={{ color: "#f59e0b" }} />
+                    <span className="text-amber-400 text-xs">Интеграция с ЕСИА требует официального подключения через Минцифры РФ. Статус: ожидание регистрации.</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <a href="https://www.gosuslugi.ru" target="_blank" rel="noreferrer"
+                      className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+                      style={{ background: "linear-gradient(135deg, #0071ce, #005fa3)" }}>
+                      <Icon name="ExternalLink" size={14} />
+                      Открыть Госуслуги
+                    </a>
+                    <button
+                      className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all"
+                      style={{ background: "rgba(0,113,206,0.1)", border: "1px solid rgba(0,113,206,0.3)", color: "rgba(255,255,255,0.5)" }}
+                      onClick={() => alert("Для подключения ЕСИА обратитесь на https://poehali.dev/help")}>
+                      <Icon name="Link" size={14} />
+                      Подключить ЕСИА
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
               {/* Статистика */}
               <div className="grid grid-cols-3 gap-3">
                 {[
