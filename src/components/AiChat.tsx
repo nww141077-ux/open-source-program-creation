@@ -124,6 +124,149 @@ const CPVOA_QUICK = [
   "ЦПВОА: что делать при обнаружении сигнала?",
 ];
 
+// ─── Бесплатные открытые серверы ──────────────────────────────────────────
+interface OpenServer {
+  id: string;
+  name: string;
+  url: string;
+  model: string;
+  description: string;
+  icon: string;
+  color: string;
+  free: true;
+}
+
+interface PaidServer {
+  id: string;
+  name: string;
+  url: string;
+  model: string;
+  description: string;
+  icon: string;
+  color: string;
+  free: false;
+  price: string;
+  signupUrl: string;
+}
+
+type AiServer = OpenServer | PaidServer;
+
+const FREE_SERVERS: OpenServer[] = [
+  {
+    id: "ollama-local",
+    name: "Ollama (локальный)",
+    url: "http://localhost:11434/v1/chat/completions",
+    model: "llama3",
+    description: "Локальный LLM на вашем ПК — полностью бесплатно",
+    icon: "Server",
+    color: "#00c8a0",
+    free: true,
+  },
+  {
+    id: "lmstudio-local",
+    name: "LM Studio (локальный)",
+    url: "http://localhost:1234/v1/chat/completions",
+    model: "local-model",
+    description: "LM Studio с любой GGUF-моделью",
+    icon: "Cpu",
+    color: "#6366f1",
+    free: true,
+  },
+  {
+    id: "together-free",
+    name: "Together AI (бесплатный)",
+    url: "https://api.together.xyz/v1/chat/completions",
+    model: "mistralai/Mistral-7B-Instruct-v0.2",
+    description: "Mistral 7B через Together AI — $1 кредит при регистрации",
+    icon: "Globe",
+    color: "#0ea5e9",
+    free: true,
+  },
+  {
+    id: "groq-free",
+    name: "Groq (бесплатный)",
+    url: "https://api.groq.com/openai/v1/chat/completions",
+    model: "llama3-8b-8192",
+    description: "Llama 3 8B — бесплатный уровень, нужен API ключ",
+    icon: "Zap",
+    color: "#f59e0b",
+    free: true,
+  },
+  {
+    id: "openrouter-free",
+    name: "OpenRouter (бесплатные модели)",
+    url: "https://openrouter.ai/api/v1/chat/completions",
+    model: "mistralai/mistral-7b-instruct:free",
+    description: "Бесплатные модели через OpenRouter (Mistral, Llama и др.)",
+    icon: "Network",
+    color: "#8b5cf6",
+    free: true,
+  },
+];
+
+const PAID_SERVERS: PaidServer[] = [
+  {
+    id: "openai-paid",
+    name: "OpenAI GPT-4o",
+    url: "https://api.openai.com/v1/chat/completions",
+    model: "gpt-4o",
+    description: "Самая мощная модель OpenAI — ~$0.005 за 1K токенов",
+    icon: "Brain",
+    color: "#00a67e",
+    free: false,
+    price: "от $5/мес",
+    signupUrl: "https://platform.openai.com",
+  },
+  {
+    id: "anthropic-paid",
+    name: "Anthropic Claude 3.5",
+    url: "https://api.anthropic.com/v1/messages",
+    model: "claude-3-5-sonnet-20241022",
+    description: "Лучший для анализа документов и кода",
+    icon: "Shield",
+    color: "#cc785c",
+    free: false,
+    price: "от $3/мес",
+    signupUrl: "https://console.anthropic.com",
+  },
+  {
+    id: "mistral-paid",
+    name: "Mistral Large",
+    url: "https://api.mistral.ai/v1/chat/completions",
+    model: "mistral-large-latest",
+    description: "Европейская альтернатива — отличный баланс цена/качество",
+    icon: "Flame",
+    color: "#f97316",
+    free: false,
+    price: "от $2/мес",
+    signupUrl: "https://console.mistral.ai",
+  },
+  {
+    id: "cohere-paid",
+    name: "Cohere Command R+",
+    url: "https://api.cohere.ai/v1/chat",
+    model: "command-r-plus",
+    description: "Оптимизирован для RAG и корпоративных задач",
+    icon: "Database",
+    color: "#06b6d4",
+    free: false,
+    price: "от $1/мес",
+    signupUrl: "https://dashboard.cohere.com",
+  },
+  {
+    id: "deepseek-paid",
+    name: "DeepSeek V3",
+    url: "https://api.deepseek.com/v1/chat/completions",
+    model: "deepseek-chat",
+    description: "Мощная китайская модель — самые низкие цены",
+    icon: "Search",
+    color: "#3b82f6",
+    free: false,
+    price: "от $0.1/мес",
+    signupUrl: "https://platform.deepseek.com",
+  },
+];
+
 function renderMarkdown(text: string) {
   return text
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
@@ -149,7 +292,7 @@ const LS_MODELS = "ezsu_ai_models";
 const LS_CUSTOM_URL = "ezsu_ai_custom_url";
 
 export default function AiChat({ onClose, initialCpvoaContext, initialMessage }: Props) {
-  const [tab, setTab] = useState<"chat" | "cpvoa" | "admin" | "settings">(initialCpvoaContext ? "cpvoa" : "chat");
+  const [tab, setTab] = useState<"chat" | "cpvoa" | "admin" | "settings" | "servers">(initialCpvoaContext ? "cpvoa" : "chat");
   const [cpvoaContext, setCpvoaContext] = useState<CpvoaContext | null>(initialCpvoaContext ?? null);
   const [cpvoaSynced, setCpvoaSynced] = useState(!!initialCpvoaContext);
 
@@ -335,6 +478,85 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
 
   const [adminLoading, setAdminLoading] = useState(false);
 
+  // ─── Серверы ──────────────────────────────────────────────────────────────
+  const [serverStatuses, setServerStatuses] = useState<Record<string, "checking" | "online" | "offline">>({});
+  const [connectedServer, setConnectedServer] = useState<AiServer | null>(null);
+  const [serverKeys, setServerKeys] = useState<Record<string, string>>({});
+  const [serverKeyInput, setServerKeyInput] = useState<Record<string, string>>({});
+
+  const checkServer = async (server: OpenServer | PaidServer) => {
+    setServerStatuses(prev => ({ ...prev, [server.id]: "checking" }));
+    try {
+      const res = await fetch(server.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(serverKeys[server.id] ? { Authorization: `Bearer ${serverKeys[server.id]}` } : {}) },
+        body: JSON.stringify({ model: server.model, messages: [{ role: "user", content: "hi" }], max_tokens: 5 }),
+        signal: AbortSignal.timeout(5000),
+      });
+      setServerStatuses(prev => ({ ...prev, [server.id]: res.ok || res.status === 401 ? "online" : "offline" }));
+      return res.ok || res.status === 401;
+    } catch {
+      setServerStatuses(prev => ({ ...prev, [server.id]: "offline" }));
+      return false;
+    }
+  };
+
+  const autoConnectFree = async () => {
+    for (const server of FREE_SERVERS) {
+      const ok = await checkServer(server);
+      if (ok) {
+        setConnectedServer(server);
+        setCustomUrl(server.url);
+        setSelectedProvider("custom");
+        setSelectedModels(prev => ({ ...prev, custom: server.model }));
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          text: `✅ **Автоподключение выполнено!**\n\nПодключён к серверу **${server.name}**\nМодель: \`${server.model}\`\n\n${server.description}`,
+          time: getTime(),
+          suggestions: ["Проверь связь", "Что ты умеешь?", "Привет!"],
+        }]);
+        setTab("chat");
+        return;
+      }
+    }
+    setMessages(prev => [...prev, {
+      role: "assistant",
+      text: "⚠️ **Автоподключение не удалось**\n\nНи один из бесплатных серверов не доступен. Попробуйте:\n• Установить **Ollama** на свой ПК\n• Зарегистрироваться на **Groq** или **OpenRouter**\n• Использовать платный сервер",
+      time: getTime(),
+      suggestions: ["Открыть список серверов", "Попробовать снова"],
+    }]);
+    setTab("chat");
+  };
+
+  const connectServer = (server: AiServer) => {
+    const key = serverKeys[server.id] || serverKeyInput[server.id] || "";
+    if (!server.free && !key) return;
+    if (key) setServerKeys(prev => ({ ...prev, [server.id]: key }));
+    setConnectedServer(server);
+    setCustomUrl(server.url);
+    setSelectedProvider("custom");
+    setSelectedModels(prev => ({ ...prev, custom: server.model }));
+    if (key) setApiKeys(prev => ({ ...prev, custom: key }));
+    setMessages(prev => [...prev, {
+      role: "assistant",
+      text: `✅ **Подключено к ${server.name}**\n\nМодель: \`${server.model}\`\n\n${server.description}`,
+      time: getTime(),
+      suggestions: ["Проверь связь", "Что ты умеешь?"],
+    }]);
+    setTab("chat");
+  };
+
+  // ─── Вставка из буфера ────────────────────────────────────────────────────
+  const pasteFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) setInput(prev => prev + text);
+      inputRef.current?.focus();
+    } catch {
+      inputRef.current?.focus();
+    }
+  };
+
   const runAdminCmd = async (cmd: string, label: string) => {
     setAdminLoading(true);
     try {
@@ -401,6 +623,17 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
             style={{ background: showTopics ? "rgba(168,85,247,0.2)" : "transparent" }}
           >
             <Icon name="LayoutGrid" size={14} />
+          </button>
+          <button
+            onClick={() => setTab("servers")}
+            title="Серверы ИИ"
+            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+            style={{
+              background: tab === "servers" ? "rgba(0,200,160,0.2)" : connectedServer ? "rgba(0,200,160,0.1)" : "transparent",
+              color: connectedServer ? "#00c8a0" : "rgba(255,255,255,0.4)",
+            }}
+          >
+            <Icon name="Server" size={14} />
           </button>
           <button
             onClick={clearChat}
@@ -651,6 +884,162 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
         </div>
       )}
 
+      {/* ── TAB: СЕРВЕРЫ ── */}
+      {tab === "servers" && (
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(0,200,160,0.3) transparent" }}>
+
+          {/* Текущее подключение */}
+          {connectedServer && (
+            <div className="p-3 rounded-xl" style={{ background: "rgba(0,200,160,0.08)", border: "1px solid rgba(0,200,160,0.25)" }}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs font-bold text-emerald-400">Подключено: {connectedServer.name}</span>
+              </div>
+              <div className="text-[10px] text-white/40">{connectedServer.model} · {connectedServer.url.replace("https://", "").split("/")[0]}</div>
+            </div>
+          )}
+
+          {/* Автоподключение */}
+          <div className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="text-[10px] uppercase tracking-widest text-white/30 mb-2">Автоподключение</div>
+            <p className="text-xs text-white/45 mb-3">Система автоматически найдёт и подключится к первому доступному бесплатному серверу</p>
+            <button
+              onClick={autoConnectFree}
+              className="w-full py-2 rounded-xl text-xs font-bold transition-all hover:scale-[1.02]"
+              style={{ background: "linear-gradient(135deg, #00c8a0, #3b82f6)", color: "white" }}
+            >
+              <Icon name="Zap" size={13} className="inline mr-1.5" />
+              Найти и подключиться автоматически
+            </button>
+          </div>
+
+          {/* Бесплатные серверы */}
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-white/30 mb-2">🆓 Бесплатные серверы</div>
+            <div className="space-y-2">
+              {FREE_SERVERS.map(server => {
+                const status = serverStatuses[server.id];
+                const isConnected = connectedServer?.id === server.id;
+                return (
+                  <div key={server.id} className="rounded-xl overflow-hidden"
+                    style={{ border: `1px solid ${isConnected ? server.color + "60" : "rgba(255,255,255,0.07)"}`, background: isConnected ? `${server.color}10` : "rgba(255,255,255,0.02)" }}>
+                    <div className="flex items-center gap-2.5 px-3 py-2.5">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: `${server.color}22`, border: `1px solid ${server.color}40` }}>
+                        <Icon name={server.icon as "Server"} size={13} style={{ color: server.color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-semibold text-white/90">{server.name}</span>
+                          {status === "checking" && <span className="text-[9px] text-white/40 animate-pulse">проверка...</span>}
+                          {status === "online" && <span className="text-[9px] text-emerald-400">● онлайн</span>}
+                          {status === "offline" && <span className="text-[9px] text-red-400">● офлайн</span>}
+                        </div>
+                        <div className="text-[10px] text-white/35 truncate">{server.description}</div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => checkServer(server)}
+                          className="w-6 h-6 rounded-md flex items-center justify-center text-white/25 hover:text-white/60 transition-colors"
+                          style={{ background: "rgba(255,255,255,0.05)" }}>
+                          <Icon name="RefreshCw" size={11} />
+                        </button>
+                        <button
+                          onClick={() => connectServer(server)}
+                          className="px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all hover:scale-105"
+                          style={{
+                            background: isConnected ? `${server.color}30` : `${server.color}20`,
+                            color: server.color,
+                            border: `1px solid ${server.color}40`,
+                          }}>
+                          {isConnected ? "✓" : "Подкл."}
+                        </button>
+                      </div>
+                    </div>
+                    {/* Поле ключа для серверов требующих ключ */}
+                    {(server.id === "groq-free" || server.id === "openrouter-free" || server.id === "together-free") && (
+                      <div className="px-3 pb-2.5 pt-0" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                        <input
+                          type="password"
+                          placeholder={`API ключ ${server.name} (необязательно для теста)`}
+                          value={serverKeyInput[server.id] ?? ""}
+                          onChange={e => setServerKeyInput(prev => ({ ...prev, [server.id]: e.target.value }))}
+                          className="w-full bg-transparent text-white text-[10px] outline-none px-2 py-1.5 rounded-lg"
+                          style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.08)" }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Платные серверы */}
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-white/30 mb-2">💳 Платные серверы (высокое качество)</div>
+            <div className="space-y-2">
+              {PAID_SERVERS.map(server => {
+                const isConnected = connectedServer?.id === server.id;
+                const key = serverKeyInput[server.id] ?? "";
+                return (
+                  <div key={server.id} className="rounded-xl overflow-hidden"
+                    style={{ border: `1px solid ${isConnected ? server.color + "60" : "rgba(255,255,255,0.07)"}`, background: isConnected ? `${server.color}10` : "rgba(255,255,255,0.02)" }}>
+                    <div className="flex items-center gap-2.5 px-3 py-2.5">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: `${server.color}22`, border: `1px solid ${server.color}40` }}>
+                        <Icon name={server.icon as "Brain"} size={13} style={{ color: server.color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-semibold text-white/90">{server.name}</span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                            style={{ background: `${server.color}20`, color: server.color }}>{server.price}</span>
+                        </div>
+                        <div className="text-[10px] text-white/35 truncate">{server.description}</div>
+                      </div>
+                      <a
+                        href={server.signupUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white/70 transition-colors shrink-0"
+                        style={{ background: "rgba(255,255,255,0.05)" }}
+                        title="Зарегистрироваться">
+                        <Icon name="ExternalLink" size={11} />
+                      </a>
+                    </div>
+                    <div className="px-3 pb-2.5" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="password"
+                          placeholder={`API ключ для ${server.name}...`}
+                          value={key}
+                          onChange={e => setServerKeyInput(prev => ({ ...prev, [server.id]: e.target.value }))}
+                          className="flex-1 bg-transparent text-white text-[10px] outline-none px-2 py-1.5 rounded-lg"
+                          style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.08)" }}
+                        />
+                        <button
+                          onClick={() => key && connectServer(server)}
+                          disabled={!key}
+                          className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all hover:scale-105 disabled:opacity-30"
+                          style={{ background: `linear-gradient(135deg, ${server.color}, #3b82f6)`, color: "white" }}>
+                          {isConnected ? "✓ Активен" : "Подкл."}
+                        </button>
+                      </div>
+                      {!key && <div className="text-[9px] text-white/25 mt-1">Введите API ключ для подключения · <a href={server.signupUrl} target="_blank" rel="noreferrer" className="underline" style={{ color: server.color }}>Получить ключ →</a></div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl text-[10px] text-white/25" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+            API ключи хранятся только в вашем браузере и не передаются на сервер ECSU.
+          </div>
+        </div>
+      )}
+
       {/* ── TAB: ЦПВОА ── */}
       {tab === "cpvoa" && (
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(76,175,80,0.3) transparent" }}>
@@ -854,6 +1243,14 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
                   t.style.height = Math.min(t.scrollHeight, 96) + "px";
                 }}
               />
+              <button
+                onClick={pasteFromClipboard}
+                title="Вставить из буфера обмена"
+                className="w-7 h-7 rounded-lg flex items-center justify-center transition-all hover:scale-110 shrink-0 text-white/30 hover:text-white/70"
+                style={{ background: "rgba(255,255,255,0.05)" }}
+              >
+                <Icon name="Clipboard" size={13} />
+              </button>
               <button
                 onClick={() => send()}
                 disabled={!input.trim() || loading}
