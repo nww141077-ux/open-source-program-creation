@@ -288,18 +288,20 @@ interface Props {
   initialMessage?: string;
 }
 
-const LS_PROVIDER = "ezsu_ai_provider";
-const LS_KEYS = "ezsu_ai_keys";
-const LS_MODELS = "ezsu_ai_models";
-const LS_CUSTOM_URL = "ezsu_ai_custom_url";
+const LS_PROVIDER = "ecsu_ai_provider_v3"; // v3 — принудительный сброс кэша
+const LS_KEYS = "ecsu_ai_keys_v3";
+const LS_MODELS = "ecsu_ai_models_v3";
+const LS_CUSTOM_URL = "ecsu_ai_custom_url_v3";
 
-// Принудительная миграция: сбрасываем любой старый провайдер на yandex
-// (убираем "auto" и любой провайдер без ключа)
-{
-  const saved = localStorage.getItem(LS_PROVIDER);
-  if (!saved || saved === "auto" || saved === "gemini" || saved === "openai" || saved === "anthropic") {
-    localStorage.setItem(LS_PROVIDER, "yandex");
-  }
+// Удаляем все старые ключи предыдущих версий
+["ezsu_ai_provider","ezsu_ai_keys","ezsu_ai_models","ezsu_ai_custom_url",
+ "ecsu_ai_provider","ecsu_ai_keys","ecsu_ai_models","ecsu_ai_custom_url",
+ "ecsu_ai_provider_v2","ecsu_ai_keys_v2","ecsu_ai_models_v2","ecsu_ai_custom_url_v2",
+].forEach(k => localStorage.removeItem(k));
+
+// Устанавливаем yandex по умолчанию
+if (!localStorage.getItem(LS_PROVIDER)) {
+  localStorage.setItem(LS_PROVIDER, "yandex");
 }
 
 export default function AiChat({ onClose, initialCpvoaContext, initialMessage }: Props) {
@@ -308,12 +310,9 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
   const [cpvoaSynced, setCpvoaSynced] = useState(!!initialCpvoaContext);
 
   // ─── Настройки провайдера ─────────────────────────────────────────────────
-  const [selectedProvider, setSelectedProvider] = useState<ProviderId>(() => {
-    const v = localStorage.getItem(LS_PROVIDER) as ProviderId;
-    // Принудительно yandex если нет ключа у сохранённого провайдера
-    if (!v || v === "auto" || v === "gemini" || v === "openai" || v === "anthropic") return "yandex";
-    return v;
-  });
+  const [selectedProvider, setSelectedProvider] = useState<ProviderId>(
+    () => (localStorage.getItem(LS_PROVIDER) as ProviderId) || "yandex"
+  );
   const [apiKeys, setApiKeys] = useState<Record<ProviderId, string>>(() => {
     try { return JSON.parse(localStorage.getItem(LS_KEYS) ?? "{}"); } catch { return {}; }
   });
