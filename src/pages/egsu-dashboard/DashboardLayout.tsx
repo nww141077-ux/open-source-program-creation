@@ -121,6 +121,12 @@ export default function DashboardLayout({ activeTab, setActiveTab, chatOpen, set
             <Icon name="Package" size={14} />
             <span className="hidden md:block">Экспорт</span>
           </button>
+          <button onClick={() => navigate("/egsu/migration")}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105"
+            style={{ background: "rgba(110,64,201,0.12)", color: "#9b70e0", border: "1px solid rgba(110,64,201,0.35)" }}>
+            <Icon name="ArrowRightLeft" size={14} />
+            <span className="hidden md:block">Эмиграция</span>
+          </button>
           <button onClick={() => navigate("/egsu/install")}
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105"
             style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)" }}>
