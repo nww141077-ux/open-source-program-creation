@@ -29,6 +29,7 @@ import EgsuArk from "./pages/EgsuArk";
 import EgsuMigration from "./pages/EgsuMigration";
 import EgsuStart from "./pages/EgsuStart";
 import EgsuVip from "./pages/EgsuVip";
+import EgsuOrgans from "./pages/EgsuOrgans";
 import AdminLogin from "./pages/AdminLogin";
 import AdminPanel from "./pages/AdminPanel";
 import MyModel from "./pages/MyModel";
@@ -69,6 +70,7 @@ const App = () => (
           <Route path="/egsu/ark" element={<EgsuArk />} />
           <Route path="/egsu/migration" element={<EgsuMigration />} />
           <Route path="/egsu/vip" element={<EgsuVip />} />
+          <Route path="/egsu/organs" element={<EgsuOrgans />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/panel" element={<AdminPanel />} />
           <Route path="/my-model" element={<MyModel />} />

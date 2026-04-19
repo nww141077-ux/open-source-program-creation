@@ -64,6 +64,15 @@ const CITIZEN_TOOLS = [
     badge: null,
   },
   {
+    path: "/egsu/organs",
+    icon: "Building2",
+    color: "#00ff87",
+    label: "Органы системы ECSU",
+    desc: "10 органов ECSU принимают и направляют обращения в госведомства",
+    law: "Конституция РФ ст. 33; ФЗ №59",
+    badge: "НОВОЕ",
+  },
+  {
     path: "/egsu/vip",
     icon: "ShieldCheck",
     color: "#a855f7",
@@ -84,8 +93,8 @@ const SYSTEM_STATUS = [
 ];
 
 const QUICK_ACTIONS = [
+  { label: "Органы ECSU",        path: "/egsu/organs",   icon: "Building2",     color: "#00ff87" },
   { label: "Анонимная жалоба",   path: "/egsu/vip",      icon: "ShieldCheck",   color: "#a855f7" },
-  { label: "Проверить инциденты",path: "/egsu/cpvoa",    icon: "Radar",         color: "#2196F3" },
   { label: "Обращение в орган",  path: "/egsu/appeal",   icon: "FileText",      color: "#10b981" },
   { label: "Экстренные службы",  path: "/egsu/emergency",icon: "PhoneCall",     color: "#f43f5e" },
 ];

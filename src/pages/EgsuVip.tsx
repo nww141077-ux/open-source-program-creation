@@ -82,25 +82,64 @@ const VIP_ROLES: Record<VipRole, { label: string; icon: string; color: string; n
   whistleblower:  { label: "Разоблачитель (виссл-блоур)", icon: "Bell", color: "#f97316", note: "ФЗ №273 ст. 9 — защита лица, сообщившего о коррупции" },
 };
 
-const TARGET_ORGS = [
-  "Генеральная прокуратура РФ",
-  "Следственный комитет РФ",
-  "ФСБ России — Управление собственной безопасности",
-  "МВД России — Департамент собственной безопасности",
-  "Счётная палата РФ",
-  "Росфинмониторинг",
-  "Роспотребнадзор",
-  "Росприроднадзор",
-  "Федеральная антимонопольная служба (ФАС)",
-  "Уполномоченный по правам человека (Омбудсмен)",
-  "Совет при Президенте РФ по правам человека (СПЧ)",
-  "Конституционный суд РФ",
-  "Европейский суд по правам человека (ЕСПЧ)",
-  "GRECO (антикоррупционный орган Совета Европы)",
-  "UNODC (ООН — наркотики и преступность)",
-  "Transparency International",
-  "Международный уголовный суд (МУС)",
+// ─── Сгруппированные органы для выбора ───────────────────────────────────────
+interface TargetGroup {
+  label: string;
+  color: string;
+  orgs: string[];
+}
+
+const TARGET_GROUPS: TargetGroup[] = [
+  {
+    label: "🔷 Органы системы ECSU 2.0",
+    color: "#00ff87",
+    orgs: [
+      "ECSU: Главный орган ECSU (все категории)",
+      "ECSU: Антикоррупционный орган ECSU",
+      "ECSU: Орган безопасности ECSU",
+      "ECSU: Орган прав человека ECSU",
+      "ECSU: Орган киберзащиты ECSU",
+      "ECSU: Орган экологии ECSU",
+      "ECSU: Орган ЧС ECSU",
+      "ECSU: Правовой орган ECSU",
+      "ECSU: Медиа и информационный орган ECSU",
+      "ECSU: Финансовый орган ECSU",
+    ],
+  },
+  {
+    label: "🏛️ Федеральные органы РФ",
+    color: "#a855f7",
+    orgs: [
+      "Генеральная прокуратура РФ",
+      "Следственный комитет РФ",
+      "ФСБ России — Управление собственной безопасности",
+      "МВД России — Департамент собственной безопасности",
+      "Счётная палата РФ",
+      "Росфинмониторинг",
+      "Роспотребнадзор",
+      "Росприроднадзор",
+      "Федеральная антимонопольная служба (ФАС)",
+      "Уполномоченный по правам человека (Омбудсмен)",
+      "Совет при Президенте РФ по правам человека (СПЧ)",
+      "Конституционный суд РФ",
+    ],
+  },
+  {
+    label: "🌐 Международные органы",
+    color: "#3b82f6",
+    orgs: [
+      "Европейский суд по правам человека (ЕСПЧ)",
+      "GRECO (антикоррупционный орган Совета Европы)",
+      "UNODC (ООН — наркотики и преступность)",
+      "Transparency International",
+      "Международный уголовный суд (МУС)",
+      "Комитет ООН по правам человека",
+    ],
+  },
 ];
+
+// Для совместимости — плоский список
+const TARGET_ORGS = TARGET_GROUPS.flatMap(g => g.orgs);
 
 // Генерация анонимного хэша-идентификатора
 function generateAnonHash(): string {
@@ -431,21 +470,31 @@ export default function EgsuVip() {
 
             {/* Куда направить */}
             <div>
-              <label className="block text-xs font-bold text-white/50 mb-2 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-white/50 mb-3 uppercase tracking-wider">
                 Направить в орган *
               </label>
-              <div className="grid grid-cols-1 gap-1.5 max-h-64 overflow-y-auto pr-1 mb-2">
-                {TARGET_ORGS.map(org => (
-                  <button key={org} onClick={() => setTargetOrg(org)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-left text-xs transition-all"
-                    style={{
-                      background: targetOrg === org ? "rgba(168,85,247,0.12)" : "rgba(255,255,255,0.02)",
-                      border: `1px solid ${targetOrg === org ? "rgba(168,85,247,0.4)" : "rgba(255,255,255,0.06)"}`,
-                      color: targetOrg === org ? "#a855f7" : "rgba(255,255,255,0.5)",
-                    }}>
-                    <Icon name={targetOrg === org ? "CheckCircle" : "Circle"} size={12} />
-                    {org}
-                  </button>
+              <div className="space-y-4 max-h-80 overflow-y-auto pr-1 mb-2">
+                {TARGET_GROUPS.map(group => (
+                  <div key={group.label}>
+                    <div className="text-[10px] font-bold uppercase tracking-widest mb-2 px-1"
+                      style={{ color: group.color }}>
+                      {group.label}
+                    </div>
+                    <div className="space-y-1">
+                      {group.orgs.map(org => (
+                        <button key={org} onClick={() => setTargetOrg(org)}
+                          className="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-left text-xs transition-all"
+                          style={{
+                            background: targetOrg === org ? `${group.color}12` : "rgba(255,255,255,0.02)",
+                            border: `1px solid ${targetOrg === org ? group.color + "45" : "rgba(255,255,255,0.05)"}`,
+                            color: targetOrg === org ? group.color : "rgba(255,255,255,0.5)",
+                          }}>
+                          <Icon name={targetOrg === org ? "CheckCircle" : "Circle"} size={12} />
+                          {org.replace(/^ECSU: /, "")}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
               <input

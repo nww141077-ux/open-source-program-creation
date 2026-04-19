@@ -1,0 +1,11 @@
+{
+  "tests": [
+    {
+      "name": "GET / — список активных органов ECSU",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

@@ -54,14 +54,24 @@ const LAW_NORMS: Record<string, { norm: string; desc: string; inaction?: string 
 };
 
 const AGENCIES_SHORT = [
-  { id: "mchs", name: "МЧС России", email: "info@mchs.gov.ru", phone: "112", category: "emergency" },
-  { id: "mvd", name: "МВД (Полиция)", email: "mvd@mvd.ru", phone: "102", category: "law" },
-  { id: "prosecutor", name: "Генпрокуратура РФ", email: "genproc@genproc.gov.ru", phone: "8-800-250-77-55", category: "law" },
-  { id: "skrf", name: "Следственный комитет", email: "priemnaya@sledcom.ru", phone: "8-800-100-12-60", category: "law" },
-  { id: "fsb", name: "ФСБ России", email: "fsb@fsb.ru", phone: "8-800-224-22-22", category: "security" },
-  { id: "rosprirodnadzor", name: "Росприроднадзор", email: "rpn@rpn.gov.ru", phone: "8-800-200-34-60", category: "ecology" },
-  { id: "rospotrebnadzor", name: "Роспотребнадзор", email: "rpn@gsen.ru", phone: "8-800-555-49-43", category: "health" },
-  { id: "rostechnadzor", name: "Ростехнадзор", email: "rtn@gosnadzor.ru", phone: "8-800-100-80-40", category: "tech" },
+  // ── Органы системы ECSU 2.0 ──
+  { id: "ecsu-general",   name: "🔷 Главный орган ECSU",              email: "ecsu@ecsu2.ru",  phone: "",                 category: "ecsu",      note: "Принимает все обращения, перенаправляет" },
+  { id: "ecsu-ecology",   name: "🌿 Орган экологии ECSU",             email: "ecsu@ecsu2.ru",  phone: "",                 category: "ecsu",      note: "ФЗ №7, Орхусская конвенция" },
+  { id: "ecsu-cyber",     name: "💻 Орган киберзащиты ECSU",          email: "ecsu@ecsu2.ru",  phone: "",                 category: "ecsu",      note: "УК РФ ст. 272–274, ФЗ №149" },
+  { id: "ecsu-rights",    name: "❤️ Орган прав человека ECSU",        email: "ecsu@ecsu2.ru",  phone: "",                 category: "ecsu",      note: "Конституция РФ, ЕКПЧ" },
+  { id: "ecsu-anticorr",  name: "⚖️ Антикоррупционный орган ECSU",    email: "ecsu@ecsu2.ru",  phone: "",                 category: "ecsu",      note: "ФЗ №273, УК РФ ст. 290–291" },
+  { id: "ecsu-security",  name: "🛡️ Орган безопасности ECSU",         email: "ecsu@ecsu2.ru",  phone: "",                 category: "ecsu",      note: "Угрозы жизни, незаконные задержания" },
+  { id: "ecsu-emergency", name: "🚨 Орган ЧС ECSU",                   email: "ecsu@ecsu2.ru",  phone: "",                 category: "ecsu",      note: "ФЗ №68, 69. Срок ответа: 3 дня" },
+  { id: "ecsu-legal",     name: "📜 Правовой орган ECSU",             email: "ecsu@ecsu2.ru",  phone: "",                 category: "ecsu",      note: "Правовая помощь, ФЗ №59" },
+  // ── Государственные ведомства РФ ──
+  { id: "mchs",           name: "МЧС России",                         email: "info@mchs.gov.ru",       phone: "112",              category: "emergency", note: "" },
+  { id: "mvd",            name: "МВД (Полиция)",                      email: "mvd@mvd.ru",             phone: "102",              category: "law",       note: "" },
+  { id: "prosecutor",     name: "Генпрокуратура РФ",                  email: "genproc@genproc.gov.ru", phone: "8-800-250-77-55",  category: "law",       note: "" },
+  { id: "skrf",           name: "Следственный комитет",               email: "priemnaya@sledcom.ru",   phone: "8-800-100-12-60",  category: "law",       note: "" },
+  { id: "fsb",            name: "ФСБ России",                         email: "fsb@fsb.ru",             phone: "8-800-224-22-22",  category: "security",  note: "" },
+  { id: "rosprirodnadzor",name: "Росприроднадзор",                    email: "rpn@rpn.gov.ru",         phone: "8-800-200-34-60",  category: "ecology",   note: "" },
+  { id: "rospotrebnadzor",name: "Роспотребнадзор",                    email: "rpn@gsen.ru",            phone: "8-800-555-49-43",  category: "health",    note: "" },
+  { id: "rostechnadzor",  name: "Ростехнадзор",                       email: "rtn@gosnadzor.ru",       phone: "8-800-100-80-40",  category: "tech",      note: "" },
 ];
 
 const INCIDENT_TYPES = [
@@ -331,8 +341,33 @@ E-mail: ${OWNER.email}`);
           <div>
             <h2 style={{ fontSize: 20, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Шаг 2 — Куда направить</h2>
             <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 20 }}>Выберите ведомства для отправки обращения</p>
-            <div style={{ display: "grid", gap: 10, marginBottom: 20 }}>
-              {AGENCIES_SHORT.map(a => (
+            {/* ОРГАНЫ ECSU */}
+            <div style={{ fontSize: 11, color: "#00ff87", fontWeight: 700, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8, marginTop: 4 }}>
+              🔷 Органы системы ECSU 2.0
+            </div>
+            <div style={{ background: "rgba(0,255,135,0.03)", border: "1px solid rgba(0,255,135,0.1)", borderRadius: 10, padding: "4px 0", marginBottom: 16 }}>
+              {AGENCIES_SHORT.filter(a => a.category === "ecsu").map(a => (
+                <div key={a.id}
+                  onClick={() => toggleAgency(a.id)}
+                  style={{ background: selectedAgencies.includes(a.id) ? "rgba(0,255,135,0.1)" : "transparent", borderRadius: 8, padding: "10px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, margin: "2px 4px" }}>
+                  <div style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${selectedAgencies.includes(a.id) ? "#00ff87" : "rgba(255,255,255,0.2)"}`, background: selectedAgencies.includes(a.id) ? "#00ff87" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {selectedAgencies.includes(a.id) && <span style={{ fontSize: 10, color: "#000", fontWeight: 900 }}>✓</span>}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{a.name}</div>
+                    {a.note && <div style={{ fontSize: 10, color: "rgba(0,255,135,0.5)" }}>{a.note}</div>}
+                  </div>
+                  <span style={{ fontSize: 10, color: "rgba(0,255,135,0.4)", fontStyle: "italic" }}>ECSU</span>
+                </div>
+              ))}
+            </div>
+
+            {/* ГОСОРГАНЫ РФ */}
+            <div style={{ fontSize: 11, color: "rgba(168,85,247,0.8)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8 }}>
+              🏛️ Государственные ведомства РФ
+            </div>
+            <div style={{ display: "grid", gap: 6, marginBottom: 20 }}>
+              {AGENCIES_SHORT.filter(a => a.category !== "ecsu").map(a => (
                 <div key={a.id}
                   onClick={() => toggleAgency(a.id)}
                   style={{ background: selectedAgencies.includes(a.id) ? "rgba(168,85,247,0.12)" : "rgba(255,255,255,0.03)", border: `1px solid ${selectedAgencies.includes(a.id) ? "rgba(168,85,247,0.4)" : "rgba(255,255,255,0.08)"}`, borderRadius: 10, padding: "12px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
@@ -343,8 +378,8 @@ E-mail: ${OWNER.email}`);
                     <div style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{a.name}</div>
                     <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{a.email}</div>
                   </div>
-                  <a href={`tel:${a.phone}`} onClick={e => e.stopPropagation()}
-                    style={{ color: "#22c55e", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>{a.phone}</a>
+                  {a.phone && <a href={`tel:${a.phone}`} onClick={e => e.stopPropagation()}
+                    style={{ color: "#22c55e", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>{a.phone}</a>}
                 </div>
               ))}
             </div>
