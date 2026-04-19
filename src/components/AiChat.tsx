@@ -5,7 +5,7 @@ const DEFAULT_API = "https://functions.poehali.dev/daefa87e-0693-4de5-9191-bbc91
 const SCANNER_API = "https://functions.poehali.dev/b3ae5ea9-0780-4337-b7b0-e19f144a63fb";
 
 // ─── Типы провайдеров ───────────────────────────────────────────────────────
-type ProviderId = "auto" | "gemini" | "openai" | "anthropic" | "yandex" | "custom";
+type ProviderId = "auto" | "gemini" | "openai" | "anthropic" | "yandex" | "groq" | "custom";
 
 interface Provider {
   id: ProviderId;
@@ -64,6 +64,15 @@ const PROVIDERS: Provider[] = [
     models: ["yandexgpt-lite", "yandexgpt"],
   },
   {
+    id: "groq",
+    label: "Groq (Llama 3)",
+    color: "#00c8a0",
+    icon: "Zap",
+    keyPlaceholder: "gsk_...",
+    description: "Groq — бесплатный быстрый провайдер на базе Llama 3",
+    models: ["llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768"],
+  },
+  {
     id: "custom",
     label: "Свой эндпоинт",
     color: "#f59e0b",
@@ -75,13 +84,14 @@ const PROVIDERS: Provider[] = [
 ];
 
 // Авто-выбор провайдера на основе контекста сообщения
+// Приоритет: yandex (есть ключ) → groq (бесплатный резерв)
 function autoSelectProvider(text: string, hasCpvoa: boolean): ProviderId {
   const lower = text.toLowerCase();
-  if (hasCpvoa || lower.includes("цпвоа") || lower.includes("аномал") || lower.includes("инцидент")) return "gemini";
-  if (lower.includes("документ") || lower.includes("контракт") || lower.includes("договор") || lower.includes("анализ")) return "anthropic";
-  if (lower.includes("код") || lower.includes("программ") || lower.includes("api") || lower.includes("json")) return "openai";
+  if (hasCpvoa || lower.includes("цпвоа") || lower.includes("аномал") || lower.includes("инцидент")) return "yandex";
+  if (lower.includes("документ") || lower.includes("контракт") || lower.includes("договор") || lower.includes("анализ")) return "yandex";
+  if (lower.includes("код") || lower.includes("программ") || lower.includes("api") || lower.includes("json")) return "yandex";
   if (lower.includes("право") || lower.includes("закон") || lower.includes("упк") || lower.includes("мгп")) return "yandex";
-  return "gemini";
+  return "yandex";
 }
 
 // ─── Интерфейсы ────────────────────────────────────────────────────────────
@@ -291,6 +301,11 @@ const LS_KEYS = "ezsu_ai_keys";
 const LS_MODELS = "ezsu_ai_models";
 const LS_CUSTOM_URL = "ezsu_ai_custom_url";
 
+// Миграция: если сохранён "auto" без ключей — переключаем на yandex
+if (localStorage.getItem(LS_PROVIDER) === "auto") {
+  localStorage.setItem(LS_PROVIDER, "yandex");
+}
+
 export default function AiChat({ onClose, initialCpvoaContext, initialMessage }: Props) {
   const [tab, setTab] = useState<"chat" | "cpvoa" | "admin" | "settings" | "servers">(initialCpvoaContext ? "cpvoa" : "chat");
   const [cpvoaContext, setCpvoaContext] = useState<CpvoaContext | null>(initialCpvoaContext ?? null);
@@ -298,7 +313,7 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
 
   // ─── Настройки провайдера ─────────────────────────────────────────────────
   const [selectedProvider, setSelectedProvider] = useState<ProviderId>(
-    () => (localStorage.getItem(LS_PROVIDER) as ProviderId) ?? "auto"
+    () => (localStorage.getItem(LS_PROVIDER) as ProviderId) ?? "yandex"
   );
   const [apiKeys, setApiKeys] = useState<Record<ProviderId, string>>(() => {
     try { return JSON.parse(localStorage.getItem(LS_KEYS) ?? "{}"); } catch { return {}; }
