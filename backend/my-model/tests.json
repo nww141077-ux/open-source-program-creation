@@ -5,7 +5,7 @@
       "method": "GET",
       "path": "/",
       "expectedStatus": 200,
-      "expectedBody": {"models": []},
+      "expectedBody": {"models": [{"id": "llama3-8b"}]},
       "bodyMatcher": "partial"
     }
   ]
