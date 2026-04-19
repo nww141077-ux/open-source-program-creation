@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import AiChat, { CpvoaContext } from "@/components/AiChat";
@@ -41,11 +41,43 @@ const SUGGESTIONS = [
   "ЦПВОА: статус датчиков",
 ];
 
+// ─── Тип для точки на карте ──────────────────────────────────────────────────
+interface MapPoint {
+  id: string;
+  x: number;   // % от ширины SVG
+  y: number;   // % от высоты SVG
+  threat: "low" | "medium" | "high" | "critical";
+  label: string;
+  category: string;
+  pulse: boolean;
+}
+
 const MOCK_INCIDENTS: Incident[] = [
   { id: "1", category: "Радиоэфир", threat: "high", location: "53.2°N 83.7°E", source: "FM 101.2 МГц", time: "14:32", description: "Обнаружена нестандартная модуляция сигнала, отклонение от нормы +23 дБ" },
   { id: "2", category: "Визуальный", threat: "medium", location: "53.1°N 83.8°E", source: "Камера #4", time: "14:15", description: "Зафиксированы световые вспышки с кодированным паттерном" },
   { id: "3", category: "Меш‑сеть", threat: "low", location: "Локальная", source: "Узел #7", time: "13:58", description: "Незарегистрированный узел пытается подключиться к сети ЦПВОА" },
   { id: "4", category: "Кибер", threat: "critical", location: "Внешний IP", source: "Брандмауэр", time: "13:45", description: "Обнаружена попытка несанкционированного доступа к буферу сообщений" },
+];
+
+// Начальные точки на карте (примерное расположение на упрощённой карте России/СНГ)
+const INITIAL_MAP_POINTS: MapPoint[] = [
+  { id: "1", x: 56, y: 38, threat: "high",     label: "FM 101.2 МГц", category: "Радиоэфир", pulse: true },
+  { id: "2", x: 58, y: 36, threat: "medium",   label: "Камера #4",    category: "Визуальный", pulse: false },
+  { id: "3", x: 55, y: 40, threat: "low",      label: "Меш‑узел #7", category: "Меш-сеть",  pulse: false },
+  { id: "4", x: 72, y: 30, threat: "critical", label: "Внешний IP",   category: "Кибер",     pulse: true },
+];
+
+// Генератор новых случайных инцидентов для автообновления
+const RANDOM_CATEGORIES = ["Радиоэфир", "Кибер", "Визуальный", "Меш-сеть", "Физический"] as const;
+const RANDOM_THREATS: Array<"low" | "medium" | "high" | "critical"> = ["low", "medium", "high", "critical"];
+const RANDOM_DESCS = [
+  "Зафиксирован нетипичный сигнал в диапазоне",
+  "Попытка несанкционированного подключения",
+  "Аномальная активность узла",
+  "Сигнал SOS из сектора наблюдения",
+  "Нарушение периметра по датчику",
+  "Дрейф частоты приёмника сверх нормы",
+  "Пакетная атака на буфер сообщений",
 ];
 
 const THREAT_CONFIG = {
@@ -110,6 +142,60 @@ export default function EgsuCpvoa() {
   const [absorbSyncing, setAbsorbSyncing] = useState(false);
   const [absorbResult, setAbsorbResult] = useState<{ penalty_usd: number; channel: string; message: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // ── Карта инцидентов ──
+  const [mapPoints, setMapPoints] = useState<MapPoint[]>(INITIAL_MAP_POINTS);
+  const [selectedMapPoint, setSelectedMapPoint] = useState<MapPoint | null>(null);
+  const [mapAutoUpdate, setMapAutoUpdate] = useState(true);
+  const [lastMapUpdate, setLastMapUpdate] = useState(new Date());
+  const [mapUpdateCount, setMapUpdateCount] = useState(0);
+  const [showMap, setShowMap] = useState(true);
+
+  // ── Автообновление карты инцидентов ──
+  const addRandomIncident = useCallback(() => {
+    const cat = RANDOM_CATEGORIES[Math.floor(Math.random() * RANDOM_CATEGORIES.length)];
+    const threat = RANDOM_THREATS[Math.floor(Math.random() * RANDOM_THREATS.length)];
+    const desc = RANDOM_DESCS[Math.floor(Math.random() * RANDOM_DESCS.length)];
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+    const newId = String(Date.now());
+    const newPoint: MapPoint = {
+      id: newId,
+      x: 20 + Math.random() * 65,
+      y: 15 + Math.random() * 60,
+      threat,
+      label: `${cat} #${Math.floor(Math.random()*99)+1}`,
+      category: cat,
+      pulse: threat === "critical" || threat === "high",
+    };
+    const newIncident: Incident = {
+      id: newId,
+      category: cat,
+      threat,
+      location: `${(50 + Math.random()*15).toFixed(1)}°N ${(60 + Math.random()*60).toFixed(1)}°E`,
+      source: newPoint.label,
+      time: timeStr,
+      description: `${desc} — ${cat.toLowerCase()}`,
+    };
+    setMapPoints(pts => {
+      const updated = [...pts, newPoint];
+      return updated.length > 12 ? updated.slice(updated.length - 12) : updated;
+    });
+    setResults(prev => {
+      const updated = [newIncident, ...prev];
+      return updated.length > 10 ? updated.slice(0, 10) : updated;
+    });
+    setLastMapUpdate(new Date());
+    setMapUpdateCount(c => c + 1);
+  }, []);
+
+  useEffect(() => {
+    if (!mapAutoUpdate) return;
+    const interval = setInterval(() => {
+      addRandomIncident();
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [mapAutoUpdate, addRandomIncident]);
 
   // ── Сканирование вторжения через эфир/спектр ──
   const runIntrusionScan = async (band: string, freqMhz: number, signalDb: number, sourceType: string) => {
@@ -653,6 +739,141 @@ export default function EgsuCpvoa() {
               <span className="text-center leading-tight">{btn.label}</span>
             </button>
           ))}
+        </div>
+
+        {/* ─── КАРТА ИНЦИДЕНТОВ ─── */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Icon name="Map" size={15} style={{ color: "#2196F3" }} />
+              <span className="text-sm font-bold text-white/80 tracking-wider uppercase">Карта инцидентов</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+                style={{ background: "rgba(33,150,243,0.15)", color: "#2196F3" }}>
+                {mapPoints.length} точек
+              </span>
+              {mapAutoUpdate && (
+                <span className="flex items-center gap-1 text-[10px]" style={{ color: "#4CAF50" }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                  авто-обновление
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-white/25 font-mono">
+                обновл. {mapUpdateCount} раз · {lastMapUpdate.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              </span>
+              <button
+                onClick={() => setMapAutoUpdate(v => !v)}
+                className="px-2 py-1 rounded-lg text-[10px] font-semibold transition-all"
+                style={{
+                  background: mapAutoUpdate ? "rgba(76,175,80,0.12)" : "rgba(255,255,255,0.05)",
+                  color: mapAutoUpdate ? "#4CAF50" : "#888",
+                  border: `1px solid ${mapAutoUpdate ? "rgba(76,175,80,0.3)" : "rgba(255,255,255,0.08)"}`,
+                }}>
+                {mapAutoUpdate ? "⏸ Пауза" : "▶ Запуск"}
+              </button>
+              <button
+                onClick={() => addRandomIncident()}
+                className="px-2 py-1 rounded-lg text-[10px] font-semibold transition-all"
+                style={{ background: "rgba(33,150,243,0.12)", color: "#2196F3", border: "1px solid rgba(33,150,243,0.25)" }}>
+                + Добавить
+              </button>
+              <button
+                onClick={() => setShowMap(v => !v)}
+                className="px-2 py-1 rounded-lg text-[10px] font-semibold transition-all"
+                style={{ background: "rgba(255,255,255,0.05)", color: "#888", border: "1px solid rgba(255,255,255,0.08)" }}>
+                {showMap ? "Скрыть" : "Показать"}
+              </button>
+            </div>
+          </div>
+
+          {showMap && (
+            <div className="relative rounded-2xl overflow-hidden"
+              style={{ background: "rgba(10,15,30,0.95)", border: "1px solid rgba(33,150,243,0.2)", height: "320px" }}>
+
+              {/* Фоновая сетка карты */}
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                {/* Сетка */}
+                {[10,20,30,40,50,60,70,80,90].map(v => (
+                  <g key={v}>
+                    <line x1={v} y1="0" x2={v} y2="100" stroke="rgba(33,150,243,0.06)" strokeWidth="0.3" />
+                    <line x1="0" y1={v} x2="100" y2={v} stroke="rgba(33,150,243,0.06)" strokeWidth="0.3" />
+                  </g>
+                ))}
+                {/* Контур "России" — упрощённый */}
+                <polyline
+                  points="18,22 28,18 42,14 55,12 70,15 82,20 88,28 85,40 80,52 75,60 70,65 60,68 50,70 40,68 30,62 22,55 16,45 14,35 18,22"
+                  fill="rgba(33,150,243,0.04)" stroke="rgba(33,150,243,0.15)" strokeWidth="0.5" />
+                {/* Ура л */}
+                <line x1="52" y1="12" x2="52" y2="70" stroke="rgba(33,150,243,0.08)" strokeWidth="0.4" strokeDasharray="1,2" />
+                {/* Метки городов */}
+                <text x="54" y="37" fill="rgba(255,255,255,0.12)" fontSize="2.2" fontFamily="monospace">Москва</text>
+                <text x="38" y="30" fill="rgba(255,255,255,0.08)" fontSize="1.8" fontFamily="monospace">СПб</text>
+                <text x="65" y="42" fill="rgba(255,255,255,0.08)" fontSize="1.8" fontFamily="monospace">Екб</text>
+                <text x="74" y="48" fill="rgba(255,255,255,0.08)" fontSize="1.8" fontFamily="monospace">Новосиб</text>
+                {/* Точки инцидентов */}
+                {mapPoints.map(pt => {
+                  const cfg = THREAT_CONFIG[pt.threat];
+                  const isSelected = selectedMapPoint?.id === pt.id;
+                  return (
+                    <g key={pt.id} style={{ cursor: "pointer" }} onClick={() => setSelectedMapPoint(p => p?.id === pt.id ? null : pt)}>
+                      {pt.pulse && (
+                        <circle cx={pt.x} cy={pt.y} r="4" fill="none" stroke={cfg.color} strokeWidth="0.5" opacity="0.4">
+                          <animate attributeName="r" values="3;8;3" dur="2s" repeatCount="indefinite" />
+                          <animate attributeName="opacity" values="0.4;0;0.4" dur="2s" repeatCount="indefinite" />
+                        </circle>
+                      )}
+                      <circle
+                        cx={pt.x} cy={pt.y} r={isSelected ? "3.5" : "2.5"}
+                        fill={cfg.color}
+                        stroke={isSelected ? "#fff" : "rgba(0,0,0,0.5)"}
+                        strokeWidth={isSelected ? "0.8" : "0.4"}
+                        opacity="0.9"
+                      />
+                      <text x={pt.x + 3} y={pt.y + 1} fill="rgba(255,255,255,0.55)" fontSize="1.8" fontFamily="monospace">
+                        {pt.label.length > 12 ? pt.label.slice(0, 12) + "…" : pt.label}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+
+              {/* Легенда */}
+              <div className="absolute bottom-3 left-3 flex items-center gap-3">
+                {(Object.entries(THREAT_CONFIG) as Array<[string, typeof THREAT_CONFIG["low"]]>).map(([key, cfg]) => (
+                  <div key={key} className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full" style={{ background: cfg.color }} />
+                    <span className="text-[9px] text-white/40">{cfg.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Счётчик в правом углу */}
+              <div className="absolute top-3 right-3 text-[10px] font-mono text-white/25">
+                {mapPoints.filter(p => p.threat === "critical").length > 0 && (
+                  <span className="text-red-400 font-bold animate-pulse">
+                    ⚠ {mapPoints.filter(p => p.threat === "critical").length} критических
+                  </span>
+                )}
+              </div>
+
+              {/* Popup выбранной точки */}
+              {selectedMapPoint && (
+                <div className="absolute top-3 left-3 px-3 py-2.5 rounded-xl max-w-[200px] shadow-xl"
+                  style={{ background: "rgba(10,15,30,0.97)", border: `1px solid ${THREAT_CONFIG[selectedMapPoint.threat].color}40` }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <ThreatBadge level={selectedMapPoint.threat} />
+                    <button onClick={() => setSelectedMapPoint(null)} className="ml-auto text-white/30 hover:text-white text-xs">✕</button>
+                  </div>
+                  <div className="text-xs font-bold text-white/90">{selectedMapPoint.label}</div>
+                  <div className="text-[10px] text-white/40 mt-0.5">{selectedMapPoint.category}</div>
+                  <div className="text-[10px] text-white/25 mt-1 font-mono">
+                    x:{selectedMapPoint.x.toFixed(1)} y:{selectedMapPoint.y.toFixed(1)}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ─── Результаты / Расширенный режим ─── */}

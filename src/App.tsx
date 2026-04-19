@@ -27,6 +27,7 @@ import EgsuExport from "./pages/EgsuExport";
 import EgsuCapabilities from "./pages/EgsuCapabilities";
 import EgsuArk from "./pages/EgsuArk";
 import EgsuMigration from "./pages/EgsuMigration";
+import EgsuStart from "./pages/EgsuStart";
 import AdminLogin from "./pages/AdminLogin";
 import AdminPanel from "./pages/AdminPanel";
 import MyModel from "./pages/MyModel";
@@ -43,7 +44,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/app" element={<Dashboard />} />
-          <Route path="/egsu" element={<Navigate to="/egsu/dashboard" replace />} />
+          <Route path="/egsu" element={<Navigate to="/egsu/start" replace />} />
+          <Route path="/egsu/start" element={<EgsuStart />} />
           <Route path="/egsu/dashboard" element={<EgsuDashboard />} />
           <Route path="/egsu/report" element={<EgsuReport />} />
           <Route path="/egsu/docs" element={<EgsuDocs />} />
