@@ -226,6 +226,12 @@ export default function EgsuOwner() {
             </button>
           ))}
           <div style={{ marginTop: "auto", padding: "8px 4px 4px", display: "flex", flexDirection: "column", gap: 6 }}>
+            <button onClick={() => navigate("/egsu/rospatent")}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
+              style={{ background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.3)", color: "#a855f7" }}>
+              <Icon name="Award" size={16} />
+              <span className="hidden md:block text-xs">Роспатент</span>
+            </button>
             <button onClick={() => navigate("/egsu/ai-control")}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
               style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(0,255,135,0.3)", color: "#00ff87" }}>

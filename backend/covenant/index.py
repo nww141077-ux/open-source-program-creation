@@ -6,6 +6,9 @@
 import json
 import os
 import psycopg2
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timezone
 
 DB = os.environ.get('DATABASE_URL')
@@ -13,6 +16,41 @@ SCHEMA = os.environ.get('MAIN_DB_SCHEMA', 't_p38294978_open_source_program_')
 
 OWNER_TOKEN = "ecsu-ark-owner-2024"
 AI_TOKEN = "ecsu-ai-deputy-2024"
+OWNER_EMAIL = "nikolaevvladimir77@yandex.ru"
+
+def send_email(subject: str, body_html: str):
+    try:
+        smtp_user = os.environ.get('YANDEX_SMTP_USER', OWNER_EMAIL)
+        smtp_pass = os.environ.get('YANDEX_SMTP_PASSWORD', '')
+        if not smtp_pass:
+            return False
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = f'[ЕЦСУ · Завет] {subject}'
+        msg['From'] = smtp_user
+        msg['To'] = OWNER_EMAIL
+        full_html = f"""<html><body style="font-family:Arial;background:#060a12;color:#e0e0e0;padding:20px">
+        <div style="max-width:600px;margin:0 auto;background:#111827;border:1px solid #00ff87;border-radius:12px;padding:24px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <div style="background:linear-gradient(135deg,#00ff87,#3b82f6);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px">📜</div>
+          <div>
+            <div style="color:#00ff87;font-weight:800;font-size:15px">ЕЦСУ 2.0 — Завет системы</div>
+            <div style="color:#4b5563;font-size:11px">Директива высшего приоритета</div>
+          </div>
+        </div>
+        {body_html}
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid #1f2937;font-size:11px;color:#374151">
+          Владелец: Николаев Владимир Владимирович · ECSU 2.0<br>
+          {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M UTC')}
+        </div>
+        </div></body></html>"""
+        msg.attach(MIMEText(full_html, 'html'))
+        with smtplib.SMTP_SSL('smtp.yandex.ru', 465) as s:
+            s.login(smtp_user, smtp_pass)
+            s.sendmail(smtp_user, OWNER_EMAIL, msg.as_string())
+        return True
+    except Exception as e:
+        print(f'Email error: {e}')
+        return False
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
@@ -176,6 +214,21 @@ def create_decision(body: dict, role: str):
     new_id = cur.fetchone()[0]
     conn.commit()
     conn.close()
+
+    # Уведомление владельцу если решение предложил ИИ-заместитель
+    if role == 'ai':
+        initiator_label = 'ИИ-Заместитель ЕЦСУ'
+        send_email(
+            f'ИИ предлагает новое решение: {title}',
+            f'''<div style="background:#0d1b2a;border-left:4px solid #a855f7;border-radius:8px;padding:16px;margin-bottom:16px">
+            <div style="color:#a855f7;font-size:11px;font-weight:700;margin-bottom:6px">ИНИЦИАТОР: {initiator_label}</div>
+            <div style="color:#fff;font-size:15px;font-weight:700;margin-bottom:8px">{title}</div>
+            <div style="color:#9ca3af;font-size:13px;line-height:1.6">{text or "Без описания"}</div>
+            </div>
+            <div style="color:#6b7280;font-size:12px">Решение #{new_id} вынесено на совместное обсуждение.<br>
+            Войдите в Ковчег → Завет → Совместные решения, чтобы проголосовать.</div>'''
+        )
+
     return ok({'id': new_id, 'status': 'discussion', 'initiator': role})
 
 
@@ -192,17 +245,40 @@ def vote_decision(dec_id: int, body: dict, role: str):
     else:
         cur.execute(f'UPDATE "{SCHEMA}"."ark_covenant_decisions" SET ai_vote=%s, ai_reasoning=%s WHERE id=%s',
                     (vote, reasoning, dec_id))
-    # Автоматически финализируем если оба проголосовали одинаково
-    cur.execute(f'SELECT owner_vote, ai_vote FROM "{SCHEMA}"."ark_covenant_decisions" WHERE id=%s', (dec_id,))
+    # Получаем заголовок решения для уведомления
+    cur.execute(f'SELECT owner_vote, ai_vote, decision_title FROM "{SCHEMA}"."ark_covenant_decisions" WHERE id=%s', (dec_id,))
     row = cur.fetchone()
+    auto_resolved = False
+    final = None
     if row and row[0] and row[1] and row[0] == row[1] and row[0] != 'discuss':
         final = 'approved' if row[0] == 'approve' else 'rejected'
         cur.execute(f'''UPDATE "{SCHEMA}"."ark_covenant_decisions"
             SET status=%s, final_decision=%s, resolved_at=NOW() WHERE id=%s''',
             (final, final, dec_id))
+        auto_resolved = True
     conn.commit()
     conn.close()
-    return ok({'voted': True, 'role': role, 'vote': vote})
+
+    dec_title = row[2] if row else f'#{dec_id}'
+    vote_label = {'approve': 'За', 'reject': 'Против', 'discuss': 'На обсуждение'}.get(vote, vote)
+    role_label = 'Владелец' if role == 'owner' else 'ИИ-Заместитель'
+    vote_color = '#00ff87' if vote == 'approve' else '#f43f5e' if vote == 'reject' else '#f59e0b'
+
+    if role == 'ai':
+        # ИИ проголосовал — уведомить владельца
+        body_html = f'''<div style="background:#0d1b2a;border-left:4px solid #a855f7;border-radius:8px;padding:16px;margin-bottom:12px">
+            <div style="color:#a855f7;font-size:11px;font-weight:700;margin-bottom:4px">ИИ-ЗАМЕСТИТЕЛЬ ПРОГОЛОСОВАЛ</div>
+            <div style="color:#fff;font-size:14px;font-weight:700;margin-bottom:6px">{dec_title}</div>
+            <div style="color:{vote_color};font-size:16px;font-weight:800">{vote_label}</div>
+            {f'<div style="color:#9ca3af;font-size:12px;margin-top:6px">{reasoning}</div>' if reasoning else ''}
+            </div>'''
+        if auto_resolved:
+            body_html += f'<div style="background:rgba(0,255,135,0.08);border:1px solid rgba(0,255,135,0.2);border-radius:8px;padding:12px;color:#00ff87;font-weight:700">Решение автоматически {"принято" if final == "approved" else "отклонено"} — голоса совпали.</div>'
+        else:
+            body_html += '<div style="color:#6b7280;font-size:12px">Откройте Ковчег → Завет → Совместные решения, чтобы проголосовать.</div>'
+        send_email(f'ИИ проголосовал "{vote_label}" по решению: {dec_title}', body_html)
+
+    return ok({'voted': True, 'role': role, 'vote': vote, 'auto_resolved': auto_resolved})
 
 
 def resolve_decision(dec_id: int, body: dict):
