@@ -46,9 +46,21 @@ type AbsorptionStats = {
 
 type ScanStatus = { due_now: { incident_scan: boolean; security_check: boolean }; last_runs: { incident_scan: string | null; security_check: string | null } };
 
+const EXTRA_DOCS = [
+  { id: "inn", label: "ИНН", icon: "Hash", color: "#a855f7", hint: "Индивидуальный номер налогоплательщика" },
+  { id: "snils", label: "СНИЛС", icon: "CreditCard", color: "#3b82f6", hint: "Страховой номер индивидуального лицевого счёта" },
+  { id: "birth", label: "Свидетельство о рождении", icon: "Baby", color: "#00c8a0", hint: "Документ о рождении" },
+  { id: "medical", label: "Медицинский полис", icon: "HeartPulse", color: "#f43f5e", hint: "ОМС / ДМС" },
+  { id: "military", label: "Военный билет", icon: "Shield", color: "#f59e0b", hint: "Документ воинского учёта" },
+  { id: "other", label: "Иной документ", icon: "FilePlus", color: "#64748b", hint: "Любой другой официальный документ" },
+];
+
 export default function EgsuOwner() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<"profile" | "settings" | "access" | "recovery" | "absorption" | "autoscan">("profile");
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
+  const [uploadedDocs, setUploadedDocs] = useState<Record<string, { url: string; name: string; date: string }>>({});
+  const [uploadToast, setUploadToast] = useState("");
   const [owner, setOwner] = useState<OwnerData | null>(null);
   const [settings, setSettings] = useState<Setting[]>([]);
   const [accessLog, setAccessLog] = useState<AccessLog[]>([]);
@@ -63,6 +75,34 @@ export default function EgsuOwner() {
   const [scanRunning, setScanRunning] = useState(false);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3500); };
+
+  const handleDocUpload = async (docId: string, file: File) => {
+    setUploadingDoc(docId);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = (e.target?.result as string).split(",")[1];
+        const ext = file.name.split(".").pop();
+        const key = `owner-docs/${docId}-${Date.now()}.${ext}`;
+        const res = await fetch("https://functions.poehali.dev/e610af8a-f8c5-4c04-8d9b-092391fb0c70/upload-doc", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key, base64, content_type: file.type }),
+        });
+        const d = await res.json();
+        const url = d?.url || URL.createObjectURL(file);
+        setUploadedDocs(prev => ({ ...prev, [docId]: { url, name: file.name, date: new Date().toLocaleDateString("ru-RU") } }));
+        setUploadToast(`✓ ${EXTRA_DOCS.find(x => x.id === docId)?.label} загружен`);
+        setTimeout(() => setUploadToast(""), 3000);
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setUploadToast("Ошибка загрузки файла");
+      setTimeout(() => setUploadToast(""), 3000);
+    } finally {
+      setUploadingDoc(null);
+    }
+  };
 
   const safeFetch = async (url: string) => {
     try {
@@ -387,6 +427,87 @@ export default function EgsuOwner() {
                       <Icon name="Link" size={14} />
                       Подключить ЕСИА
                     </button>
+                  </div>
+                </div>
+
+                {/* Дополнительные документы */}
+                <div className="p-5 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Icon name="FolderOpen" size={16} className="text-white/50" />
+                    <span className="text-xs font-bold text-white/50 uppercase tracking-widest">Дополнительные документы</span>
+                  </div>
+
+                  {uploadToast && (
+                    <div className="mb-3 px-3 py-2 rounded-xl text-sm font-semibold"
+                      style={{ background: "rgba(0,255,135,0.15)", color: "#00ff87", border: "1px solid rgba(0,255,135,0.25)" }}>
+                      {uploadToast}
+                    </div>
+                  )}
+
+                  <div className="grid md:grid-cols-2 gap-3">
+                    {EXTRA_DOCS.map(doc => {
+                      const uploaded = uploadedDocs[doc.id];
+                      const isUploading = uploadingDoc === doc.id;
+                      return (
+                        <div key={doc.id} className="p-4 rounded-xl transition-all"
+                          style={{ background: uploaded ? `${doc.color}08` : "rgba(255,255,255,0.02)", border: `1px solid ${uploaded ? doc.color + "30" : "rgba(255,255,255,0.07)"}` }}>
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                              style={{ background: `${doc.color}15` }}>
+                              <Icon name={doc.icon as "Hash"} size={15} style={{ color: doc.color }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold text-white/80">{doc.label}</div>
+                              <div className="text-[10px] text-white/30">{doc.hint}</div>
+                            </div>
+                            {uploaded && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                                style={{ background: `${doc.color}20`, color: doc.color }}>✓</span>
+                            )}
+                          </div>
+
+                          {uploaded ? (
+                            <div className="space-y-2">
+                              {uploaded.url.match(/\.(jpg|jpeg|png|webp|gif)$/i) ? (
+                                <img src={uploaded.url} alt={doc.label}
+                                  className="w-full max-h-32 object-cover rounded-lg cursor-pointer hover:opacity-90"
+                                  onClick={() => window.open(uploaded.url, "_blank")} />
+                              ) : (
+                                <a href={uploaded.url} target="_blank" rel="noreferrer"
+                                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all hover:opacity-80"
+                                  style={{ background: `${doc.color}10`, color: doc.color }}>
+                                  <Icon name="FileText" size={13} />
+                                  {uploaded.name}
+                                </a>
+                              )}
+                              <div className="text-[10px] text-white/25">Загружено: {uploaded.date}</div>
+                              <label className="flex items-center gap-1.5 text-[11px] text-white/30 cursor-pointer hover:text-white/50 transition-colors">
+                                <Icon name="RefreshCw" size={11} />
+                                Заменить
+                                <input type="file" className="hidden" accept="image/*,.pdf"
+                                  onChange={e => e.target.files?.[0] && handleDocUpload(doc.id, e.target.files[0])} />
+                              </label>
+                            </div>
+                          ) : (
+                            <label className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all hover:opacity-90 ${isUploading ? "opacity-50 cursor-wait" : ""}`}
+                              style={{ background: `${doc.color}15`, border: `1px dashed ${doc.color}40`, color: doc.color }}>
+                              {isUploading ? (
+                                <><div className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />Загружаю...</>
+                              ) : (
+                                <><Icon name="Upload" size={13} />Загрузить</>
+                              )}
+                              <input type="file" className="hidden" accept="image/*,.pdf" disabled={isUploading}
+                                onChange={e => e.target.files?.[0] && handleDocUpload(doc.id, e.target.files[0])} />
+                            </label>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-2 text-[10px] text-white/20">
+                    <Icon name="Lock" size={11} />
+                    Документы хранятся в защищённом хранилище ECSU 2.0. Доступ только у владельца.
                   </div>
                 </div>
 
