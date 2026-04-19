@@ -393,62 +393,96 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
 
-    try {
-      const history = buildHistory();
-      const body: Record<string, unknown> = {
-        message: text,
-        session_id: sessionId,
-        history,
-        provider: effectiveProvider,
-        api_key: apiKeys[effectiveProvider] || undefined,
-        model: selectedModels[effectiveProvider] || undefined,
-        custom_url: effectiveProvider === "custom" ? customUrl : undefined,
-      };
-      if (useCpvoa && cpvoaContext) body.cpvoa_context = cpvoaContext;
+    const history = buildHistory();
+    const body: Record<string, unknown> = {
+      message: text,
+      session_id: sessionId,
+      history,
+      provider: effectiveProvider,
+      api_key: apiKeys[effectiveProvider] || undefined,
+      model: selectedModels[effectiveProvider] || undefined,
+      custom_url: effectiveProvider === "custom" ? customUrl : undefined,
+    };
+    if (useCpvoa && cpvoaContext) body.cpvoa_context = cpvoaContext;
 
-      const res = await fetch(DEFAULT_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-
-      let reply = "";
-      let suggestions: string[] = [];
-
-      if (typeof data === "string") {
-        try { const p = JSON.parse(data); reply = p.reply || data; suggestions = p.suggestions || []; }
-        catch { reply = data; }
-      } else {
-        reply = data.reply || "Не получил ответ от сервера.";
-        suggestions = data.suggestions || [];
-      }
-
-      setMessages(prev => [
-        ...prev,
-        { role: "assistant", text: reply, time: getTime(), suggestions, fromCpvoa: useCpvoa, usedProvider: effectiveProvider },
-      ]);
-
-      // Авто-подсказка: если провайдер авто — показываем какой был выбран
-      if (selectedProvider === "auto") {
-        setMessages(prev => {
-          const last = prev[prev.length - 1];
-          return [...prev.slice(0, -1), { ...last, text: last.text + `\n\n> *Использован: ${providerInfo.label}*` }];
+    // Функция одной попытки с таймаутом 25 сек
+    const tryOnce = async () => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 25000);
+      try {
+        const res = await fetch(DEFAULT_API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: ctrl.signal,
         });
+        clearTimeout(timer);
+        return await res.json();
+      } catch (e) {
+        clearTimeout(timer);
+        throw e;
       }
-    } catch {
-      setMessages(prev => [
-        ...prev,
-        {
-          role: "assistant",
-          text: "⚠️ Нет связи с сервером. Проверьте соединение и попробуйте ещё раз.",
-          time: getTime(),
-          suggestions: ["Попробовать снова", "Настройки ИИ", "Правовая база"],
-        },
-      ]);
-    } finally {
-      setLoading(false);
+    };
+
+    // До 3 попыток с паузой 2 сек
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const data = await tryOnce();
+        let reply = "";
+        let suggestions: string[] = [];
+        if (typeof data === "string") {
+          try { const p = JSON.parse(data); reply = p.reply || data; suggestions = p.suggestions || []; }
+          catch { reply = data; }
+        } else {
+          reply = data.reply || "Не получил ответ от сервера.";
+          suggestions = data.suggestions || [];
+        }
+        setMessages(prev => [
+          ...prev,
+          { role: "assistant", text: reply, time: getTime(), suggestions, fromCpvoa: useCpvoa, usedProvider: effectiveProvider },
+        ]);
+        setLoading(false);
+        return;
+      } catch (e) {
+        lastErr = e;
+        if (attempt < 3) {
+          // Показываем статус повтора
+          setMessages(prev => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "assistant" && last.text.startsWith("🔄")) return prev;
+            return [...prev, { role: "assistant", text: `🔄 Слабый сигнал, повтор ${attempt}/3...`, time: getTime() }];
+          });
+          await new Promise(r => setTimeout(r, 2000));
+          // Убираем статус повтора
+          setMessages(prev => prev.filter(m => !m.text.startsWith("🔄")));
+        }
+      }
     }
+
+    // Все 3 попытки провалились — локальный ответ
+    console.error("AI fetch failed after 3 attempts:", lastErr);
+    const lower = text.toLowerCase();
+    let offlineReply = "";
+    let offlineSuggestions: string[] = [];
+    if (lower.includes("привет") || lower.includes("здравств")) {
+      offlineReply = "Привет! Я ИИ-ассистент **ECSU 2.0**.\n\nСейчас наблюдаются проблемы с соединением, но я могу помочь с базовыми вопросами в офлайн-режиме.";
+      offlineSuggestions = ["Что ты умеешь?", "Правовые вопросы", "Попробовать снова"];
+    } else if (lower.includes("право") || lower.includes("закон") || lower.includes("упк") || lower.includes("статья")) {
+      offlineReply = "**Правовой офлайн-режим:**\n\n• УПК РФ регулирует уголовное судопроизводство\n• Ст. 46 УПК — права подозреваемого\n• Ст. 47 УПК — права обвиняемого\n• Ст. 51 Конституции — право не свидетельствовать против себя\n\n⚡ Для полного анализа нужно соединение с ИИ.";
+      offlineSuggestions = ["Права обвиняемого", "Попробовать снова", "Ст. 51 Конституции"];
+    } else if (lower.includes("инцидент") || lower.includes("угроз") || lower.includes("цпвоа")) {
+      offlineReply = "**Офлайн-режим ЦПВОА:**\n\nДанные системы мониторинга доступны локально. Для анализа инцидентов через ИИ требуется подключение.\n\n• Просмотр инцидентов: вкладка «Инциденты»\n• Статус ЦПВОА: вкладка «ЦПВОА»";
+      offlineSuggestions = ["Показать инциденты", "Статус системы", "Попробовать снова"];
+    } else {
+      offlineReply = "⚠️ **Нет связи с сервером ИИ** (3 попытки)\n\nЭто может быть вызвано:\n• Слабым интернет-сигналом\n• Временной недоступностью сервера\n\nПопробуйте через 1-2 минуты.";
+      offlineSuggestions = ["Попробовать снова", "Правовые вопросы", "Инциденты системы"];
+    }
+    setMessages(prev => [
+      ...prev,
+      { role: "assistant", text: offlineReply, time: getTime(), suggestions: offlineSuggestions },
+    ]);
+    setLoading(false);
   };
 
   const handleKey = (e: React.KeyboardEvent) => {
