@@ -6,6 +6,7 @@ import json
 import os
 import urllib.request
 import urllib.error
+import urllib.parse
 import psycopg2
 from datetime import datetime, timezone
 
@@ -302,6 +303,76 @@ def fallback_answer(user_text: str) -> dict:
     return {"text": "⚠️ ИИ временно недоступен. Работаю в базовом режиме.\n\nЗадайте вопрос о праве, инцидентах или системе ECSU.", "suggestions": ["Правовые вопросы", "Инциденты системы", "Попробовать снова"]}
 
 
+# ── Веб-поиск через DuckDuckGo (без ключа) ───────────────────────────────────
+
+def web_search(query: str, max_results: int = 4) -> str:
+    """Поиск актуальной информации в интернете через DuckDuckGo Instant Answer API."""
+    try:
+        q = urllib.parse.quote(query)
+        url = f"https://api.duckduckgo.com/?q={q}&format=json&no_html=1&skip_disambig=1&no_redirect=1"
+        req = urllib.request.Request(url, headers={"User-Agent": "ECSU-AI/2.0"})
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read())
+
+        results = []
+
+        # Abstract (главный ответ)
+        if data.get("AbstractText"):
+            source = data.get("AbstractSource", "")
+            results.append(f"📖 {source}: {data['AbstractText'][:400]}")
+
+        # RelatedTopics (похожие результаты)
+        for topic in data.get("RelatedTopics", [])[:max_results]:
+            if isinstance(topic, dict) and topic.get("Text"):
+                text = topic["Text"][:200]
+                url_t = topic.get("FirstURL", "")
+                results.append(f"• {text}" + (f" ({url_t})" if url_t else ""))
+
+        # Answer (прямой ответ на вопрос)
+        if data.get("Answer"):
+            results.insert(0, f"✅ Прямой ответ: {data['Answer']}")
+
+        if not results:
+            # Fallback: поиск через DDG HTML (lite версия)
+            url2 = f"https://lite.duckduckgo.com/lite/?q={q}"
+            req2 = urllib.request.Request(url2, headers={"User-Agent": "ECSU-AI/2.0"})
+            with urllib.request.urlopen(req2, timeout=8) as resp2:
+                html = resp2.read().decode("utf-8", errors="replace")
+            # Извлекаем первые результаты из HTML
+            import re
+            snippets = re.findall(r'class="result-snippet"[^>]*>(.*?)</span>', html, re.DOTALL)
+            for s in snippets[:3]:
+                clean = re.sub(r'<[^>]+>', '', s).strip()
+                if clean:
+                    results.append(f"• {clean[:200]}")
+
+        if not results:
+            return ""
+
+        lines = [f"[РЕЗУЛЬТАТЫ ПОИСКА: «{query}»]"]
+        lines.extend(results[:5])
+        lines.append("[КОНЕЦ РЕЗУЛЬТАТОВ ПОИСКА]")
+        return "\n".join(lines)
+
+    except Exception:
+        return ""
+
+
+def should_search_web(text: str) -> bool:
+    """Определяем нужен ли веб-поиск для данного запроса."""
+    lower = text.lower()
+    # Явные запросы на поиск
+    if any(w in lower for w in ["найди", "найдите", "поищи", "поиск", "загугли", "в интернете",
+                                  "актуально", "последние новости", "новости", "сегодня", "сейчас",
+                                  "текущий", "последний", "что происходит", "что случилось"]):
+        return True
+    # Вопросы о конкретных фактах/событиях
+    if any(w in lower for w in ["когда", "кто такой", "что такое", "где находится", "сколько стоит",
+                                  "курс", "погода", "санкции", "война", "конфликт", "катастроф"]):
+        return True
+    return False
+
+
 # ── Правовая база из БД ───────────────────────────────────────────────────────
 
 def search_legal_db(user_text: str) -> str:
@@ -457,12 +528,20 @@ def handler(event: dict, context) -> dict:
         # Ищем релевантные статьи в правовой БД
         legal_block = search_legal_db(user_message)
 
-        # Собираем финальное сообщение: ЦПВОА + правовая база + вопрос
+        # Веб-поиск если нужна актуальная информация из интернета
+        web_block = ""
+        use_web = body.get("web_search", True)  # по умолчанию включён
+        if use_web and should_search_web(user_message):
+            web_block = web_search(user_message)
+
+        # Собираем финальное сообщение: ЦПВОА + правовая база + веб + вопрос
         parts = []
         if cpvoa_block:
             parts.append(cpvoa_block)
         if legal_block:
             parts.append(legal_block)
+        if web_block:
+            parts.append(web_block)
         parts.append(user_message)
         full_msg = "\n\n".join(parts)
         messages.append({"role": "user", "content": full_msg})
@@ -511,6 +590,8 @@ def handler(event: dict, context) -> dict:
             "provider": provider,
             "model": used_model,
             "session_id": session_id,
+            "web_search_used": bool(web_block),
+            "legal_db_used": bool(legal_block),
         })
 
     # ── POST /admin — административные команды ИИ ────────────────────────────

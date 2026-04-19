@@ -95,6 +95,8 @@ interface Message {
   loading?: boolean;
   fromCpvoa?: boolean;
   usedProvider?: ProviderId;
+  webSearchUsed?: boolean;
+  legalDbUsed?: boolean;
 }
 
 export interface CpvoaContext {
@@ -429,16 +431,20 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
         const data = await tryOnce();
         let reply = "";
         let suggestions: string[] = [];
+        let webSearchUsed = false;
+        let legalDbUsed = false;
         if (typeof data === "string") {
-          try { const p = JSON.parse(data); reply = p.reply || data; suggestions = p.suggestions || []; }
+          try { const p = JSON.parse(data); reply = p.reply || data; suggestions = p.suggestions || []; webSearchUsed = !!p.web_search_used; legalDbUsed = !!p.legal_db_used; }
           catch { reply = data; }
         } else {
           reply = data.reply || "Не получил ответ от сервера.";
           suggestions = data.suggestions || [];
+          webSearchUsed = !!data.web_search_used;
+          legalDbUsed = !!data.legal_db_used;
         }
         setMessages(prev => [
           ...prev,
-          { role: "assistant", text: reply, time: getTime(), suggestions, fromCpvoa: useCpvoa, usedProvider: effectiveProvider },
+          { role: "assistant", text: reply, time: getTime(), suggestions, fromCpvoa: useCpvoa, usedProvider: effectiveProvider, webSearchUsed, legalDbUsed },
         ]);
         setLoading(false);
         return;
@@ -1172,6 +1178,8 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
                       </div>
                       <span className="text-white/25 text-[10px]">{msg.time}</span>
                       {msg.fromCpvoa && <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(76,175,80,0.15)", color: "#4CAF50" }}>ЦПВОА</span>}
+                      {msg.webSearchUsed && <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5" style={{ background: "rgba(59,130,246,0.15)", color: "#60a5fa" }}><span>🌐</span>Поиск</span>}
+                      {msg.legalDbUsed && <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(168,85,247,0.15)", color: "#c084fc" }}>⚖️ Право</span>}
                       {msg.usedProvider && msg.usedProvider !== "auto" && selectedProvider === "auto" && (
                         <span className="text-[9px] px-1.5 py-0.5 rounded-full"
                           style={{ background: `${PROVIDERS.find(p => p.id === msg.usedProvider)?.color ?? "#a855f7"}22`, color: PROVIDERS.find(p => p.id === msg.usedProvider)?.color ?? "#a855f7" }}>
