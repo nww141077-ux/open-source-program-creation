@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "Get base models catalog",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {"models": []},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
