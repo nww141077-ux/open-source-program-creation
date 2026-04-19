@@ -54,7 +54,7 @@ type Tab = "dashboard" | "integrations" | "profile";
 export default function Dashboard() {
   const [tab, setTab] = useState<Tab>("dashboard");
   const [addModal, setAddModal] = useState(false);
-  const [userName] = useState("Алексей");
+  const [userName] = useState("Владимир");
 
   return (
     <div className="min-h-screen font-body" style={{ background: "var(--dark-bg)" }}>

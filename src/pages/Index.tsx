@@ -72,7 +72,7 @@ export default function Index() {
 
       {/* Footer */}
       <div className="mt-10 text-center text-xs text-white/20 space-y-1">
-        <div>© 2024 Николаев Владимир Владимирович</div>
+        <div>© 2026 Николаев Владимир Владимирович</div>
         <div>Все права защищены</div>
       </div>
     </div>
