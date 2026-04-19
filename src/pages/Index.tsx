@@ -102,9 +102,11 @@ export default function Index() {
             <a key={item} href="#" className="text-sm text-white/60 hover:text-white transition-colors duration-200">{item}</a>
           ))}
         </div>
-        <button onClick={() => navigate('/app')} className="px-5 py-2 rounded-lg font-semibold text-sm text-black transition-all duration-200 hover:scale-105"
-          style={{ background: 'linear-gradient(135deg, #00ff87, #3b82f6)', boxShadow: '0 0 20px rgba(0,255,135,0.3)' }}>
-          Начать бесплатно
+        <button onClick={() => navigate('/egsu/dashboard')}
+          className="px-5 py-2 rounded-lg font-semibold text-sm text-white transition-all duration-200 hover:scale-105 flex items-center gap-2"
+          style={{ background: 'linear-gradient(135deg, #3b82f6, #a855f7)', boxShadow: '0 0 20px rgba(59,130,246,0.4)' }}>
+          <Icon name="LogIn" size={15} />
+          Войти в систему
         </button>
       </nav>
 
@@ -140,11 +142,17 @@ export default function Index() {
             </p>
 
             <div className="flex flex-wrap gap-4">
-              <button onClick={() => navigate('/app')} className="px-8 py-4 rounded-xl font-semibold text-black text-base transition-all duration-300 hover:scale-105 glow-green"
-                style={{ background: 'linear-gradient(135deg, #00ff87, #3b82f6)' }}>
-                Попробовать бесплатно →
+              <button onClick={() => navigate('/egsu/dashboard')}
+                className="px-8 py-4 rounded-xl font-semibold text-white text-base transition-all duration-300 hover:scale-105 flex items-center gap-3"
+                style={{ background: 'linear-gradient(135deg, #3b82f6, #a855f7)', boxShadow: '0 0 30px rgba(59,130,246,0.4)' }}>
+                <Icon name="LayoutDashboard" size={20} />
+                Открыть мою систему →
               </button>
-
+              <button onClick={() => navigate('/egsu')}
+                className="px-8 py-4 rounded-xl font-semibold text-white/70 text-base transition-all duration-300 hover:text-white hover:scale-105"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)' }}>
+                ECSU 2.0
+              </button>
             </div>
 
             <div className="flex items-center gap-6 pt-2">
