@@ -6,6 +6,7 @@ const SCANNER_API = "https://functions.poehali.dev/b3ae5ea9-0780-4337-b7b0-e19f1
 
 // ─── Типы провайдеров ───────────────────────────────────────────────────────
 type ProviderId = "auto" | "gemini" | "openai" | "anthropic" | "yandex" | "groq" | "custom";
+// "auto" оставлен только для обратной совместимости с localStorage, реально всегда маппится на "yandex"
 
 interface Provider {
   id: ProviderId;
@@ -18,15 +19,6 @@ interface Provider {
 }
 
 const PROVIDERS: Provider[] = [
-  {
-    id: "auto",
-    label: "Авто",
-    color: "#a855f7",
-    icon: "Sparkles",
-    keyPlaceholder: "Ключ не нужен",
-    description: "Система сама выбирает лучшую модель для каждого запроса",
-    models: ["gemini-pro", "gpt-4o", "claude-3", "yandex-gpt"],
-  },
   {
     id: "gemini",
     label: "Google Gemini",
@@ -301,9 +293,13 @@ const LS_KEYS = "ezsu_ai_keys";
 const LS_MODELS = "ezsu_ai_models";
 const LS_CUSTOM_URL = "ezsu_ai_custom_url";
 
-// Миграция: если сохранён "auto" без ключей — переключаем на yandex
-if (localStorage.getItem(LS_PROVIDER) === "auto") {
-  localStorage.setItem(LS_PROVIDER, "yandex");
+// Принудительная миграция: сбрасываем любой старый провайдер на yandex
+// (убираем "auto" и любой провайдер без ключа)
+{
+  const saved = localStorage.getItem(LS_PROVIDER);
+  if (!saved || saved === "auto" || saved === "gemini" || saved === "openai" || saved === "anthropic") {
+    localStorage.setItem(LS_PROVIDER, "yandex");
+  }
 }
 
 export default function AiChat({ onClose, initialCpvoaContext, initialMessage }: Props) {
@@ -312,9 +308,12 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
   const [cpvoaSynced, setCpvoaSynced] = useState(!!initialCpvoaContext);
 
   // ─── Настройки провайдера ─────────────────────────────────────────────────
-  const [selectedProvider, setSelectedProvider] = useState<ProviderId>(
-    () => (localStorage.getItem(LS_PROVIDER) as ProviderId) ?? "yandex"
-  );
+  const [selectedProvider, setSelectedProvider] = useState<ProviderId>(() => {
+    const v = localStorage.getItem(LS_PROVIDER) as ProviderId;
+    // Принудительно yandex если нет ключа у сохранённого провайдера
+    if (!v || v === "auto" || v === "gemini" || v === "openai" || v === "anthropic") return "yandex";
+    return v;
+  });
   const [apiKeys, setApiKeys] = useState<Record<ProviderId, string>>(() => {
     try { return JSON.parse(localStorage.getItem(LS_KEYS) ?? "{}"); } catch { return {}; }
   });
@@ -334,9 +333,9 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
     setTimeout(() => setSettingsSaved(false), 2000);
   };
 
-  const getEffectiveProvider = (text: string): ProviderId => {
-    if (selectedProvider !== "auto") return selectedProvider;
-    return autoSelectProvider(text, cpvoaSynced);
+  const getEffectiveProvider = (_text: string): ProviderId => {
+    if (selectedProvider === "auto") return "yandex";
+    return selectedProvider;
   };
 
   // ─── Чат ──────────────────────────────────────────────────────────────────
@@ -382,7 +381,7 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
 
     const useCpvoa = withCpvoa ?? (cpvoaContext !== null && cpvoaSynced);
     const effectiveProvider = getEffectiveProvider(text);
-    const providerInfo = PROVIDERS.find(p => p.id === effectiveProvider)!;
+    const providerInfo = PROVIDERS.find(p => p.id === effectiveProvider) ?? PROVIDERS.find(p => p.id === "yandex")!;
 
     const userMsg: Message = {
       role: "user",
