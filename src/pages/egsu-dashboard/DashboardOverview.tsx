@@ -69,6 +69,135 @@ const KPI_DETAILS = [
 const maxCount = Math.max(...WEEKLY.map(w => w.count));
 const total = BY_TYPE.reduce((a, b) => a + b.count, 0);
 
+// Координаты стран на SVG-карте (x,y в процентах от размера 1000x500)
+const COUNTRY_COORDS: Record<string, [number, number]> = {
+  "Бразилия": [280, 340], "Германия": [490, 165], "Китай": [730, 210],
+  "Кения": [540, 310], "Норвегия": [490, 130], "Нигерия": [480, 290],
+  "Канада": [210, 155], "Индия": [650, 250], "Россия": [620, 145],
+  "США": [185, 210], "Австралия": [790, 380], "Франция": [470, 175],
+  "Япония": [800, 205], "Аргентина": [265, 400], "ЮАР": [510, 370],
+};
+
+const SEV_COLOR: Record<string, string> = {
+  critical: "#f43f5e", high: "#f59e0b", medium: "#a855f7", low: "#3b82f6",
+};
+
+function IncidentMap({ incidents }: { incidents: any[] }) {
+  const [hovered, setHovered] = useState<any | null>(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
+  const points = incidents.map(inc => ({
+    ...inc,
+    coords: COUNTRY_COORDS[inc.country] || null,
+  })).filter(inc => inc.coords);
+
+  return (
+    <div className="rounded-2xl overflow-hidden relative"
+      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+        <h3 className="font-display text-sm font-semibold text-white/70 uppercase tracking-wider">Карта инцидентов</h3>
+        <div className="flex items-center gap-3 text-[10px]">
+          {Object.entries(SEV_COLOR).map(([k, c]) => (
+            <span key={k} className="flex items-center gap-1 text-white/40">
+              <span className="w-2 h-2 rounded-full inline-block" style={{ background: c }} />
+              {k === "critical" ? "Критич." : k === "high" ? "Высокий" : k === "medium" ? "Средний" : "Низкий"}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="relative" style={{ paddingBottom: "50%" }}>
+        <svg
+          viewBox="0 0 1000 500"
+          className="absolute inset-0 w-full h-full"
+          style={{ background: "transparent" }}
+        >
+          {/* Упрощённые контуры континентов */}
+          {/* Северная Америка */}
+          <path d="M 80,100 L 330,80 L 360,200 L 320,280 L 250,300 L 200,260 L 140,220 L 100,160 Z"
+            fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+          {/* Южная Америка */}
+          <path d="M 220,300 L 320,290 L 340,360 L 300,440 L 240,450 L 210,400 L 215,340 Z"
+            fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+          {/* Европа */}
+          <path d="M 440,100 L 560,90 L 570,170 L 510,200 L 450,195 L 430,150 Z"
+            fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+          {/* Африка */}
+          <path d="M 450,210 L 570,200 L 590,260 L 560,370 L 500,410 L 450,380 L 430,310 L 440,250 Z"
+            fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+          {/* Азия */}
+          <path d="M 570,80 L 860,70 L 870,200 L 820,250 L 750,260 L 660,230 L 600,220 L 570,170 Z"
+            fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+          {/* Австралия */}
+          <path d="M 740,340 L 870,330 L 880,410 L 820,440 L 750,420 L 730,380 Z"
+            fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+
+          {/* Сетка */}
+          {[100, 200, 300, 400].map(y => (
+            <line key={y} x1="0" y1={y} x2="1000" y2={y} stroke="rgba(255,255,255,0.03)" strokeWidth="0.5" />
+          ))}
+          {[200, 400, 600, 800].map(x => (
+            <line key={x} x1={x} y1="0" x2={x} y2="500" stroke="rgba(255,255,255,0.03)" strokeWidth="0.5" />
+          ))}
+
+          {/* Точки инцидентов */}
+          {points.map((inc, i) => {
+            const [cx, cy] = inc.coords!;
+            const color = SEV_COLOR[inc.severity] || "#a855f7";
+            return (
+              <g key={i}
+                onMouseEnter={e => { setHovered(inc); setTooltipPos({ x: cx / 10, y: cy / 5 }); }}
+                onMouseLeave={() => setHovered(null)}
+                style={{ cursor: "pointer" }}>
+                {/* Пульсирующий круг для активных */}
+                {inc.status === "active" && (
+                  <circle cx={cx} cy={cy} r="14" fill={color} opacity="0.12">
+                    <animate attributeName="r" values="10;18;10" dur="2s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="0.15;0.05;0.15" dur="2s" repeatCount="indefinite" />
+                  </circle>
+                )}
+                <circle cx={cx} cy={cy} r="6" fill={color} opacity="0.9"
+                  stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                {/* Подпись страны */}
+                <text x={cx + 9} y={cy + 4} fontSize="9" fill="rgba(255,255,255,0.4)"
+                  style={{ pointerEvents: "none" }}>
+                  {inc.country}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+
+        {/* Тултип */}
+        {hovered && (
+          <div
+            className="absolute z-10 px-3 py-2 rounded-xl text-xs pointer-events-none"
+            style={{
+              left: `${tooltipPos.x}%`,
+              top: `${tooltipPos.y}%`,
+              transform: "translate(-50%, -120%)",
+              background: "#0d1220",
+              border: `1px solid ${SEV_COLOR[hovered.severity] || "#a855f7"}60`,
+              boxShadow: `0 4px 20px rgba(0,0,0,0.5)`,
+              minWidth: 160,
+            }}
+          >
+            <div className="font-bold text-white mb-0.5">{hovered.title}</div>
+            <div className="text-white/50">{hovered.country} · {hovered.date}</div>
+            <div className="mt-1 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full" style={{ background: SEV_COLOR[hovered.severity] }} />
+              <span style={{ color: SEV_COLOR[hovered.severity] }}>{hovered.severity}</span>
+              <span className="text-white/30">· AI {hovered.ai}%</span>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="px-5 py-2 text-[10px] text-white/20" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        Показано {points.length} инцидентов на карте · пульсирующие точки — активные
+      </div>
+    </div>
+  );
+}
+
 type Props = {
   incidents: any[];
   onShowAll: () => void;
@@ -172,6 +301,9 @@ export default function DashboardOverview({ incidents, onShowAll, onSelectIncide
           </div>
         </div>
       )}
+
+      {/* ── Карта инцидентов ── */}
+      <IncidentMap incidents={incidents} />
 
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Weekly chart */}
