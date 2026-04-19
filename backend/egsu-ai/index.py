@@ -224,7 +224,7 @@ def auto_pick_provider(text: str, has_cpvoa: bool) -> str:
         "gemini": bool(os.environ.get("GEMINI_API_KEY")),
         "openai": bool(os.environ.get("OPENAI_API_KEY")),
         "anthropic": bool(os.environ.get("ANTHROPIC_API_KEY")),
-        "yandex": bool(os.environ.get("YANDEX_GPT_API_KEY")),
+        "yandex": bool(os.environ.get("YANDEX_GPT_API_KEY") or os.environ.get("YANDEX_SPEECHKIT_API_KEY")),
     }
     for p in preferred:
         if available.get(p):
@@ -254,7 +254,7 @@ def dispatch_call(provider: str, messages: list, client_key: str, model: str, cu
         m = model or "claude-3-5-sonnet-20241022"
         return call_anthropic(messages, key, m)
     if provider == "yandex":
-        key = client_key or os.environ.get("YANDEX_SPEECHKIT_API_KEY", "")
+        key = client_key or os.environ.get("YANDEX_GPT_API_KEY", "")
         m = model or "yandexgpt-lite"
         return call_yandex(messages, key, m)
     if provider == "custom" and custom_url:
@@ -333,7 +333,7 @@ def handler(event: dict, context) -> dict:
             "gemini": bool(os.environ.get("GEMINI_API_KEY")),
             "openai": bool(os.environ.get("OPENAI_API_KEY")),
             "anthropic": bool(os.environ.get("ANTHROPIC_API_KEY")),
-            "yandex": bool(os.environ.get("YANDEX_SPEECHKIT_API_KEY")),
+            "yandex": bool(os.environ.get("YANDEX_GPT_API_KEY")),
         }
         return ok({
             "status": "active",
