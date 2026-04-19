@@ -260,8 +260,8 @@ export default function Dashboard() {
                     {userName[0]}
                   </div>
                   <div>
-                    <div className="text-white font-semibold text-lg">{userName} Иванов</div>
-                    <div className="text-white/40 text-sm">admin@nexaflow.io</div>
+                    <div className="text-white font-semibold text-lg">{userName} Николаев</div>
+                    <div className="text-white/40 text-sm">nikolaevvladimir77@yandex.ru</div>
                     <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded text-xs font-semibold text-black" style={{ background: "#00ff87" }}>
                       Pro план
                     </span>
@@ -270,9 +270,9 @@ export default function Dashboard() {
 
                 <div className="space-y-4">
                   {[
-                    { label: "Имя", value: userName + " Иванов", icon: "User" },
-                    { label: "Email", value: "admin@nexaflow.io", icon: "Mail" },
-                    { label: "Организация", value: "NexaFlow Corp", icon: "Building2" },
+                    { label: "Имя", value: "Николаев Владимир Владимирович", icon: "User" },
+                    { label: "Email", value: "nikolaevvladimir77@yandex.ru", icon: "Mail" },
+                    { label: "Организация", value: "ECSU 2.0 — Единая ЦСУ", icon: "Building2" },
                     { label: "Часовой пояс", value: "UTC+3, Москва", icon: "Clock" },
                   ].map((field) => (
                     <div key={field.label} className="flex items-center justify-between py-3"
