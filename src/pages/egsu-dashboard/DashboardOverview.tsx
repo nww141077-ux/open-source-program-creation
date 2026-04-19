@@ -69,7 +69,6 @@ const KPI_DETAILS = [
 const maxCount = Math.max(...WEEKLY.map(w => w.count));
 const total = BY_TYPE.reduce((a, b) => a + b.count, 0);
 
-// Координаты стран на SVG-карте (x,y в процентах от размера 1000x500)
 const COUNTRY_COORDS: Record<string, [number, number]> = {
   "Бразилия": [280, 340], "Германия": [490, 165], "Китай": [730, 210],
   "Кения": [540, 310], "Норвегия": [490, 130], "Нигерия": [480, 290],
@@ -78,123 +77,544 @@ const COUNTRY_COORDS: Record<string, [number, number]> = {
   "Япония": [800, 205], "Аргентина": [265, 400], "ЮАР": [510, 370],
 };
 
+// Сферические координаты (lon, lat) для 3D-глобуса
+const COUNTRY_GEO: Record<string, [number, number]> = {
+  "Бразилия": [-52, -14], "Германия": [10, 51], "Китай": [104, 35],
+  "Кения": [37, 1], "Норвегия": [10, 62], "Нигерия": [8, 9],
+  "Канада": [-96, 56], "Индия": [78, 22], "Россия": [60, 60],
+  "США": [-98, 38], "Австралия": [134, -25], "Франция": [2, 46],
+  "Япония": [138, 36], "Аргентина": [-64, -34], "ЮАР": [25, -29],
+};
+
 const SEV_COLOR: Record<string, string> = {
   critical: "#f43f5e", high: "#f59e0b", medium: "#a855f7", low: "#3b82f6",
 };
 
-function IncidentMap({ incidents }: { incidents: any[] }) {
-  const [hovered, setHovered] = useState<any | null>(null);
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+const SEV_LABEL: Record<string, string> = {
+  critical: "Критический", high: "Высокий", medium: "Средний", low: "Низкий",
+};
 
-  const points = incidents.map(inc => ({
-    ...inc,
-    coords: COUNTRY_COORDS[inc.country] || null,
-  })).filter(inc => inc.coords);
+// Видео по типу инцидента (демо — YouTube embed)
+const TYPE_VIDEOS: Record<string, string> = {
+  ecology: "https://www.youtube.com/embed/IFBF9j2A4sg",
+  water: "https://www.youtube.com/embed/uFwGZHHqHTE",
+  air: "https://www.youtube.com/embed/DCCGKd7DqEk",
+  cyber: "https://www.youtube.com/embed/AQDCe585Lnc",
+};
+
+// ─── Модальное окно инцидента ─────────────────────────────────────────────────
+function IncidentDetailModal({ inc, onClose }: { inc: any; onClose: () => void }) {
+  const [tab, setTab] = useState<"info" | "video">("info");
+  const color = SEV_COLOR[inc.severity] || "#a855f7";
+  const videoUrl = TYPE_VIDEOS[inc.type] || TYPE_VIDEOS.ecology;
 
   return (
-    <div className="rounded-2xl overflow-hidden relative"
-      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-      <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-        <h3 className="font-display text-sm font-semibold text-white/70 uppercase tracking-wider">Карта инцидентов</h3>
-        <div className="flex items-center gap-3 text-[10px]">
-          {Object.entries(SEV_COLOR).map(([k, c]) => (
-            <span key={k} className="flex items-center gap-1 text-white/40">
-              <span className="w-2 h-2 rounded-full inline-block" style={{ background: c }} />
-              {k === "critical" ? "Критич." : k === "high" ? "Высокий" : k === "medium" ? "Средний" : "Низкий"}
-            </span>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)" }}
+      onClick={onClose}>
+      <div className="w-full max-w-lg rounded-2xl overflow-hidden"
+        style={{ background: "#080e1a", border: `1px solid ${color}40`, boxShadow: `0 0 80px ${color}25, 0 20px 60px rgba(0,0,0,0.7)` }}
+        onClick={e => e.stopPropagation()}>
+
+        {/* Шапка */}
+        <div className="px-5 py-4 flex items-start justify-between"
+          style={{ background: `linear-gradient(135deg, ${color}15, rgba(255,255,255,0.02))`, borderBottom: `1px solid ${color}25` }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: `${color}20`, border: `1px solid ${color}40` }}>
+              <Icon name={inc.type === "cyber" ? "Shield" : inc.type === "water" ? "Droplets" : inc.type === "air" ? "Wind" : "Leaf"} size={20} style={{ color }} />
+            </div>
+            <div>
+              <div className="text-white font-bold text-base leading-tight">{inc.title}</div>
+              <div className="text-white/40 text-xs mt-0.5">{inc.id} · {inc.country} · {inc.date}</div>
+            </div>
+          </div>
+          <button onClick={onClose}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white/70 transition-colors shrink-0"
+            style={{ background: "rgba(255,255,255,0.06)" }}>
+            <Icon name="X" size={14} />
+          </button>
+        </div>
+
+        {/* Табы */}
+        <div className="flex" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          {([["info", "Детали", "FileText"], ["video", "Видео", "Play"]] as const).map(([id, label, icon]) => (
+            <button key={id} onClick={() => setTab(id)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-semibold transition-all"
+              style={{
+                color: tab === id ? color : "rgba(255,255,255,0.3)",
+                borderBottom: tab === id ? `2px solid ${color}` : "2px solid transparent",
+                background: tab === id ? `${color}08` : "transparent",
+              }}>
+              <Icon name={icon as any} size={13} />
+              {label}
+            </button>
           ))}
         </div>
-      </div>
-      <div className="relative" style={{ paddingBottom: "50%" }}>
-        <svg
-          viewBox="0 0 1000 500"
-          className="absolute inset-0 w-full h-full"
-          style={{ background: "transparent" }}
-        >
-          {/* Упрощённые контуры континентов */}
-          {/* Северная Америка */}
-          <path d="M 80,100 L 330,80 L 360,200 L 320,280 L 250,300 L 200,260 L 140,220 L 100,160 Z"
-            fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-          {/* Южная Америка */}
-          <path d="M 220,300 L 320,290 L 340,360 L 300,440 L 240,450 L 210,400 L 215,340 Z"
-            fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-          {/* Европа */}
-          <path d="M 440,100 L 560,90 L 570,170 L 510,200 L 450,195 L 430,150 Z"
-            fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-          {/* Африка */}
-          <path d="M 450,210 L 570,200 L 590,260 L 560,370 L 500,410 L 450,380 L 430,310 L 440,250 Z"
-            fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-          {/* Азия */}
-          <path d="M 570,80 L 860,70 L 870,200 L 820,250 L 750,260 L 660,230 L 600,220 L 570,170 Z"
-            fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-          {/* Австралия */}
-          <path d="M 740,340 L 870,330 L 880,410 L 820,440 L 750,420 L 730,380 Z"
-            fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
 
-          {/* Сетка */}
-          {[100, 200, 300, 400].map(y => (
-            <line key={y} x1="0" y1={y} x2="1000" y2={y} stroke="rgba(255,255,255,0.03)" strokeWidth="0.5" />
-          ))}
-          {[200, 400, 600, 800].map(x => (
-            <line key={x} x1={x} y1="0" x2={x} y2="500" stroke="rgba(255,255,255,0.03)" strokeWidth="0.5" />
-          ))}
-
-          {/* Точки инцидентов */}
-          {points.map((inc, i) => {
-            const [cx, cy] = inc.coords!;
-            const color = SEV_COLOR[inc.severity] || "#a855f7";
-            return (
-              <g key={i}
-                onMouseEnter={e => { setHovered(inc); setTooltipPos({ x: cx / 10, y: cy / 5 }); }}
-                onMouseLeave={() => setHovered(null)}
-                style={{ cursor: "pointer" }}>
-                {/* Пульсирующий круг для активных */}
-                {inc.status === "active" && (
-                  <circle cx={cx} cy={cy} r="14" fill={color} opacity="0.12">
-                    <animate attributeName="r" values="10;18;10" dur="2s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" values="0.15;0.05;0.15" dur="2s" repeatCount="indefinite" />
-                  </circle>
-                )}
-                <circle cx={cx} cy={cy} r="6" fill={color} opacity="0.9"
-                  stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                {/* Подпись страны */}
-                <text x={cx + 9} y={cy + 4} fontSize="9" fill="rgba(255,255,255,0.4)"
-                  style={{ pointerEvents: "none" }}>
-                  {inc.country}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
-
-        {/* Тултип */}
-        {hovered && (
-          <div
-            className="absolute z-10 px-3 py-2 rounded-xl text-xs pointer-events-none"
-            style={{
-              left: `${tooltipPos.x}%`,
-              top: `${tooltipPos.y}%`,
-              transform: "translate(-50%, -120%)",
-              background: "#0d1220",
-              border: `1px solid ${SEV_COLOR[hovered.severity] || "#a855f7"}60`,
-              boxShadow: `0 4px 20px rgba(0,0,0,0.5)`,
-              minWidth: 160,
-            }}
-          >
-            <div className="font-bold text-white mb-0.5">{hovered.title}</div>
-            <div className="text-white/50">{hovered.country} · {hovered.date}</div>
-            <div className="mt-1 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full" style={{ background: SEV_COLOR[hovered.severity] }} />
-              <span style={{ color: SEV_COLOR[hovered.severity] }}>{hovered.severity}</span>
-              <span className="text-white/30">· AI {hovered.ai}%</span>
+        {/* Контент: Детали */}
+        {tab === "info" && (
+          <div className="p-5 space-y-4">
+            {/* Статус + Уровень */}
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: "Уровень", value: SEV_LABEL[inc.severity] || inc.severity, color },
+                { label: "Статус", value: inc.status === "active" ? "Активен" : inc.status === "investigating" ? "Расследование" : "Решён", color: STATUS_COLORS[inc.status] || "#fff" },
+                { label: "ИИ-оценка", value: `${inc.ai}%`, color: inc.ai >= 85 ? "#00ff87" : "#f59e0b" },
+              ].map(item => (
+                <div key={item.label} className="rounded-xl p-3 text-center"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div className="text-[10px] text-white/35 mb-1">{item.label}</div>
+                  <div className="font-bold text-sm" style={{ color: item.color }}>{item.value}</div>
+                </div>
+              ))}
             </div>
+
+            {/* Инфо */}
+            <div className="space-y-2.5 text-sm">
+              {[
+                ["Ответственный орган", inc.responsible],
+                ["Тип инцидента", inc.type === "ecology" ? "🌿 Экология" : inc.type === "water" ? "💧 Водные ресурсы" : inc.type === "air" ? "🌬️ Атмосфера" : "🛡️ Кибербезопасность"],
+                ["Дата регистрации", inc.date],
+              ].map(([k, v]) => (
+                <div key={k} className="flex items-center justify-between px-3 py-2 rounded-lg"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                  <span className="text-white/40 text-xs">{k}</span>
+                  <span className="text-white/80 text-xs font-medium">{v}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* ИИ-шкала */}
+            <div>
+              <div className="flex justify-between text-xs mb-2">
+                <span className="text-white/40">Достоверность ИИ-верификации</span>
+                <span style={{ color: inc.ai >= 85 ? "#00ff87" : "#f59e0b" }}>{inc.ai}%</span>
+              </div>
+              <div className="h-2 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+                <div className="h-2 rounded-full transition-all"
+                  style={{ width: `${inc.ai}%`, background: `linear-gradient(90deg, ${color}, ${inc.ai >= 85 ? "#00ff87" : "#f59e0b"})` }} />
+              </div>
+            </div>
+
+            <button onClick={() => setTab("video")}
+              className="w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:opacity-90 hover:scale-[1.01]"
+              style={{ background: `linear-gradient(135deg, ${color}30, rgba(255,255,255,0.05))`, color, border: `1px solid ${color}40` }}>
+              <Icon name="Play" size={14} />
+              Смотреть видео по инциденту
+            </button>
+          </div>
+        )}
+
+        {/* Контент: Видео */}
+        {tab === "video" && (
+          <div className="p-5">
+            <div className="rounded-xl overflow-hidden mb-3" style={{ background: "#000", aspectRatio: "16/9" }}>
+              <iframe
+                src={videoUrl}
+                title={inc.title}
+                width="100%" height="100%"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={{ border: "none", display: "block" }}
+              />
+            </div>
+            <div className="text-xs text-white/30 text-center">
+              Документальный материал по категории: {inc.type === "ecology" ? "Экология" : inc.type === "water" ? "Водные ресурсы" : inc.type === "air" ? "Атмосфера" : "Кибербезопасность"}
+            </div>
+            <button onClick={() => setTab("info")}
+              className="w-full mt-3 py-2 rounded-xl text-xs font-semibold text-white/40 hover:text-white/70 transition-colors"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              ← Назад к деталям
+            </button>
           </div>
         )}
       </div>
-      <div className="px-5 py-2 text-[10px] text-white/20" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        Показано {points.length} инцидентов на карте · пульсирующие точки — активные
-      </div>
     </div>
+  );
+}
+
+// ─── Вспомогательные SVG-контуры континентов ─────────────────────────────────
+const CONTINENTS = [
+  { d: "M 80,100 Q 150,70 220,85 L 330,80 L 360,190 L 330,270 L 280,295 L 230,290 L 200,265 L 145,225 L 100,165 Z", label: "С.Америка" },
+  { d: "M 218,295 L 320,285 L 345,355 L 310,435 Q 280,460 250,455 L 215,405 L 212,345 Z", label: "Ю.Америка" },
+  { d: "M 432,98 Q 480,82 545,88 L 565,92 L 572,168 L 520,198 L 460,195 L 432,155 Z", label: "Европа" },
+  { d: "M 445,207 L 572,197 L 592,258 L 565,372 L 505,412 L 448,382 L 428,308 L 438,248 Z", label: "Африка" },
+  { d: "M 568,78 Q 680,62 800,68 L 862,72 L 872,195 L 825,248 L 752,262 L 665,232 L 600,218 L 570,172 Z", label: "Азия" },
+  { d: "M 738,338 Q 790,322 858,328 L 882,408 L 822,442 L 752,422 L 730,380 Z", label: "Австралия" },
+];
+
+// ─── ВИД 1: Плоская карта ────────────────────────────────────────────────────
+function FlatMap({ points, onSelect }: { points: any[]; onSelect: (inc: any) => void }) {
+  const [hovered, setHovered] = useState<any | null>(null);
+  return (
+    <div className="relative" style={{ paddingBottom: "50%" }}>
+      <svg viewBox="0 0 1000 500" className="absolute inset-0 w-full h-full">
+        {/* Фон-сетка */}
+        <defs>
+          <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(255,255,255,0.025)" strokeWidth="0.5" />
+          </pattern>
+        </defs>
+        <rect width="1000" height="500" fill="url(#grid)" />
+        {/* Линии экватора и тропиков */}
+        <line x1="0" y1="250" x2="1000" y2="250" stroke="rgba(59,130,246,0.15)" strokeWidth="1" strokeDasharray="6,4" />
+        <line x1="0" y1="185" x2="1000" y2="185" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" strokeDasharray="4,6" />
+        <line x1="0" y1="315" x2="1000" y2="315" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" strokeDasharray="4,6" />
+        <text x="8" y="248" fontSize="8" fill="rgba(59,130,246,0.4)">экватор</text>
+        {/* Континенты */}
+        {CONTINENTS.map(c => (
+          <path key={c.label} d={c.d}
+            fill="rgba(99,102,241,0.07)" stroke="rgba(99,102,241,0.25)" strokeWidth="1" />
+        ))}
+        {/* Точки */}
+        {points.map((inc, i) => {
+          const [cx, cy] = inc.flatCoords;
+          const color = SEV_COLOR[inc.severity] || "#a855f7";
+          const isHov = hovered?.id === inc.id;
+          return (
+            <g key={i} style={{ cursor: "pointer" }}
+              onClick={() => onSelect(inc)}
+              onMouseEnter={() => setHovered(inc)}
+              onMouseLeave={() => setHovered(null)}>
+              {/* Пульс для активных */}
+              {inc.status === "active" && (
+                <circle cx={cx} cy={cy} r="16" fill={color} opacity="0.08">
+                  <animate attributeName="r" values="8;20;8" dur="2.5s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.12;0.03;0.12" dur="2.5s" repeatCount="indefinite" />
+                </circle>
+              )}
+              <circle cx={cx} cy={cy} r={isHov ? 9 : 7} fill={color}
+                stroke={isHov ? "white" : "rgba(255,255,255,0.4)"} strokeWidth={isHov ? 2 : 1}
+                style={{ transition: "r 0.15s" }} />
+              {isHov && (
+                <>
+                  <rect x={cx + 12} y={cy - 20} width={inc.country.length * 6 + 8} height={28} rx="4"
+                    fill="#0d1220" stroke={`${color}80`} strokeWidth="1" />
+                  <text x={cx + 16} y={cy - 7} fontSize="9" fill="white" fontWeight="bold">{inc.title.slice(0, 18)}{inc.title.length > 18 ? "…" : ""}</text>
+                  <text x={cx + 16} y={cy + 4} fontSize="8" fill="rgba(255,255,255,0.5)">{inc.country}</text>
+                </>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+// ─── ВИД 2: 3D-Глобус (CSS perspective + SVG эллипс) ──────────────────────
+function GlobeMap({ points, onSelect }: { points: any[]; onSelect: (inc: any) => void }) {
+  const [rot, setRot] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [rotStart, setRotStart] = useState(0);
+  const [hovered, setHovered] = useState<any | null>(null);
+
+  const R = 200; // радиус глобуса в SVG-единицах
+
+  // Перевод geo(lon,lat) → 3D → 2D с учётом поворота
+  const project = (lon: number, lat: number): { x: number; y: number; visible: boolean } => {
+    const φ = (lat * Math.PI) / 180;
+    const λ = ((lon + rot) * Math.PI) / 180;
+    const x = R * Math.cos(φ) * Math.sin(λ);
+    const y = -R * Math.sin(φ);
+    const z = R * Math.cos(φ) * Math.cos(λ);
+    return { x: x + 250, y: y + 250, visible: z > 0 };
+  };
+
+  const onMouseDown = (e: React.MouseEvent) => { setDragging(true); setStartX(e.clientX); setRotStart(rot); };
+  const onMouseMove = (e: React.MouseEvent) => { if (dragging) setRot(rotStart + (e.clientX - startX) * 0.4); };
+  const onMouseUp = () => setDragging(false);
+
+  // Меридианы и параллели
+  const meridians = Array.from({ length: 12 }, (_, i) => i * 30);
+  const parallels = [-60, -30, 0, 30, 60];
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ height: 420 }}>
+      {/* Подсветка-сфера */}
+      <div className="absolute rounded-full pointer-events-none"
+        style={{
+          width: 420, height: 420,
+          background: "radial-gradient(circle at 35% 35%, rgba(99,102,241,0.18) 0%, rgba(168,85,247,0.08) 50%, transparent 70%)",
+          boxShadow: "0 0 80px rgba(99,102,241,0.12), inset 0 0 60px rgba(0,0,50,0.5)",
+          borderRadius: "50%",
+        }} />
+
+      <svg viewBox="0 0 500 500" width="420" height="420"
+        style={{ cursor: dragging ? "grabbing" : "grab", userSelect: "none" }}
+        onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
+
+        {/* Тень */}
+        <defs>
+          <radialGradient id="globeShadow" cx="45%" cy="45%" r="55%">
+            <stop offset="0%" stopColor="rgba(99,102,241,0.15)" />
+            <stop offset="60%" stopColor="rgba(30,40,80,0.4)" />
+            <stop offset="100%" stopColor="rgba(5,10,25,0.95)" />
+          </radialGradient>
+          <radialGradient id="globeShine" cx="30%" cy="25%" r="50%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.07)" />
+            <stop offset="100%" stopColor="transparent" />
+          </radialGradient>
+          <clipPath id="globeClip">
+            <circle cx="250" cy="250" r={R} />
+          </clipPath>
+        </defs>
+
+        {/* Основной круг */}
+        <circle cx="250" cy="250" r={R} fill="url(#globeShadow)" stroke="rgba(99,102,241,0.3)" strokeWidth="1.5" />
+
+        <g clipPath="url(#globeClip)">
+          {/* Параллели */}
+          {parallels.map(lat => {
+            const φ = (lat * Math.PI) / 180;
+            const ry = R * Math.cos(φ);
+            const cy2 = 250 - R * Math.sin(φ);
+            return <ellipse key={lat} cx="250" cy={cy2} rx={ry} ry={ry * 0.12}
+              fill="none" stroke={lat === 0 ? "rgba(59,130,246,0.3)" : "rgba(255,255,255,0.06)"} strokeWidth={lat === 0 ? 1 : 0.5} />;
+          })}
+          {/* Меридианы */}
+          {meridians.map(lon => {
+            const pts: string[] = [];
+            for (let lat = -90; lat <= 90; lat += 5) {
+              const p = project(lon, lat);
+              if (p.visible) pts.push(`${p.x.toFixed(1)},${p.y.toFixed(1)}`);
+            }
+            return pts.length > 2 ? (
+              <polyline key={lon} points={pts.join(" ")} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
+            ) : null;
+          })}
+
+          {/* Континенты (упрощённые заливки) */}
+          {[
+            { points: [[-82,70],[-140,60],[-135,50],[-120,32],[-85,20],[-77,8],[-80,25],[-65,45],[-52,46],[-55,50],[-62,62],[-72,67]] },
+            { points: [[-34,-6],[-70,-18],[-75,-32],[-68,-55],[-56,-52],[-46,-24],[-35,-8]] },
+            { points: [[2,51],[10,54],[14,50],[18,60],[28,72],[10,72],[5,62],[2,57]] },
+            { points: [[10,5],[15,22],[25,37],[35,37],[42,12],[40,-2],[28,-28],[15,-34],[10,-18],[10,5]] },
+            { points: [[60,70],[90,70],[130,50],[145,40],[135,25],[100,5],[80,10],[70,35],[55,45],[45,42],[35,37]] },
+            { points: [[115,-25],[135,-18],[150,-25],[148,-38],[138,-38],[122,-34],[115,-25]] },
+          ].map((cont, ci) => {
+            const visible = cont.points.filter(([lon]) => {
+              const λ = ((lon + rot) * Math.PI) / 180;
+              return Math.cos(λ) > -0.3;
+            });
+            if (visible.length < 3) return null;
+            const d = cont.points.map(([lon, lat], idx) => {
+              const p = project(lon, lat);
+              return `${idx === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+            }).join(" ") + " Z";
+            return <path key={ci} d={d} fill="rgba(99,102,241,0.18)" stroke="rgba(99,102,241,0.4)" strokeWidth="0.8" />;
+          })}
+        </g>
+
+        {/* Точки инцидентов */}
+        {points.map((inc, i) => {
+          const [lon, lat] = inc.geoCoords;
+          const p = project(lon, lat);
+          if (!p.visible) return null;
+          const color = SEV_COLOR[inc.severity] || "#a855f7";
+          const isHov = hovered?.id === inc.id;
+          return (
+            <g key={i} style={{ cursor: "pointer" }}
+              onClick={() => onSelect(inc)}
+              onMouseEnter={() => setHovered(inc)}
+              onMouseLeave={() => setHovered(null)}>
+              {inc.status === "active" && (
+                <circle cx={p.x} cy={p.y} r="14" fill={color} opacity="0.1">
+                  <animate attributeName="r" values="6;16;6" dur="2s" repeatCount="indefinite" />
+                </circle>
+              )}
+              <circle cx={p.x} cy={p.y} r={isHov ? 7 : 5}
+                fill={color} stroke="white" strokeWidth={isHov ? 2 : 1} />
+              {isHov && (
+                <text x={p.x + 10} y={p.y + 4} fontSize="9" fill="white" fontWeight="bold"
+                  style={{ pointerEvents: "none", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.9))" }}>
+                  {inc.country}
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        {/* Блик */}
+        <circle cx="250" cy="250" r={R} fill="url(#globeShine)" />
+        <circle cx="250" cy="250" r={R} fill="none" stroke="rgba(99,102,241,0.4)" strokeWidth="1.5" />
+      </svg>
+
+      <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+        <span className="text-[10px] text-white/25">← перетащи для вращения →</span>
+      </div>
+
+      {hovered && (
+        <div className="absolute top-4 left-4 px-3 py-2 rounded-xl text-xs pointer-events-none z-10"
+          style={{ background: "#0d1220", border: `1px solid ${SEV_COLOR[hovered.severity]}60`, minWidth: 170 }}>
+          <div className="font-bold text-white mb-0.5">{hovered.title}</div>
+          <div className="text-white/50">{hovered.country} · {hovered.date}</div>
+          <div className="text-[10px] mt-1" style={{ color: SEV_COLOR[hovered.severity] }}>{SEV_LABEL[hovered.severity]}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── ВИД 3: Тепловая карта (Heatmap) ─────────────────────────────────────────
+function HeatMap({ points, onSelect }: { points: any[]; onSelect: (inc: any) => void }) {
+  const [hovered, setHovered] = useState<any | null>(null);
+  return (
+    <div className="relative" style={{ paddingBottom: "50%" }}>
+      <svg viewBox="0 0 1000 500" className="absolute inset-0 w-full h-full">
+        <defs>
+          {points.map((inc, i) => {
+            const [cx, cy] = inc.flatCoords;
+            const color = SEV_COLOR[inc.severity] || "#a855f7";
+            const r = inc.severity === "critical" ? 80 : inc.severity === "high" ? 65 : 50;
+            return (
+              <radialGradient key={i} id={`heat${i}`} cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor={color} stopOpacity="0.55" />
+                <stop offset="60%" stopColor={color} stopOpacity="0.12" />
+                <stop offset="100%" stopColor={color} stopOpacity="0" />
+              </radialGradient>
+            );
+          })}
+        </defs>
+        {/* Тёмный фон с сеткой */}
+        <rect width="1000" height="500" fill="rgba(4,8,18,0.9)" />
+        {[100, 200, 300, 400].map(y => (
+          <line key={y} x1="0" y1={y} x2="1000" y2={y} stroke="rgba(255,255,255,0.025)" strokeWidth="0.5" />
+        ))}
+        {[200, 400, 600, 800].map(x => (
+          <line key={x} x1={x} y1="0" x2={x} y2="500" stroke="rgba(255,255,255,0.025)" strokeWidth="0.5" />
+        ))}
+        {/* Континенты — тонкий контур */}
+        {CONTINENTS.map(c => (
+          <path key={c.label} d={c.d} fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.1)" strokeWidth="0.8" />
+        ))}
+        {/* Тепловые пятна */}
+        {points.map((inc, i) => {
+          const [cx, cy] = inc.flatCoords;
+          const r = inc.severity === "critical" ? 80 : inc.severity === "high" ? 65 : 50;
+          return (
+            <circle key={`heat-${i}`} cx={cx} cy={cy} r={r} fill={`url(#heat${i})`} />
+          );
+        })}
+        {/* Точки поверх */}
+        {points.map((inc, i) => {
+          const [cx, cy] = inc.flatCoords;
+          const color = SEV_COLOR[inc.severity] || "#a855f7";
+          const isHov = hovered?.id === inc.id;
+          return (
+            <g key={i} style={{ cursor: "pointer" }}
+              onClick={() => onSelect(inc)}
+              onMouseEnter={() => setHovered(inc)}
+              onMouseLeave={() => setHovered(null)}>
+              <circle cx={cx} cy={cy} r={isHov ? 8 : 5} fill={color}
+                stroke="white" strokeWidth={isHov ? 2 : 1} />
+              {isHov && (
+                <>
+                  <rect x={cx + 12} y={cy - 22} width={inc.country.length * 6 + 10} height={30} rx="4"
+                    fill="rgba(8,14,26,0.95)" stroke={`${color}80`} strokeWidth="1" />
+                  <text x={cx + 17} y={cy - 8} fontSize="9" fill="white" fontWeight="bold">{inc.title.slice(0, 16)}{inc.title.length > 16 ? "…" : ""}</text>
+                  <text x={cx + 17} y={cy + 4} fontSize="8" fill="rgba(255,255,255,0.5)">{inc.country}</text>
+                </>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+// ─── Основной компонент карты с переключением ─────────────────────────────────
+function IncidentMap({ incidents, onSelectIncident }: { incidents: any[]; onSelectIncident: (inc: any) => void }) {
+  const [mapMode, setMapMode] = useState<"flat" | "globe" | "heat">("flat");
+  const [selectedInc, setSelectedInc] = useState<any | null>(null);
+
+  const points = incidents.map(inc => ({
+    ...inc,
+    flatCoords: COUNTRY_COORDS[inc.country] || null,
+    geoCoords: COUNTRY_GEO[inc.country] || null,
+  })).filter(inc => inc.flatCoords && inc.geoCoords);
+
+  const handleSelect = (inc: any) => setSelectedInc(inc);
+
+  const MODES = [
+    { id: "flat", label: "Плоская", icon: "Map" },
+    { id: "globe", label: "3D Глобус", icon: "Globe" },
+    { id: "heat", label: "Тепловая", icon: "Flame" },
+  ] as const;
+
+  return (
+    <>
+      {selectedInc && (
+        <IncidentDetailModal inc={selectedInc} onClose={() => setSelectedInc(null)} />
+      )}
+
+      <div className="rounded-2xl overflow-hidden"
+        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+        {/* Шапка */}
+        <div className="px-5 py-3 flex flex-wrap items-center justify-between gap-3"
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          <div className="flex items-center gap-2">
+            <Icon name="Map" size={15} className="text-purple-400" />
+            <h3 className="font-display text-sm font-semibold text-white/70 uppercase tracking-wider">Карта инцидентов</h3>
+            <span className="text-[10px] px-2 py-0.5 rounded-full text-white/30"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              {points.length} объектов
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Переключатель вида */}
+            <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+              {MODES.map(m => (
+                <button key={m.id} onClick={() => setMapMode(m.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all"
+                  style={{
+                    background: mapMode === m.id ? "rgba(168,85,247,0.2)" : "transparent",
+                    color: mapMode === m.id ? "#c084fc" : "rgba(255,255,255,0.35)",
+                    borderRight: m.id !== "heat" ? "1px solid rgba(255,255,255,0.06)" : "none",
+                  }}>
+                  <Icon name={m.icon as any} size={12} />
+                  {m.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Легенда */}
+            <div className="flex items-center gap-2 text-[10px]">
+              {Object.entries(SEV_COLOR).map(([k, c]) => (
+                <span key={k} className="flex items-center gap-1 text-white/35">
+                  <span className="w-2 h-2 rounded-full" style={{ background: c }} />
+                  {k === "critical" ? "Крит." : k === "high" ? "Выс." : k === "medium" ? "Ср." : "Низ."}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Карта */}
+        <div style={{ background: mapMode === "globe" ? "radial-gradient(ellipse at center, #050b1a 60%, #020408)" : "#040810" }}>
+          {mapMode === "flat" && <FlatMap points={points} onSelect={handleSelect} />}
+          {mapMode === "globe" && <GlobeMap points={points} onSelect={handleSelect} />}
+          {mapMode === "heat" && <HeatMap points={points} onSelect={handleSelect} />}
+        </div>
+
+        {/* Подвал */}
+        <div className="px-5 py-2 flex items-center justify-between"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+          <span className="text-[10px] text-white/20">
+            {mapMode === "flat" && "Нажми на точку → детали и видео"}
+            {mapMode === "globe" && "Тяни для вращения · нажми на точку → детали и видео"}
+            {mapMode === "heat" && "Тепловая карта угроз · нажми на точку → детали и видео"}
+          </span>
+          <span className="text-[10px] text-white/20">
+            {points.filter(p => p.status === "active").length} активных · пульсируют
+          </span>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -303,7 +723,7 @@ export default function DashboardOverview({ incidents, onShowAll, onSelectIncide
       )}
 
       {/* ── Карта инцидентов ── */}
-      <IncidentMap incidents={incidents} />
+      <IncidentMap incidents={incidents} onSelectIncident={onSelectIncident} />
 
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Weekly chart */}
