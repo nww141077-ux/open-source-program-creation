@@ -1,5 +1,5 @@
 """
-ИИ-ассистент ECSU 2.0 — мультипровайдерный: Gemini, OpenAI, Anthropic, YandexGPT.
+ИИ-ассистент ECSU 2.0 — мультипровайдерный: Gemini, OpenAI, Anthropic, YandexGPT, Groq.
 Авто-выбор модели по контексту, поддержка ЦПВОА, история диалога, умные подсказки.
 """
 import json
@@ -160,18 +160,27 @@ def call_anthropic(messages: list, api_key: str, model: str = "claude-3-5-sonnet
 
 def call_yandex(messages: list, api_key: str, model: str = "yandexgpt-lite") -> str:
     """YandexGPT API."""
-    msgs = [{"role": "system", "text": SYSTEM_PROMPT}]
-    for msg in messages:
-        msgs.append({"role": msg["role"], "text": msg["content"]})
+    import urllib.error as ue
+    folder_id = os.environ.get("YANDEX_FOLDER_ID", "")
+    # Последнее сообщение пользователя — только один user-turn для простоты
+    last_user = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
+    msgs = [
+        {"role": "system", "text": SYSTEM_PROMPT},
+        {"role": "user", "text": last_user},
+    ]
     payload = {
-        "modelUri": f"gpt://{os.environ.get('YANDEX_FOLDER_ID', 'b1g')}/{model}",
-        "completionOptions": {"stream": False, "temperature": 0.85, "maxTokens": "1500"},
+        "modelUri": f"gpt://{folder_id}/{model}",
+        "completionOptions": {"stream": False, "temperature": 0.85, "maxTokens": 1500},
         "messages": msgs
     }
-    result = http_post(YANDEX_URL, payload, {
-        "Content-Type": "application/json",
-        "Authorization": f"Api-Key {api_key}"
-    })
+    try:
+        result = http_post(YANDEX_URL, payload, {
+            "Content-Type": "application/json",
+            "Authorization": f"Api-Key {api_key}"
+        })
+    except ue.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        raise ValueError(f"YandexGPT HTTP {e.code}: {body}")
     return result["result"]["alternatives"][0]["message"]["text"]
 
 
