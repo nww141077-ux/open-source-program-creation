@@ -1,0 +1,53 @@
+{
+  "tests": [
+    {
+      "name": "Статус ИИ-синхронизации",
+      "method": "GET",
+      "path": "/status",
+      "expectedStatus": 200,
+      "expectedBody": {"status": "active"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Список предложений ИИ",
+      "method": "GET",
+      "path": "/proposals",
+      "expectedStatus": 200,
+      "expectedBody": {"proposals": []},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Баланс фонда развития",
+      "method": "GET",
+      "path": "/fund",
+      "expectedStatus": 200,
+      "expectedBody": {"fund_percent": 10.0},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Запросы одобрения",
+      "method": "GET",
+      "path": "/approvals",
+      "expectedStatus": 200,
+      "expectedBody": {"approvals": []},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Лог синхронизаций",
+      "method": "GET",
+      "path": "/sync-log",
+      "expectedStatus": 200,
+      "expectedBody": {"logs": []},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Сбор токенов в фонд",
+      "method": "POST",
+      "path": "/fund/collect",
+      "body": {"amount": 100, "source": "test"},
+      "expectedStatus": 200,
+      "expectedBody": {"fund_contribution": 10.0},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

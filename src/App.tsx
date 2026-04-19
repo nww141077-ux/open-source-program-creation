@@ -33,6 +33,7 @@ import EgsuOrgans from "./pages/EgsuOrgans";
 import AdminLogin from "./pages/AdminLogin";
 import AdminPanel from "./pages/AdminPanel";
 import MyModel from "./pages/MyModel";
+import EgsuAiControl from "./pages/EgsuAiControl";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -74,6 +75,7 @@ const App = () => (
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/panel" element={<AdminPanel />} />
           <Route path="/my-model" element={<MyModel />} />
+          <Route path="/egsu/ai-control" element={<EgsuAiControl />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

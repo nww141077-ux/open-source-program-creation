@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "Проверка работы функции",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 404,
+      "expectedBody": {"error": "Маршрут не найден"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

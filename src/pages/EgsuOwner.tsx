@@ -225,7 +225,13 @@ export default function EgsuOwner() {
               <span className="hidden md:block text-xs">{t.label}</span>
             </button>
           ))}
-          <div style={{ marginTop: "auto", padding: "8px 4px 4px" }}>
+          <div style={{ marginTop: "auto", padding: "8px 4px 4px", display: "flex", flexDirection: "column", gap: 6 }}>
+            <button onClick={() => navigate("/egsu/ai-control")}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
+              style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(0,255,135,0.3)", color: "#00ff87" }}>
+              <Icon name="Brain" size={16} />
+              <span className="hidden md:block text-xs">ИИ-Синхронизация</span>
+            </button>
             <button onClick={() => navigate("/egsu/ark")}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
               style={{ background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.3)", color: "#f43f5e" }}>
