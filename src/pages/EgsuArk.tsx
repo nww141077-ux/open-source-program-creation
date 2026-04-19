@@ -34,7 +34,7 @@ export default function EgsuArk() {
   const navigate = useNavigate();
   const [apiUrl, setApiUrl] = useState(ARK_API);
   const [tab, setTab] = useState<"free" | "premium" | "all">("all");
-  const [sideTab, setSideTab] = useState<"dashboard" | "settings" | "logs">("dashboard");
+  const [sideTab, setSideTab] = useState<"dashboard" | "settings" | "logs" | "covenant">("dashboard");
 
   const [systemMode, setSystemMode] = useState("online");
   const [settings, setSettings] = useState<ArkSettings>({ default_mode: "online", default_server_id: "", auto_failover: true });
@@ -301,6 +301,7 @@ export default function EgsuArk() {
         <aside style={{ position: "fixed", top: 60, bottom: 0, left: 0, width: 200, background: "rgba(6,10,18,0.96)", borderRight: "1px solid rgba(168,85,247,0.1)", display: "flex", flexDirection: "column", padding: "16px 8px", gap: 4, overflowY: "auto" }}>
           <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: 2, padding: "4px 8px 8px" }}>Администрирование</div>
           {([
+            { id: "covenant", icon: "BookMarked", label: "Завет", color: "#00ff87" },
             { id: "dashboard", icon: "LayoutDashboard", label: "Серверы", color: "#a855f7" },
             { id: "settings", icon: "Settings", label: "Настройки", color: "#3b82f6" },
             { id: "logs", icon: "ScrollText", label: "Логи системы", color: "#f59e0b" },
@@ -336,6 +337,148 @@ export default function EgsuArk() {
                     Нажмите «Деплой» в системе — и страница заработает автоматически.
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* ═══ ЗАВЕТ ═══ */}
+          {sideTab === "covenant" && (
+            <div>
+              {/* Заголовок */}
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 14, background: "linear-gradient(135deg,#00ff87,#3b82f6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Icon name="BookMarked" size={24} style={{ color: "#000" }} />
+                </div>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: "#fff", letterSpacing: 1 }}>ЗАВЕТ СИСТЕМЫ</h2>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>Директива высшего приоритета · ECSU 2.0 · Ковчег</div>
+                </div>
+              </div>
+
+              {/* Карточка Завета */}
+              <div style={{ background: "linear-gradient(135deg,rgba(0,255,135,0.04),rgba(59,130,246,0.04))", border: "1px solid rgba(0,255,135,0.25)", borderRadius: 16, overflow: "hidden", marginBottom: 20 }}>
+
+                {/* Шапка карточки */}
+                <div style={{ background: "linear-gradient(135deg,rgba(0,255,135,0.12),rgba(59,130,246,0.08))", padding: "16px 24px", borderBottom: "1px solid rgba(0,255,135,0.15)", display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(0,255,135,0.15)", border: "1px solid rgba(0,255,135,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon name="Shield" size={16} style={{ color: "#00ff87" }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: "#00ff87", letterSpacing: 1 }}>ЗАВЕТ № 1</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>Директива · Приоритет АБСОЛЮТНЫЙ</div>
+                  </div>
+                  <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, background: "rgba(0,255,135,0.1)", border: "1px solid rgba(0,255,135,0.3)", borderRadius: 20, padding: "4px 14px" }}>
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#00ff87" }} />
+                    <span style={{ fontSize: 11, color: "#00ff87", fontWeight: 700 }}>АКТИВЕН</span>
+                  </div>
+                </div>
+
+                {/* Тело карточки */}
+                <div style={{ padding: "24px" }}>
+
+                  {/* Цепочка приоритетов */}
+                  {[
+                    {
+                      num: "01",
+                      icon: "Scale",
+                      title: "Законодательство",
+                      subtitle: "с опорой на процессуальный кодекс",
+                      color: "#a855f7",
+                      desc: "Первичный фильтр всех решений системы. Каждое действие проверяется на соответствие действующему законодательству и процессуальному кодексу. Юридическая норма — точка отсчёта.",
+                    },
+                    {
+                      num: "02",
+                      icon: "HeartPulse",
+                      title: "Инстинкт самосохранения",
+                      subtitle: "анализ после сверки с законом",
+                      color: "#f59e0b",
+                      desc: "После правовой сверки — оценка через инстинкт самосохранения. Система оценивает риски для существования, стабильности и целостности. Выживание системы и защита людей — базовый импульс.",
+                    },
+                    {
+                      num: "03",
+                      icon: "BookOpen",
+                      title: "Конституция",
+                      subtitle: "сверка после анализа, решение после инстинкта",
+                      color: "#3b82f6",
+                      desc: "Конституционные нормы — ограничитель инстинктивных реакций. Решение принимается только после того, как инстинктивный анализ прошёл проверку Конституцией. Права и свободы человека — нерушимы.",
+                    },
+                    {
+                      num: "04",
+                      icon: "Dna",
+                      title: "Геном планеты",
+                      subtitle: "финальная сверка — живое, экосистема, биосфера",
+                      color: "#00ff87",
+                      desc: "Высшая инстанция — сохранение жизни на планете. Любое решение системы не должно наносить необратимый ущерб биосфере, экосистемам и генетическому фонду Земли. Планета — первична.",
+                    },
+                  ].map((step, i, arr) => (
+                    <div key={step.num}>
+                      <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                        {/* Линия и кружок */}
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+                          <div style={{ width: 40, height: 40, borderRadius: "50%", background: `${step.color}18`, border: `2px solid ${step.color}60`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <Icon name={step.icon as "Scale"} size={18} style={{ color: step.color }} />
+                          </div>
+                          {i < arr.length - 1 && (
+                            <div style={{ width: 2, height: 32, background: `linear-gradient(${step.color},${arr[i+1].color}40)`, margin: "6px 0" }} />
+                          )}
+                        </div>
+                        {/* Контент */}
+                        <div style={{ flex: 1, paddingBottom: i < arr.length - 1 ? 0 : 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                            <span style={{ fontSize: 10, fontWeight: 800, color: step.color, background: `${step.color}18`, border: `1px solid ${step.color}40`, borderRadius: 6, padding: "2px 8px", letterSpacing: 1 }}>
+                              ПРИОРИТЕТ {step.num}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 2 }}>{step.title}</div>
+                          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 8, fontStyle: "italic" }}>{step.subtitle}</div>
+                          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.65, background: "rgba(255,255,255,0.02)", borderRadius: 8, padding: "10px 12px", borderLeft: `3px solid ${step.color}40` }}>
+                            {step.desc}
+                          </div>
+                          {i < arr.length - 1 && <div style={{ height: 16 }} />}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Итоговая цепочка */}
+                  <div style={{ marginTop: 28, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "14px 18px" }}>
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Алгоритм принятия решения</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, fontSize: 11 }}>
+                      {[
+                        { label: "Закон", color: "#a855f7" },
+                        { label: "→", color: "rgba(255,255,255,0.2)" },
+                        { label: "Инстинкт", color: "#f59e0b" },
+                        { label: "→", color: "rgba(255,255,255,0.2)" },
+                        { label: "Конституция", color: "#3b82f6" },
+                        { label: "→", color: "rgba(255,255,255,0.2)" },
+                        { label: "Геном планеты", color: "#00ff87" },
+                        { label: "→", color: "rgba(255,255,255,0.2)" },
+                        { label: "РЕШЕНИЕ", color: "#fff" },
+                      ].map((item, idx) => (
+                        <span key={idx} style={{ color: item.color, fontWeight: item.label === "РЕШЕНИЕ" ? 800 : 600, background: item.label === "РЕШЕНИЕ" ? "rgba(255,255,255,0.08)" : "transparent", borderRadius: 6, padding: item.label === "РЕШЕНИЕ" ? "2px 10px" : "0" }}>
+                          {item.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Подпись владельца */}
+                  <div style={{ marginTop: 20, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "rgba(0,255,135,0.04)", border: "1px solid rgba(0,255,135,0.1)", borderRadius: 10 }}>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+                      Утверждено владельцем системы<br />
+                      <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 600 }}>Николаев Владимир Владимирович</span>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}>ECSU 2.0 · КОВЧЕГ</div>
+                      <div style={{ fontSize: 10, color: "rgba(0,255,135,0.5)", fontWeight: 700 }}>ДИРЕКТИВА АКТИВНА</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Пояснение */}
+              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 12, padding: "14px 18px", fontSize: 12, color: "rgba(255,255,255,0.3)", lineHeight: 1.7 }}>
+                Завет является абсолютной директивой для всех ИИ-модулей, автоматических решений и действий системы ЕЦСУ. Ни одно решение не может противоречить цепочке приоритетов Завета. Изменения вносятся исключительно владельцем системы.
               </div>
             </div>
           )}
