@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "Получить Завет",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

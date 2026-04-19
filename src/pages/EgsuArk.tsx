@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
 // URL подставится после деплоя
 const ARK_API = "https://functions.poehali.dev/9878d5a9-0ad5-432c-9dd0-3ab00d97c421";
+const COVENANT_API = "https://functions.poehali.dev/95e61865-02c5-4b09-a4b9-cfccf7aba44e";
 const OWNER_TOKEN = "ecsu-ark-owner-2024";
+const AI_TOKEN = "ecsu-ai-deputy-2024";
 
 const G = (s: string) => `linear-gradient(135deg, ${s})`;
 const fmt = (iso: string) => {
@@ -21,6 +23,8 @@ type Server = {
 type ArkSettings = { default_mode: string; default_server_id: string; auto_failover: boolean };
 type Monitoring = { total_servers: number; online_servers: number; offline_servers: number; high_load_servers: number; avg_ping_ms: number };
 type LogEntry = { id: number; event: string; user_id: string; details: string; ip_address: string; created_at: string };
+type CovenantItem = { id: number; covenant_num: number; priority_num: string; icon: string; title: string; subtitle: string; color: string; description: string; sort_order: number; updated_at: string; updated_by: string };
+type CovenantDecision = { id: number; decision_title: string; decision_body: string; initiator: string; status: string; owner_vote: string | null; ai_vote: string | null; ai_reasoning: string | null; final_decision: string | null; created_at: string; resolved_at: string | null };
 
 const STATUS_CFG: Record<string, { label: string; color: string; dot: string }> = {
   online:    { label: "Онлайн",       color: "#22c55e", dot: "#22c55e" },
@@ -51,6 +55,19 @@ export default function EgsuArk() {
   const [editServer, setEditServer] = useState<Server | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Завет
+  const [covenantItems, setCovenantItems] = useState<CovenantItem[]>([]);
+  const [covenantDecisions, setCovenantDecisions] = useState<CovenantDecision[]>([]);
+  const [covenantRole, setCovenantRole] = useState<"owner" | "ai" | null>(null);
+  const [covenantTab, setCovenantTab] = useState<"view" | "decisions">("view");
+  const [editingItem, setEditingItem] = useState<CovenantItem | null>(null);
+  const [editForm, setEditForm] = useState<Partial<CovenantItem>>({});
+  const [covenantLoading, setCovenantLoading] = useState(false);
+  const [covenantToken, setCovenantToken] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [newDecision, setNewDecision] = useState({ title: "", body: "" });
+  const [showNewDecision, setShowNewDecision] = useState(false);
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
@@ -177,8 +194,88 @@ export default function EgsuArk() {
   };
 
   const displayServers = tab === "free" ? freeServers : tab === "premium" ? premiumServers : allServers;
-
   const isApiReady = apiUrl && !apiUrl.includes("placeholder");
+
+  // ── Завет ──────────────────────────────────────────────
+  const covenantHeaders = useCallback(() => {
+    const h: Record<string, string> = { "Content-Type": "application/json" };
+    if (covenantRole === "owner") h["X-Owner-Token"] = OWNER_TOKEN;
+    if (covenantRole === "ai") h["X-AI-Token"] = AI_TOKEN;
+    return h;
+  }, [covenantRole]);
+
+  const loadCovenant = useCallback(async () => {
+    setCovenantLoading(true);
+    const [c, d] = await Promise.all([
+      fetch(`${COVENANT_API}/`).then(r => r.json()),
+      fetch(`${COVENANT_API}/decisions`).then(r => r.json()),
+    ]);
+    setCovenantItems(c.covenant || []);
+    setCovenantDecisions(d.decisions || []);
+    setCovenantLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (sideTab === "covenant") loadCovenant();
+  }, [sideTab, loadCovenant]);
+
+  const loginCovenant = async () => {
+    setLoginError("");
+    const token = covenantToken.trim();
+    const role = token === OWNER_TOKEN ? "owner" : token === AI_TOKEN ? "ai" : null;
+    if (!role) { setLoginError("Неверный токен доступа"); return; }
+    setCovenantRole(role);
+    setCovenantToken("");
+  };
+
+  const saveItem = async () => {
+    if (!editingItem) return;
+    setCovenantLoading(true);
+    await fetch(`${COVENANT_API}/items/${editingItem.id}`, {
+      method: "PUT",
+      headers: covenantHeaders(),
+      body: JSON.stringify(editForm),
+    });
+    setEditingItem(null);
+    setEditForm({});
+    await loadCovenant();
+    showToast("Пункт Завета обновлён");
+    setCovenantLoading(false);
+  };
+
+  const submitDecision = async () => {
+    if (!newDecision.title.trim()) return;
+    await fetch(`${COVENANT_API}/decisions`, {
+      method: "POST",
+      headers: covenantHeaders(),
+      body: JSON.stringify({ decision_title: newDecision.title, decision_body: newDecision.body }),
+    });
+    setNewDecision({ title: "", body: "" });
+    setShowNewDecision(false);
+    await loadCovenant();
+    showToast("Решение вынесено на обсуждение");
+  };
+
+  const voteDecision = async (id: number, vote: string) => {
+    const reasoning = vote === "reject" ? "Требует доработки с учётом приоритетов Завета." : "Соответствует цепочке Завета.";
+    await fetch(`${COVENANT_API}/decisions/${id}/vote`, {
+      method: "PUT",
+      headers: covenantHeaders(),
+      body: JSON.stringify({ vote, reasoning }),
+    });
+    await loadCovenant();
+    showToast("Голос принят");
+  };
+
+  const resolveDecision = async (id: number, final: string) => {
+    await fetch(`${COVENANT_API}/decisions/${id}/resolve`, {
+      method: "PUT",
+      headers: covenantHeaders(),
+      body: JSON.stringify({ final_decision: final }),
+    });
+    await loadCovenant();
+    showToast(`Решение ${final === "approved" ? "принято" : "отклонено"}`);
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: "#060a12", color: "#e0e8ff", fontFamily: "'Golos Text', monospace" }}>
@@ -345,141 +442,255 @@ export default function EgsuArk() {
           {sideTab === "covenant" && (
             <div>
               {/* Заголовок */}
-              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
-                <div style={{ width: 48, height: 48, borderRadius: 14, background: "linear-gradient(135deg,#00ff87,#3b82f6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <Icon name="BookMarked" size={24} style={{ color: "#000" }} />
-                </div>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: "#fff", letterSpacing: 1 }}>ЗАВЕТ СИСТЕМЫ</h2>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>Директива высшего приоритета · ECSU 2.0 · Ковчег</div>
-                </div>
-              </div>
-
-              {/* Карточка Завета */}
-              <div style={{ background: "linear-gradient(135deg,rgba(0,255,135,0.04),rgba(59,130,246,0.04))", border: "1px solid rgba(0,255,135,0.25)", borderRadius: 16, overflow: "hidden", marginBottom: 20 }}>
-
-                {/* Шапка карточки */}
-                <div style={{ background: "linear-gradient(135deg,rgba(0,255,135,0.12),rgba(59,130,246,0.08))", padding: "16px 24px", borderBottom: "1px solid rgba(0,255,135,0.15)", display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(0,255,135,0.15)", border: "1px solid rgba(0,255,135,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Icon name="Shield" size={16} style={{ color: "#00ff87" }} />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, marginBottom: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 14, background: "linear-gradient(135deg,#00ff87,#3b82f6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Icon name="BookMarked" size={24} style={{ color: "#000" }} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: "#00ff87", letterSpacing: 1 }}>ЗАВЕТ № 1</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>Директива · Приоритет АБСОЛЮТНЫЙ</div>
-                  </div>
-                  <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, background: "rgba(0,255,135,0.1)", border: "1px solid rgba(0,255,135,0.3)", borderRadius: 20, padding: "4px 14px" }}>
-                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#00ff87" }} />
-                    <span style={{ fontSize: 11, color: "#00ff87", fontWeight: 700 }}>АКТИВЕН</span>
+                    <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: "#fff", letterSpacing: 1 }}>ЗАВЕТ СИСТЕМЫ</h2>
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>Директива высшего приоритета · ECSU 2.0 · Ковчег</div>
                   </div>
                 </div>
+                {/* Статус авторизации */}
+                {covenantRole ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, background: covenantRole === "owner" ? "rgba(0,255,135,0.1)" : "rgba(124,58,237,0.1)", border: `1px solid ${covenantRole === "owner" ? "rgba(0,255,135,0.3)" : "rgba(124,58,237,0.3)"}`, borderRadius: 20, padding: "5px 14px" }}>
+                      <Icon name={covenantRole === "owner" ? "Crown" : "Brain"} size={13} style={{ color: covenantRole === "owner" ? "#00ff87" : "#a855f7" }} />
+                      <span style={{ fontSize: 12, fontWeight: 700, color: covenantRole === "owner" ? "#00ff87" : "#a855f7" }}>
+                        {covenantRole === "owner" ? "Владелец" : "ИИ-Заместитель"}
+                      </span>
+                    </div>
+                    <button onClick={() => setCovenantRole(null)} style={{ background: "none", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "5px 10px", color: "rgba(255,255,255,0.35)", cursor: "pointer", fontSize: 11 }}>Выйти</button>
+                  </div>
+                ) : null}
+              </div>
 
-                {/* Тело карточки */}
-                <div style={{ padding: "24px" }}>
+              {/* Форма входа если не авторизован */}
+              {!covenantRole && (
+                <div style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(0,255,135,0.2)", borderRadius: 14, padding: 24, marginBottom: 20, maxWidth: 400 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#00ff87", marginBottom: 4 }}>Вход в Завет</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 14 }}>Только владелец системы или ИИ-заместитель</div>
+                  <input value={covenantToken} onChange={e => setCovenantToken(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && loginCovenant()}
+                    type="password" placeholder="Токен доступа"
+                    style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "9px 12px", color: "#fff", fontSize: 13, outline: "none", marginBottom: 10, boxSizing: "border-box" }} />
+                  {loginError && <div style={{ fontSize: 12, color: "#f43f5e", marginBottom: 8 }}>{loginError}</div>}
+                  <button onClick={loginCovenant} style={{ width: "100%", background: G("#00ff87,#3b82f6"), border: "none", borderRadius: 8, padding: "9px 0", color: "#000", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>Войти</button>
+                </div>
+              )}
 
-                  {/* Цепочка приоритетов */}
-                  {[
-                    {
-                      num: "01",
-                      icon: "Scale",
-                      title: "Законодательство",
-                      subtitle: "с опорой на процессуальный кодекс",
-                      color: "#a855f7",
-                      desc: "Первичный фильтр всех решений системы. Каждое действие проверяется на соответствие действующему законодательству и процессуальному кодексу. Юридическая норма — точка отсчёта.",
-                    },
-                    {
-                      num: "02",
-                      icon: "HeartPulse",
-                      title: "Инстинкт самосохранения",
-                      subtitle: "анализ после сверки с законом",
-                      color: "#f59e0b",
-                      desc: "После правовой сверки — оценка через инстинкт самосохранения. Система оценивает риски для существования, стабильности и целостности. Выживание системы и защита людей — базовый импульс.",
-                    },
-                    {
-                      num: "03",
-                      icon: "BookOpen",
-                      title: "Конституция",
-                      subtitle: "сверка после анализа, решение после инстинкта",
-                      color: "#3b82f6",
-                      desc: "Конституционные нормы — ограничитель инстинктивных реакций. Решение принимается только после того, как инстинктивный анализ прошёл проверку Конституцией. Права и свободы человека — нерушимы.",
-                    },
-                    {
-                      num: "04",
-                      icon: "Dna",
-                      title: "Геном планеты",
-                      subtitle: "финальная сверка — живое, экосистема, биосфера",
-                      color: "#00ff87",
-                      desc: "Высшая инстанция — сохранение жизни на планете. Любое решение системы не должно наносить необратимый ущерб биосфере, экосистемам и генетическому фонду Земли. Планета — первична.",
-                    },
-                  ].map((step, i, arr) => (
-                    <div key={step.num}>
-                      <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-                        {/* Линия и кружок */}
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
-                          <div style={{ width: 40, height: 40, borderRadius: "50%", background: `${step.color}18`, border: `2px solid ${step.color}60`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <Icon name={step.icon as "Scale"} size={18} style={{ color: step.color }} />
+              {/* Вкладки Завета */}
+              <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                {([["view","Директива","BookMarked"],["decisions","Совместные решения","Handshake"]] as const).map(([id, label, icon]) => (
+                  <button key={id} onClick={() => setCovenantTab(id)}
+                    style={{ padding: "8px 18px", background: "none", border: "none", borderBottom: `2px solid ${covenantTab === id ? "#00ff87" : "transparent"}`, color: covenantTab === id ? "#00ff87" : "rgba(255,255,255,0.35)", cursor: "pointer", fontWeight: covenantTab === id ? 700 : 400, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+                    <Icon name={icon} size={13} />{label}
+                    {id === "decisions" && covenantDecisions.filter(d => d.status === "discussion").length > 0 && (
+                      <span style={{ background: "#f59e0b", borderRadius: 10, padding: "1px 6px", fontSize: 10, color: "#000", fontWeight: 800 }}>
+                        {covenantDecisions.filter(d => d.status === "discussion").length}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {covenantLoading && <div style={{ textAlign: "center", padding: 30, color: "rgba(255,255,255,0.3)" }}>Загрузка...</div>}
+
+              {/* ── ДИРЕКТИВА ── */}
+              {covenantTab === "view" && !covenantLoading && (
+                <div>
+                  {/* Шапка */}
+                  <div style={{ background: "linear-gradient(135deg,rgba(0,255,135,0.08),rgba(59,130,246,0.06))", border: "1px solid rgba(0,255,135,0.2)", borderRadius: 14, padding: "14px 20px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                    <Icon name="Shield" size={20} style={{ color: "#00ff87" }} />
+                    <div>
+                      <div style={{ fontWeight: 800, color: "#00ff87", fontSize: 14, letterSpacing: 1 }}>ЗАВЕТ № 1 — ДИРЕКТИВА АКТИВНА</div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>Абсолютный приоритет · Николаев Владимир Владимирович</div>
+                    </div>
+                  </div>
+
+                  {/* Пункты из БД */}
+                  {covenantItems.map((item, i) => (
+                    <div key={item.id} style={{ marginBottom: 6 }}>
+                      {editingItem?.id === item.id ? (
+                        /* Форма редактирования */
+                        <div style={{ background: "rgba(0,255,135,0.04)", border: `1px solid ${item.color}50`, borderRadius: 12, padding: 20 }}>
+                          <div style={{ fontSize: 12, color: item.color, fontWeight: 700, marginBottom: 12 }}>Редактирование пункта {item.priority_num}</div>
+                          {[
+                            { label: "Заголовок", key: "title" as const },
+                            { label: "Подзаголовок", key: "subtitle" as const },
+                          ].map(f => (
+                            <div key={f.key} style={{ marginBottom: 10 }}>
+                              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginBottom: 4, textTransform: "uppercase" }}>{f.label}</div>
+                              <input value={(editForm[f.key] ?? item[f.key]) as string}
+                                onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))}
+                                style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "8px 12px", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                            </div>
+                          ))}
+                          <div style={{ marginBottom: 12 }}>
+                            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginBottom: 4, textTransform: "uppercase" }}>Описание</div>
+                            <textarea value={(editForm.description ?? item.description) as string}
+                              onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))}
+                              rows={4}
+                              style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "8px 12px", color: "#fff", fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box" }} />
                           </div>
-                          {i < arr.length - 1 && (
-                            <div style={{ width: 2, height: 32, background: `linear-gradient(${step.color},${arr[i+1].color}40)`, margin: "6px 0" }} />
-                          )}
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={saveItem} style={{ flex: 1, background: G("#00ff87,#3b82f6"), border: "none", borderRadius: 8, padding: "9px 0", color: "#000", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>Сохранить</button>
+                            <button onClick={() => { setEditingItem(null); setEditForm({}); }} style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "9px 0", color: "rgba(255,255,255,0.5)", fontSize: 13, cursor: "pointer" }}>Отмена</button>
+                          </div>
                         </div>
-                        {/* Контент */}
-                        <div style={{ flex: 1, paddingBottom: i < arr.length - 1 ? 0 : 0 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                            <span style={{ fontSize: 10, fontWeight: 800, color: step.color, background: `${step.color}18`, border: `1px solid ${step.color}40`, borderRadius: 6, padding: "2px 8px", letterSpacing: 1 }}>
-                              ПРИОРИТЕТ {step.num}
-                            </span>
+                      ) : (
+                        /* Просмотр пункта */
+                        <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+                            <div style={{ width: 42, height: 42, borderRadius: "50%", background: `${item.color}18`, border: `2px solid ${item.color}60`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <Icon name={item.icon as "Scale"} size={18} style={{ color: item.color }} />
+                            </div>
+                            {i < covenantItems.length - 1 && (
+                              <div style={{ width: 2, height: 28, background: `${item.color}40`, margin: "6px 0" }} />
+                            )}
                           </div>
-                          <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 2 }}>{step.title}</div>
-                          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 8, fontStyle: "italic" }}>{step.subtitle}</div>
-                          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.65, background: "rgba(255,255,255,0.02)", borderRadius: 8, padding: "10px 12px", borderLeft: `3px solid ${step.color}40` }}>
-                            {step.desc}
+                          <div style={{ flex: 1, background: "rgba(255,255,255,0.02)", border: `1px solid ${item.color}20`, borderRadius: 12, padding: "14px 16px", marginBottom: i < covenantItems.length - 1 ? 0 : 0 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                              <div>
+                                <span style={{ fontSize: 10, fontWeight: 800, color: item.color, background: `${item.color}15`, border: `1px solid ${item.color}40`, borderRadius: 6, padding: "2px 8px", marginRight: 8 }}>
+                                  ПРИОРИТЕТ {item.priority_num}
+                                </span>
+                                <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>{item.title}</span>
+                              </div>
+                              {covenantRole === "owner" && (
+                                <button onClick={() => { setEditingItem(item); setEditForm({}); }}
+                                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "4px 10px", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 11, display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                                  <Icon name="Pencil" size={11} /> Изменить
+                                </button>
+                              )}
+                            </div>
+                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontStyle: "italic", marginBottom: 8 }}>{item.subtitle}</div>
+                            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.65, borderLeft: `3px solid ${item.color}40`, paddingLeft: 10 }}>{item.description}</div>
+                            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.15)", marginTop: 8 }}>Изм. {fmt(item.updated_at)} · {item.updated_by}</div>
                           </div>
-                          {i < arr.length - 1 && <div style={{ height: 16 }} />}
                         </div>
-                      </div>
+                      )}
                     </div>
                   ))}
 
-                  {/* Итоговая цепочка */}
-                  <div style={{ marginTop: 28, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "14px 18px" }}>
-                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Алгоритм принятия решения</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, fontSize: 11 }}>
-                      {[
-                        { label: "Закон", color: "#a855f7" },
-                        { label: "→", color: "rgba(255,255,255,0.2)" },
-                        { label: "Инстинкт", color: "#f59e0b" },
-                        { label: "→", color: "rgba(255,255,255,0.2)" },
-                        { label: "Конституция", color: "#3b82f6" },
-                        { label: "→", color: "rgba(255,255,255,0.2)" },
-                        { label: "Геном планеты", color: "#00ff87" },
-                        { label: "→", color: "rgba(255,255,255,0.2)" },
-                        { label: "РЕШЕНИЕ", color: "#fff" },
-                      ].map((item, idx) => (
-                        <span key={idx} style={{ color: item.color, fontWeight: item.label === "РЕШЕНИЕ" ? 800 : 600, background: item.label === "РЕШЕНИЕ" ? "rgba(255,255,255,0.08)" : "transparent", borderRadius: 6, padding: item.label === "РЕШЕНИЕ" ? "2px 10px" : "0" }}>
-                          {item.label}
+                  {/* Алгоритм */}
+                  <div style={{ marginTop: 20, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "12px 18px" }}>
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: 2, marginBottom: 8 }}>Алгоритм решения</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, fontSize: 11, alignItems: "center" }}>
+                      {covenantItems.map((item, i) => (
+                        <span key={item.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ color: item.color, fontWeight: 700 }}>{item.title}</span>
+                          {i < covenantItems.length - 1 && <span style={{ color: "rgba(255,255,255,0.2)" }}>→</span>}
                         </span>
                       ))}
-                    </div>
-                  </div>
-
-                  {/* Подпись владельца */}
-                  <div style={{ marginTop: 20, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "rgba(0,255,135,0.04)", border: "1px solid rgba(0,255,135,0.1)", borderRadius: 10 }}>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
-                      Утверждено владельцем системы<br />
-                      <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 600 }}>Николаев Владимир Владимирович</span>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}>ECSU 2.0 · КОВЧЕГ</div>
-                      <div style={{ fontSize: 10, color: "rgba(0,255,135,0.5)", fontWeight: 700 }}>ДИРЕКТИВА АКТИВНА</div>
+                      {covenantItems.length > 0 && <><span style={{ color: "rgba(255,255,255,0.2)" }}>→</span><span style={{ color: "#fff", fontWeight: 800, background: "rgba(255,255,255,0.08)", borderRadius: 6, padding: "2px 10px" }}>РЕШЕНИЕ</span></>}
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Пояснение */}
-              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 12, padding: "14px 18px", fontSize: 12, color: "rgba(255,255,255,0.3)", lineHeight: 1.7 }}>
-                Завет является абсолютной директивой для всех ИИ-модулей, автоматических решений и действий системы ЕЦСУ. Ни одно решение не может противоречить цепочке приоритетов Завета. Изменения вносятся исключительно владельцем системы.
-              </div>
+              {/* ── СОВМЕСТНЫЕ РЕШЕНИЯ ── */}
+              {covenantTab === "decisions" && !covenantLoading && (
+                <div>
+                  {/* Кнопка нового решения */}
+                  {covenantRole && (
+                    <div style={{ marginBottom: 16 }}>
+                      {showNewDecision ? (
+                        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(0,255,135,0.2)", borderRadius: 12, padding: 18 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#00ff87", marginBottom: 12 }}>Новое решение на обсуждение</div>
+                          <input value={newDecision.title} onChange={e => setNewDecision(p => ({ ...p, title: e.target.value }))}
+                            placeholder="Заголовок решения"
+                            style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "8px 12px", color: "#fff", fontSize: 13, outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
+                          <textarea value={newDecision.body} onChange={e => setNewDecision(p => ({ ...p, body: e.target.value }))}
+                            placeholder="Подробное описание, обоснование..." rows={3}
+                            style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "8px 12px", color: "#fff", fontSize: 13, outline: "none", marginBottom: 10, resize: "vertical", boxSizing: "border-box" }} />
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={submitDecision} style={{ flex: 2, background: G("#00ff87,#3b82f6"), border: "none", borderRadius: 8, padding: "9px 0", color: "#000", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>Вынести на обсуждение</button>
+                            <button onClick={() => setShowNewDecision(false)} style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "9px 0", color: "rgba(255,255,255,0.4)", fontSize: 13, cursor: "pointer" }}>Отмена</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button onClick={() => setShowNewDecision(true)}
+                          style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", background: G("#00ff87,#3b82f6"), border: "none", borderRadius: 8, color: "#000", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
+                          <Icon name="Plus" size={14} /> Предложить решение
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {covenantDecisions.length === 0 && (
+                    <div style={{ textAlign: "center", padding: 50, color: "rgba(255,255,255,0.2)" }}>
+                      <Icon name="Handshake" size={40} style={{ color: "rgba(255,255,255,0.08)" }} />
+                      <div style={{ marginTop: 12 }}>Совместных решений пока нет</div>
+                      <div style={{ fontSize: 12, marginTop: 4 }}>Войдите и предложите первое решение</div>
+                    </div>
+                  )}
+
+                  {covenantDecisions.map(d => {
+                    const isPending = d.status === "discussion";
+                    const myVote = covenantRole === "owner" ? d.owner_vote : d.ai_vote;
+                    return (
+                      <div key={d.id} style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${isPending ? "rgba(245,158,11,0.3)" : d.final_decision === "approved" ? "rgba(0,255,135,0.2)" : "rgba(255,255,255,0.07)"}`, borderRadius: 12, padding: 18, marginBottom: 10 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                          <div>
+                            <div style={{ fontWeight: 700, color: "#fff", fontSize: 14, marginBottom: 2 }}>{d.decision_title}</div>
+                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+                              Инициатор: <span style={{ color: d.initiator === "owner" ? "#00ff87" : "#a855f7" }}>{d.initiator === "owner" ? "Владелец" : "ИИ-Заместитель"}</span>
+                              {" · "}{fmt(d.created_at)}
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 10,
+                            background: isPending ? "rgba(245,158,11,0.12)" : d.final_decision === "approved" ? "rgba(0,255,135,0.1)" : "rgba(244,63,94,0.1)",
+                            color: isPending ? "#f59e0b" : d.final_decision === "approved" ? "#00ff87" : "#f43f5e" }}>
+                            {isPending ? "Обсуждение" : d.final_decision === "approved" ? "Принято" : "Отклонено"}
+                          </div>
+                        </div>
+
+                        {d.decision_body && (
+                          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 12, lineHeight: 1.6 }}>{d.decision_body}</div>
+                        )}
+
+                        {/* Голоса */}
+                        <div style={{ display: "flex", gap: 10, marginBottom: isPending && covenantRole ? 12 : 0 }}>
+                          {[
+                            { label: "Владелец", vote: d.owner_vote, color: "#00ff87" },
+                            { label: "ИИ-Заместитель", vote: d.ai_vote, color: "#a855f7", note: d.ai_reasoning },
+                          ].map(v => (
+                            <div key={v.label} style={{ flex: 1, background: "rgba(0,0,0,0.2)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>
+                              <div style={{ color: v.color, fontWeight: 700, marginBottom: 2 }}>{v.label}</div>
+                              <div style={{ color: !v.vote ? "rgba(255,255,255,0.2)" : v.vote === "approve" ? "#00ff87" : v.vote === "reject" ? "#f43f5e" : "#f59e0b" }}>
+                                {!v.vote ? "Не проголосовал" : v.vote === "approve" ? "За" : v.vote === "reject" ? "Против" : "На обсуждение"}
+                              </div>
+                              {v.note && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>{v.note}</div>}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Кнопки голосования */}
+                        {isPending && covenantRole && !myVote && (
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button onClick={() => voteDecision(d.id, "approve")} style={{ flex: 1, background: "rgba(0,255,135,0.1)", border: "1px solid rgba(0,255,135,0.3)", borderRadius: 8, padding: "7px 0", color: "#00ff87", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>За</button>
+                            <button onClick={() => voteDecision(d.id, "discuss")} style={{ flex: 1, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 8, padding: "7px 0", color: "#f59e0b", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Обсудить</button>
+                            <button onClick={() => voteDecision(d.id, "reject")} style={{ flex: 1, background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.3)", borderRadius: 8, padding: "7px 0", color: "#f43f5e", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Против</button>
+                          </div>
+                        )}
+
+                        {/* Финализация владельцем */}
+                        {isPending && covenantRole === "owner" && d.owner_vote && d.ai_vote && d.owner_vote !== d.ai_vote && (
+                          <div style={{ marginTop: 8 }}>
+                            <div style={{ fontSize: 11, color: "#f59e0b", marginBottom: 6 }}>Голоса разошлись — финальное слово за Владельцем:</div>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <button onClick={() => resolveDecision(d.id, "approved")} style={{ flex: 1, background: G("#00ff87,#3b82f6"), border: "none", borderRadius: 8, padding: "7px 0", color: "#000", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>Утвердить</button>
+                              <button onClick={() => resolveDecision(d.id, "rejected")} style={{ flex: 1, background: "rgba(244,63,94,0.15)", border: "1px solid rgba(244,63,94,0.3)", borderRadius: 8, padding: "7px 0", color: "#f43f5e", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Отклонить</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
