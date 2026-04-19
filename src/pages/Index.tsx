@@ -146,7 +146,7 @@ export default function Index() {
                 className="px-8 py-4 rounded-xl font-semibold text-white text-base transition-all duration-300 hover:scale-105 flex items-center gap-3"
                 style={{ background: 'linear-gradient(135deg, #3b82f6, #a855f7)', boxShadow: '0 0 30px rgba(59,130,246,0.4)' }}>
                 <Icon name="LayoutDashboard" size={20} />
-                Открыть мою систему →
+                Открыть ЦЗ →
               </button>
               <button onClick={() => navigate('/egsu')}
                 className="px-8 py-4 rounded-xl font-semibold text-white/70 text-base transition-all duration-300 hover:text-white hover:scale-105"
