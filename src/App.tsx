@@ -27,6 +27,8 @@ import EgsuForUsers from "./pages/EgsuForUsers";
 import EgsuExport from "./pages/EgsuExport";
 import EgsuCapabilities from "./pages/EgsuCapabilities";
 import EgsuArk from "./pages/EgsuArk";
+import AdminLogin from "./pages/AdminLogin";
+import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +63,8 @@ const App = () => (
           <Route path="/egsu/export" element={<EgsuExport />} />
           <Route path="/egsu/capabilities" element={<EgsuCapabilities />} />
           <Route path="/egsu/ark" element={<EgsuArk />} />
+          <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/admin/panel" element={<AdminPanel />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

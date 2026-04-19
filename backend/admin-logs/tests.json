@@ -1,0 +1,11 @@
+{
+  "tests": [
+    {
+      "name": "Get logs without auth",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

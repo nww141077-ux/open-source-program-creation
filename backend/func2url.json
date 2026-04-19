@@ -1,4 +1,8 @@
 {
+  "admin-settings": "https://functions.poehali.dev/59e4c67e-ace9-4d4a-84fe-12edd379d465",
+  "admin-logs": "https://functions.poehali.dev/c771dff7-b826-46b9-ba5f-58f48879f8b5",
+  "admin-files": "https://functions.poehali.dev/3939f61b-ae8c-41d2-a8b1-b3fd7cce326f",
+  "admin-auth": "https://functions.poehali.dev/aa81ecbc-fe9a-4921-a022-4a9ddd8dcb0e",
   "ark-admin": "https://functions.poehali.dev/9878d5a9-0ad5-432c-9dd0-3ab00d97c421",
   "export-manager": "https://functions.poehali.dev/570f8cf2-4aa5-4054-a1e4-1aac6d4f345b",
   "sms-monitor": "https://functions.poehali.dev/65523c0c-db23-4d8b-9c7e-6bae200b3318",
