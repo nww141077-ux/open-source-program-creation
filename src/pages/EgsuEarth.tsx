@@ -156,7 +156,7 @@ const GENOME_SEGMENTS = [
   {
     name: "energy", label: "Энергетический", color: "#f59e0b", icon: "Zap",
     genes: [
-      { id: "FUEL_GENE", fn: "carbon_energy_storage", rate: "anthropogenic_triggered", status: "warning" },
+      { id: "FUEL_GENE", fn: "carbon_energy_storage", rate: "anthropogenic_triggered", status: "ok" },
       { id: "GEOTHERM_GENE", fn: "internal_heat_generation", rate: "constant_low", status: "ok" },
       { id: "PHOTO_GENE", fn: "solar_energy_conversion", rate: "diurnal_seasonal", status: "ok" },
     ],
@@ -165,7 +165,7 @@ const GENOME_SEGMENTS = [
     name: "hydrological", label: "Гидрологический", color: "#06b6d4", icon: "Waves",
     genes: [
       { id: "CLAY_GENE", fn: "water_filtration", rate: "seasonal", status: "ok" },
-      { id: "AQUIFER_GENE", fn: "freshwater_storage", rate: "climate_dependent", status: "critical" },
+      { id: "AQUIFER_GENE", fn: "freshwater_storage", rate: "climate_dependent", status: "ok" },
     ],
   },
   {
@@ -179,21 +179,21 @@ const GENOME_SEGMENTS = [
     name: "biological", label: "Биологический", color: "#22c55e", icon: "Leaf",
     genes: [
       { id: "SOIL_GENE", fn: "organic_decomposition", rate: "temperature_dependent", status: "ok" },
-      { id: "FOREST_GENE", fn: "oxygen_production", rate: "seasonal", status: "high" },
+      { id: "FOREST_GENE", fn: "oxygen_production", rate: "seasonal", status: "ok" },
     ],
   },
   {
     name: "regulatory", label: "Регуляторный", color: "#a855f7", icon: "Activity",
     genes: [
-      { id: "CARBON_CYCLE", fn: "CO2_balance", rate: "dynamic", status: "critical" },
+      { id: "CARBON_CYCLE", fn: "CO2_balance", rate: "dynamic", status: "ok" },
       { id: "NITROGEN_CYCLE", fn: "nitrogen_fixation", rate: "balanced", status: "ok" },
     ],
   },
   {
     name: "anthropogenic", label: "Антропогенный", color: "#f97316", icon: "Building2",
     genes: [
-      { id: "ENERGY_GENE", fn: "resource_consumption", rate: "exponential_growth", status: "medium" },
-      { id: "URBAN_GENE", fn: "landscape_modification", rate: "accelerating", status: "warning" },
+      { id: "ENERGY_GENE", fn: "resource_consumption", rate: "exponential_growth", status: "ok" },
+      { id: "URBAN_GENE", fn: "landscape_modification", rate: "accelerating", status: "ok" },
     ],
   },
 ];
@@ -206,7 +206,7 @@ const INCIDENT_RULES = [
     label: "Сверхэксплуатация ископаемого топлива",
     severity: "warning",
     actions: ["log_event"],
-    active: true,
+    active: false,
   },
   {
     gene: "AQUIFER_GENE",
@@ -215,7 +215,7 @@ const INCIDENT_RULES = [
     label: "Истощение подземных вод",
     severity: "critical",
     actions: ["alert_user", "activate_conservation_protocol"],
-    active: true,
+    active: false,
   },
   {
     gene: "CARBON_CYCLE",
@@ -224,7 +224,7 @@ const INCIDENT_RULES = [
     label: "Климатическая чрезвычайная ситуация",
     severity: "critical",
     actions: ["log_full_state", "trigger_carbon_reduction_protocol"],
-    active: true,
+    active: false,
   },
   {
     gene: "FOREST_GENE",
@@ -930,19 +930,19 @@ export default function EgsuEarth() {
                   <div style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>incident_monitor v1.3</div>
                   <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>energy_profile: ultra_low · strategy: event_driven</div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.3)", borderRadius: 20, padding: "6px 14px" }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f43f5e", animation: "pulse 1.5s infinite" }} />
-                  <span style={{ fontSize: 12, color: "#f43f5e", fontWeight: 700 }}>2 критических инцидента активны</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(0,200,100,0.08)", border: "1px solid rgba(0,200,100,0.25)", borderRadius: 20, padding: "6px 14px" }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#00c864" }} />
+                  <span style={{ fontSize: 12, color: "#00c864", fontWeight: 700 }}>Инцидентов не зафиксировано</span>
                 </div>
               </div>
 
               {/* Счётчики по уровням */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
                 {[
-                  { label: "Критично", count: 2, color: "#f43f5e", icon: "AlertOctagon" },
-                  { label: "Высокий", count: 1, color: "#f97316", icon: "AlertTriangle" },
-                  { label: "Предупреждение", count: 1, color: "#f59e0b", icon: "Bell" },
-                  { label: "Средний", count: 1, color: "#3b82f6", icon: "Info" },
+                  { label: "Критично", count: 0, color: "#f43f5e", icon: "AlertOctagon" },
+                  { label: "Высокий", count: 0, color: "#f97316", icon: "AlertTriangle" },
+                  { label: "Предупреждение", count: 0, color: "#f59e0b", icon: "Bell" },
+                  { label: "Средний", count: 0, color: "#3b82f6", icon: "Info" },
                 ].map(s => (
                   <div key={s.label} style={{ background: `${s.color}08`, border: `1px solid ${s.color}25`, borderRadius: 10, padding: "10px 14px", textAlign: "center" }}>
                     <Icon name={s.icon as "Bell"} size={16} color={s.color} />
