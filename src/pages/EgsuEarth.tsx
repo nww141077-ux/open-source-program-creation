@@ -3,7 +3,265 @@ import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
 type ModuleKey = "core_lite" | "atmos_fast" | "hydro_simple" | "bio_stat" | "climate_lite";
-type TabKey = "overview" | "modules" | "config" | "simulation";
+type TabKey = "overview" | "modules" | "config" | "simulation" | "genome" | "incidents";
+
+const GENOME_YAML = `planet_genome:
+  name: "Terra_Genome_v3.0"
+  version: "3.1"
+  creation_date: "4.543e9_years_BP"
+  energy_budget: 1.2e34 J
+
+segments:
+  - name: "energy"
+    genes:
+      - id: "FUEL_GENE"
+        function: "carbon_energy_storage"
+        expression_rate: "anthropogenic_triggered"
+      - id: "GEOTHERM_GENE"
+        function: "internal_heat_generation"
+        expression_rate: "constant_low"
+      - id: "PHOTO_GENE"
+        function: "solar_energy_conversion"
+        expression_rate: "diurnal_seasonal"
+
+  - name: "hydrological"
+    genes:
+      - id: "CLAY_GENE"
+        function: "water_filtration"
+        expression_rate: "seasonal"
+      - id: "AQUIFER_GENE"
+        function: "freshwater_storage"
+        expression_rate: "climate_dependent"
+
+  - name: "structural"
+    genes:
+      - id: "CRUST_GENE"
+        function: "tectonic_framework"
+        expression_rate: "geological_timescale"
+      - id: "TECTONIC_GENE"
+        function: "continental_movement"
+        expression_rate: "slow_continuous"
+
+  - name: "biological"
+    genes:
+      - id: "SOIL_GENE"
+        function: "organic_decomposition"
+        expression_rate: "temperature_dependent"
+      - id: "FOREST_GENE"
+        function: "oxygen_production"
+        expression_rate: "seasonal"
+
+  - name: "regulatory"
+    genes:
+      - id: "CARBON_CYCLE"
+        function: "CO2_balance"
+        expression_rate: "dynamic"
+      - id: "NITROGEN_CYCLE"
+        function: "nitrogen_fixation"
+        expression_rate: "balanced"
+
+  - name: "anthropogenic"
+    genes:
+      - id: "ENERGY_GENE"
+        function: "resource_consumption"
+        expression_rate: "exponential_growth"
+      - id: "URBAN_GENE"
+        function: "landscape_modification"
+        expression_rate: "accelerating"
+
+incident_monitor:
+  version: "1.3"
+  energy_profile: "ultra_low"
+
+  detection_rules:
+    - target_gene: "FUEL_GENE"
+      condition: "expression_rate > threshold_anthropogenic"
+      incident_type: "fossil_overexploitation"
+      severity: "warning"
+      action: "log_event"
+
+    - target_gene: "AQUIFER_GENE"
+      condition: "expression_rate < threshold_renewal"
+      incident_type: "groundwater_depletion"
+      severity: "critical"
+      action:
+        - "alert_user"
+        - "activate_conservation_protocol"
+
+    - target_gene: "CARBON_CYCLE"
+      condition: "atmospheric_CO2 > 450 ppm"
+      incident_type: "climate_emergency"
+      severity: "critical"
+      action:
+        - "log_full_state"
+        - "trigger_carbon_reduction_protocol"
+
+    - target_gene: "FOREST_GENE"
+      condition: "coverage < 25%"
+      incident_type: "deforestation_crisis"
+      severity: "high"
+      action:
+        - "notify_regulatory_agencies"
+        - "initiate_reforestation"
+
+    - target_gene: "ENERGY_GENE"
+      condition: "consumption_rate > 2 * historical_average"
+      incident_type: "energy_demand_spike"
+      severity: "medium"
+      action: "recommend_efficiency_measures"
+
+  monitoring_strategy:
+    frequency: "event_driven"
+    sensors:
+      - "gene_expression_rates"
+      - "environmental_parameters"
+      - "threshold_breaches"
+
+  alert_system:
+    levels:
+      - level: "info"
+        color: "blue"
+        condition: "minor_deviation"
+      - level: "warning"
+        color: "yellow"
+        condition: "significant_change"
+      - level: "critical"
+        color: "red"
+        condition: "catastrophic_event"
+    actions:
+      critical:
+        - "pause_simulation"
+        - "save_state_snapshot"
+        - "send_alert"
+      warning:
+        - "increase_monitoring_frequency"
+        - "log_details"
+
+environmental_conditions:
+  temperature_range: "-89°C to +57°C"
+  pressure_range: "0.006 to 1000 bar"
+  habitability_index: "high"
+
+activation_rules:
+  - condition: "temperature > 273K"
+    activate: ["SOIL_GENE", "FOREST_GENE"]
+  - condition: "human_population > 1e6"
+    activate: ["ENERGY_GENE", "URBAN_GENE"]
+
+evolution_potential:
+  natural_mutation_rate: 1e-6 per geological_epoch
+  anthropogenic_influence: high`;
+
+const GENOME_SEGMENTS = [
+  {
+    name: "energy", label: "Энергетический", color: "#f59e0b", icon: "Zap",
+    genes: [
+      { id: "FUEL_GENE", fn: "carbon_energy_storage", rate: "anthropogenic_triggered", status: "warning" },
+      { id: "GEOTHERM_GENE", fn: "internal_heat_generation", rate: "constant_low", status: "ok" },
+      { id: "PHOTO_GENE", fn: "solar_energy_conversion", rate: "diurnal_seasonal", status: "ok" },
+    ],
+  },
+  {
+    name: "hydrological", label: "Гидрологический", color: "#06b6d4", icon: "Waves",
+    genes: [
+      { id: "CLAY_GENE", fn: "water_filtration", rate: "seasonal", status: "ok" },
+      { id: "AQUIFER_GENE", fn: "freshwater_storage", rate: "climate_dependent", status: "critical" },
+    ],
+  },
+  {
+    name: "structural", label: "Структурный", color: "#f43f5e", icon: "Mountain",
+    genes: [
+      { id: "CRUST_GENE", fn: "tectonic_framework", rate: "geological_timescale", status: "ok" },
+      { id: "TECTONIC_GENE", fn: "continental_movement", rate: "slow_continuous", status: "ok" },
+    ],
+  },
+  {
+    name: "biological", label: "Биологический", color: "#22c55e", icon: "Leaf",
+    genes: [
+      { id: "SOIL_GENE", fn: "organic_decomposition", rate: "temperature_dependent", status: "ok" },
+      { id: "FOREST_GENE", fn: "oxygen_production", rate: "seasonal", status: "high" },
+    ],
+  },
+  {
+    name: "regulatory", label: "Регуляторный", color: "#a855f7", icon: "Activity",
+    genes: [
+      { id: "CARBON_CYCLE", fn: "CO2_balance", rate: "dynamic", status: "critical" },
+      { id: "NITROGEN_CYCLE", fn: "nitrogen_fixation", rate: "balanced", status: "ok" },
+    ],
+  },
+  {
+    name: "anthropogenic", label: "Антропогенный", color: "#f97316", icon: "Building2",
+    genes: [
+      { id: "ENERGY_GENE", fn: "resource_consumption", rate: "exponential_growth", status: "medium" },
+      { id: "URBAN_GENE", fn: "landscape_modification", rate: "accelerating", status: "warning" },
+    ],
+  },
+];
+
+const INCIDENT_RULES = [
+  {
+    gene: "FUEL_GENE",
+    condition: "expression_rate > threshold_anthropogenic",
+    type: "fossil_overexploitation",
+    label: "Сверхэксплуатация ископаемого топлива",
+    severity: "warning",
+    actions: ["log_event"],
+    active: true,
+  },
+  {
+    gene: "AQUIFER_GENE",
+    condition: "expression_rate < threshold_renewal",
+    type: "groundwater_depletion",
+    label: "Истощение подземных вод",
+    severity: "critical",
+    actions: ["alert_user", "activate_conservation_protocol"],
+    active: true,
+  },
+  {
+    gene: "CARBON_CYCLE",
+    condition: "atmospheric_CO2 > 450 ppm",
+    type: "climate_emergency",
+    label: "Климатическая чрезвычайная ситуация",
+    severity: "critical",
+    actions: ["log_full_state", "trigger_carbon_reduction_protocol"],
+    active: true,
+  },
+  {
+    gene: "FOREST_GENE",
+    condition: "coverage < 25%",
+    type: "deforestation_crisis",
+    label: "Кризис вырубки лесов",
+    severity: "high",
+    actions: ["notify_regulatory_agencies", "initiate_reforestation"],
+    active: false,
+  },
+  {
+    gene: "ENERGY_GENE",
+    condition: "consumption_rate > 2 * historical_average",
+    type: "energy_demand_spike",
+    label: "Скачок энергопотребления",
+    severity: "medium",
+    actions: ["recommend_efficiency_measures"],
+    active: false,
+  },
+];
+
+const SEV_COLOR: Record<string, string> = {
+  critical: "#f43f5e",
+  high: "#f97316",
+  warning: "#f59e0b",
+  medium: "#3b82f6",
+  info: "#06b6d4",
+  ok: "#00c864",
+};
+const SEV_LABEL: Record<string, string> = {
+  critical: "Критично",
+  high: "Высокий",
+  warning: "Предупреждение",
+  medium: "Средний",
+  info: "Инфо",
+  ok: "Норма",
+};
 
 const MODULES: {
   key: ModuleKey;
@@ -346,9 +604,20 @@ export default function EgsuEarth() {
   const fmtYear = (y: number) => y === 0 ? "0" : y >= 1_000_000 ? `${(y / 1_000_000).toFixed(0)} млн лет` : `${y.toLocaleString()} лет`;
   const fmtAgo = (y: number) => y === 0 ? "—" : `${((4_600_000_000 - y) / 1_000_000).toFixed(0)} млн лет назад`;
 
+  const [genomeView, setGenomeView] = useState<"visual" | "yaml">("visual");
+  const [genomeCopied, setGenomeCopied] = useState(false);
+
+  const copyGenome = () => {
+    navigator.clipboard.writeText(GENOME_YAML);
+    setGenomeCopied(true);
+    setTimeout(() => setGenomeCopied(false), 1500);
+  };
+
   const tabs: { key: TabKey; label: string; icon: string }[] = [
     { key: "overview", label: "Обзор", icon: "Globe" },
     { key: "modules", label: "Модули", icon: "Layers" },
+    { key: "genome", label: "Геном", icon: "Dna" },
+    { key: "incidents", label: "Мониторинг", icon: "AlertTriangle" },
     { key: "config", label: "Конфиг", icon: "FileCode" },
     { key: "simulation", label: "Симуляция", icon: "Play" },
   ];
@@ -558,6 +827,197 @@ export default function EgsuEarth() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── ГЕНОМ ── */}
+        {tab === "genome" && (
+          <div>
+            {/* Шапка */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>Terra_Genome_v3.0</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>4.543 млрд лет · 6 сегментов · 13 генов · energy_budget: 1.2×10³⁴ Дж</div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setGenomeView("visual")}
+                  style={{ padding: "6px 14px", background: genomeView === "visual" ? "rgba(0,200,100,0.15)" : "rgba(255,255,255,0.03)", border: `1px solid ${genomeView === "visual" ? "rgba(0,200,100,0.4)" : "rgba(255,255,255,0.08)"}`, borderRadius: 8, color: genomeView === "visual" ? "#00c864" : "rgba(255,255,255,0.35)", cursor: "pointer", fontSize: 12, fontWeight: genomeView === "visual" ? 700 : 400 }}>
+                  Визуально
+                </button>
+                <button onClick={() => setGenomeView("yaml")}
+                  style={{ padding: "6px 14px", background: genomeView === "yaml" ? "rgba(168,85,247,0.15)" : "rgba(255,255,255,0.03)", border: `1px solid ${genomeView === "yaml" ? "rgba(168,85,247,0.4)" : "rgba(255,255,255,0.08)"}`, borderRadius: 8, color: genomeView === "yaml" ? "#a855f7" : "rgba(255,255,255,0.35)", cursor: "pointer", fontSize: 12, fontWeight: genomeView === "yaml" ? 700 : 400 }}>
+                  YAML
+                </button>
+                <button onClick={copyGenome}
+                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 14px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 12 }}>
+                  <Icon name={genomeCopied ? "Check" : "Copy"} size={12} color={genomeCopied ? "#00c864" : undefined} />
+                  {genomeCopied ? "Скопировано" : "Копировать"}
+                </button>
+              </div>
+            </div>
+
+            {genomeView === "visual" && (
+              <div>
+                {/* Сегменты генома */}
+                {GENOME_SEGMENTS.map(seg => (
+                  <div key={seg.name} style={{ background: `${seg.color}06`, border: `1px solid ${seg.color}25`, borderRadius: 14, overflow: "hidden", marginBottom: 14 }}>
+                    <div style={{ background: `${seg.color}10`, borderBottom: `1px solid ${seg.color}20`, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 30, height: 30, borderRadius: 8, background: `${seg.color}18`, border: `1px solid ${seg.color}40`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Icon name={seg.icon as "Zap"} size={14} color={seg.color} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: seg.color }}>{seg.label}</div>
+                        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>segment: {seg.name} · {seg.genes.length} генов</div>
+                      </div>
+                    </div>
+                    <div style={{ padding: "12px 18px", display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 8 }}>
+                      {seg.genes.map(gene => (
+                        <div key={gene.id} style={{ background: "rgba(0,0,0,0.3)", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "flex-start", gap: 10 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: SEV_COLOR[gene.status] || "#374151", marginTop: 4, flexShrink: 0 }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 3 }}>
+                              <code style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{gene.id}</code>
+                              <span style={{ fontSize: 10, color: SEV_COLOR[gene.status] || "#374151", background: `${SEV_COLOR[gene.status] || "#374151"}15`, borderRadius: 4, padding: "1px 6px", flexShrink: 0 }}>{SEV_LABEL[gene.status] || gene.status}</span>
+                            </div>
+                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 3 }}>{gene.fn.replace(/_/g, " ")}</div>
+                            <code style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>{gene.rate}</code>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Параметры среды */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginTop: 4 }}>
+                  {[
+                    { label: "Диапазон температур", value: "−89°C … +57°C", color: "#f43f5e", icon: "Thermometer" },
+                    { label: "Диапазон давления", value: "0.006 … 1 000 бар", color: "#3b82f6", icon: "Gauge" },
+                    { label: "Индекс обитаемости", value: "Высокий", color: "#00c864", icon: "Heart" },
+                  ].map(e => (
+                    <div key={e.label} style={{ background: `${e.color}08`, border: `1px solid ${e.color}25`, borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+                      <Icon name={e.icon as "Thermometer"} size={16} color={e.color} />
+                      <div>
+                        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginBottom: 2 }}>{e.label}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: e.color }}>{e.value}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {genomeView === "yaml" && (
+              <div style={{ background: "#0d1117", border: "1px solid rgba(168,85,247,0.25)", borderRadius: 14, overflow: "hidden" }}>
+                <div style={{ background: "rgba(168,85,247,0.06)", borderBottom: "1px solid rgba(168,85,247,0.15)", padding: "10px 18px" }}>
+                  <code style={{ fontSize: 12, color: "#a855f7" }}>terra_genome_v3.0.yaml</code>
+                </div>
+                <pre style={{ margin: 0, padding: "20px 24px", fontSize: 12, lineHeight: 1.7, color: "#e2e8f0", overflowX: "auto", fontFamily: "monospace", maxHeight: 600, overflowY: "auto" }}>{GENOME_YAML}</pre>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── МОНИТОРИНГ ИНЦИДЕНТОВ ── */}
+        {tab === "incidents" && (
+          <div>
+            {/* Шапка статуса */}
+            <div style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: 20, marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>incident_monitor v1.3</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>energy_profile: ultra_low · strategy: event_driven</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.3)", borderRadius: 20, padding: "6px 14px" }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f43f5e", animation: "pulse 1.5s infinite" }} />
+                  <span style={{ fontSize: 12, color: "#f43f5e", fontWeight: 700 }}>2 критических инцидента активны</span>
+                </div>
+              </div>
+
+              {/* Счётчики по уровням */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
+                {[
+                  { label: "Критично", count: 2, color: "#f43f5e", icon: "AlertOctagon" },
+                  { label: "Высокий", count: 1, color: "#f97316", icon: "AlertTriangle" },
+                  { label: "Предупреждение", count: 1, color: "#f59e0b", icon: "Bell" },
+                  { label: "Средний", count: 1, color: "#3b82f6", icon: "Info" },
+                ].map(s => (
+                  <div key={s.label} style={{ background: `${s.color}08`, border: `1px solid ${s.color}25`, borderRadius: 10, padding: "10px 14px", textAlign: "center" }}>
+                    <Icon name={s.icon as "Bell"} size={16} color={s.color} />
+                    <div style={{ fontSize: 22, fontWeight: 900, color: s.color, marginTop: 4 }}>{s.count}</div>
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Правила мониторинга */}
+            <div style={{ fontSize: 11, color: "#4b5563", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
+              Правила обнаружения ({INCIDENT_RULES.length})
+            </div>
+            {INCIDENT_RULES.map((rule, idx) => (
+              <div key={rule.type} style={{ background: rule.active ? `${SEV_COLOR[rule.severity]}06` : "rgba(255,255,255,0.02)", border: `1px solid ${rule.active ? SEV_COLOR[rule.severity] + "30" : "rgba(255,255,255,0.05)"}`, borderRadius: 13, padding: "16px 20px", marginBottom: 10, position: "relative", overflow: "hidden" }}>
+                {rule.active && (
+                  <div style={{ position: "absolute", top: 0, left: 0, width: 3, height: "100%", background: SEV_COLOR[rule.severity] }} />
+                )}
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: `${SEV_COLOR[rule.severity]}15`, border: `1px solid ${SEV_COLOR[rule.severity]}35`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: 14, fontWeight: 900, color: SEV_COLOR[rule.severity] }}>{idx + 1}</span>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>{rule.label}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: SEV_COLOR[rule.severity], background: `${SEV_COLOR[rule.severity]}15`, borderRadius: 4, padding: "1px 7px", border: `1px solid ${SEV_COLOR[rule.severity]}35` }}>
+                        {SEV_LABEL[rule.severity]}
+                      </span>
+                      {rule.active && (
+                        <span style={{ fontSize: 10, color: "#f43f5e", background: "rgba(244,63,94,0.1)", borderRadius: 4, padding: "1px 7px", border: "1px solid rgba(244,63,94,0.3)" }}>● АКТИВЕН</span>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 8 }}>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
+                        <span style={{ color: "rgba(255,255,255,0.2)" }}>ГЕН: </span>
+                        <code style={{ color: "#a855f7" }}>{rule.gene}</code>
+                      </div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
+                        <span style={{ color: "rgba(255,255,255,0.2)" }}>УСЛОВИЕ: </span>
+                        <code style={{ color: "#f59e0b" }}>{rule.condition}</code>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}>ДЕЙСТВИЯ:</span>
+                      {rule.actions.map(a => (
+                        <code key={a} style={{ fontSize: 10, color: "#06b6d4", background: "rgba(6,182,212,0.08)", borderRadius: 5, padding: "1px 7px", border: "1px solid rgba(6,182,212,0.2)" }}>{a}</code>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Как работает */}
+            <div style={{ background: "rgba(0,200,100,0.04)", border: "1px solid rgba(0,200,100,0.15)", borderRadius: 13, padding: 18, marginTop: 6 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#00c864", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                <Icon name="Cpu" size={14} color="#00c864" /> Стратегия мониторинга
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 8 }}>
+                {[
+                  { icon: "Zap", color: "#f59e0b", title: "Event-driven", desc: "Проверки только при изменениях, не постоянно — экономия ресурсов" },
+                  { icon: "Database", color: "#3b82f6", title: "Минимум данных", desc: "Только ключевые параметры генов, без лишних метрик" },
+                  { icon: "ArrowUpDown", color: "#a855f7", title: "Приоритеты", desc: "Критические инциденты обрабатываются в первую очередь" },
+                  { icon: "Code", color: "#06b6d4", title: "Простая логика", desc: "Простые сравнения вместо сложных вычислений" },
+                  { icon: "FileJson", color: "#00c864", title: "YAML-формат", desc: "Компактный формат — меньше памяти и нагрузки на парсер" },
+                ].map(s => (
+                  <div key={s.title} style={{ background: "rgba(0,0,0,0.2)", borderRadius: 10, padding: "10px 12px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <Icon name={s.icon as "Zap"} size={12} color={s.color} />
+                      <span style={{ fontSize: 12, fontWeight: 700, color: s.color }}>{s.title}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", lineHeight: 1.5 }}>{s.desc}</div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
