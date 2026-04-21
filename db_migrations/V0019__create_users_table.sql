@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS t_p38294978_open_source_program_.users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(200) UNIQUE NOT NULL,
+  username VARCHAR(100) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  last_login TIMESTAMPTZ
+);
