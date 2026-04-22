@@ -1,0 +1,25 @@
+{
+  "tone": "friendly_professional",
+  "max_response_length": 3,
+  "max_response_tokens": 300,
+  "use_emoji": false,
+  "response_format": "short_sentences",
+  "language": "ru",
+  "greeting_required": true,
+  "suggestions_count": 3,
+  "fallback_phrase": "Уточните, пожалуйста, ваш вопрос",
+  "scope": "ecsu_only",
+  "providers": {
+    "primary": "gemini",
+    "fallback": ["openai", "anthropic", "yandex", "groq"]
+  },
+  "history": {
+    "enabled": true,
+    "max_messages": 20
+  },
+  "moderation": {
+    "block_personal_data": true,
+    "block_off_topic": true,
+    "block_slang": true
+  }
+}
