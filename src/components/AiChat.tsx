@@ -5,7 +5,7 @@ const DEFAULT_API = "https://functions.poehali.dev/daefa87e-0693-4de5-9191-bbc91
 const SCANNER_API = "https://functions.poehali.dev/b3ae5ea9-0780-4337-b7b0-e19f144a63fb";
 
 // ─── Типы провайдеров ───────────────────────────────────────────────────────
-type ProviderId = "auto" | "gemini" | "openai" | "anthropic" | "yandex" | "groq" | "custom";
+type ProviderId = "auto" | "gemini" | "openai" | "anthropic" | "yandex" | "groq" | "custom" | "dalan1";
 // "auto" оставлен только для обратной совместимости с localStorage, реально всегда маппится на "yandex"
 
 interface Provider {
@@ -63,6 +63,15 @@ const PROVIDERS: Provider[] = [
     keyPlaceholder: "gsk_...",
     description: "Groq — бесплатный быстрый провайдер на базе Llama 3",
     models: ["llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768"],
+  },
+  {
+    id: "dalan1",
+    label: "Далан-1",
+    color: "#00c864",
+    icon: "Cpu",
+    keyPlaceholder: "",
+    description: "Далан-1 — ИИ ECSU 2.0, специалист по инцидентам, праву и ЦПВОА. Ключ не нужен.",
+    models: ["dalan-1"],
   },
   {
     id: "custom",
@@ -339,6 +348,9 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
     return selectedProvider;
   };
 
+  // Далан-1 работает без внешнего ключа, через встроенный ECSU-механизм
+  const isDalan1 = (p: ProviderId) => p === "dalan1";
+
   // ─── Чат ──────────────────────────────────────────────────────────────────
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -398,10 +410,12 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
       message: text,
       session_id: sessionId,
       history,
-      provider: effectiveProvider,
-      api_key: apiKeys[effectiveProvider] || undefined,
-      model: selectedModels[effectiveProvider] || undefined,
+      // Далан-1 использует встроенный ECSU-механизм (авто), без внешнего ключа
+      provider: isDalan1(effectiveProvider) ? "auto" : effectiveProvider,
+      api_key: isDalan1(effectiveProvider) ? undefined : (apiKeys[effectiveProvider] || undefined),
+      model: isDalan1(effectiveProvider) ? undefined : (selectedModels[effectiveProvider] || undefined),
       custom_url: effectiveProvider === "custom" ? customUrl : undefined,
+      dalan1_mode: isDalan1(effectiveProvider) ? true : undefined,
     };
     if (useCpvoa && cpvoaContext) body.cpvoa_context = cpvoaContext;
 
@@ -855,8 +869,20 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
                     <div className="px-3 pb-3 pt-1 space-y-2"
                       style={{ background: `${p.color}08`, borderTop: `1px solid ${p.color}20` }}>
 
+                      {/* Далан-1 — встроенный, без ключа */}
+                      {p.id === "dalan1" && (
+                        <div className="flex items-center gap-2 px-2 py-2 rounded-lg"
+                          style={{ background: "rgba(0,200,100,0.08)", border: "1px solid rgba(0,200,100,0.2)" }}>
+                          <Icon name="CheckCircle2" size={13} color="#00c864" />
+                          <div>
+                            <div className="text-[11px] text-white/70 font-semibold">Готов к работе</div>
+                            <div className="text-[10px] text-white/35">API-ключ не требуется — встроен в ECSU</div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* API ключ */}
-                      {p.id !== "custom" && (
+                      {p.id !== "custom" && p.id !== "dalan1" && (
                         <div>
                           <div className="text-[10px] text-white/40 mb-1">API ключ</div>
                           <div className="flex items-center gap-2">
@@ -902,24 +928,26 @@ export default function AiChat({ onClose, initialCpvoaContext, initialMessage }:
                         </div>
                       )}
 
-                      {/* Выбор модели */}
-                      <div>
-                        <div className="text-[10px] text-white/40 mb-1">Модель</div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {p.models.map(m => (
-                            <button key={m}
-                              onClick={() => setSelectedModels(prev => ({ ...prev, [p.id]: m }))}
-                              className="text-[10px] px-2 py-1 rounded-lg transition-all"
-                              style={{
-                                background: (selectedModels[p.id] ?? p.models[0]) === m ? `${p.color}25` : "rgba(255,255,255,0.05)",
-                                color: (selectedModels[p.id] ?? p.models[0]) === m ? p.color : "rgba(255,255,255,0.4)",
-                                border: `1px solid ${(selectedModels[p.id] ?? p.models[0]) === m ? `${p.color}50` : "rgba(255,255,255,0.08)"}`,
-                              }}>
-                              {m}
-                            </button>
-                          ))}
+                      {/* Выбор модели (не показываем для Далан-1) */}
+                      {p.id !== "dalan1" && (
+                        <div>
+                          <div className="text-[10px] text-white/40 mb-1">Модель</div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {p.models.map(m => (
+                              <button key={m}
+                                onClick={() => setSelectedModels(prev => ({ ...prev, [p.id]: m }))}
+                                className="text-[10px] px-2 py-1 rounded-lg transition-all"
+                                style={{
+                                  background: (selectedModels[p.id] ?? p.models[0]) === m ? `${p.color}25` : "rgba(255,255,255,0.05)",
+                                  color: (selectedModels[p.id] ?? p.models[0]) === m ? p.color : "rgba(255,255,255,0.4)",
+                                  border: `1px solid ${(selectedModels[p.id] ?? p.models[0]) === m ? `${p.color}50` : "rgba(255,255,255,0.08)"}`,
+                                }}>
+                                {m}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )}
                 </div>
