@@ -37,6 +37,7 @@ import EgsuAiControl from "./pages/EgsuAiControl";
 import EgsuRospatent from "./pages/EgsuRospatent";
 import EgsuEarth from "./pages/EgsuEarth";
 import UserAuth from "./pages/UserAuth";
+import EgsuAiConfig from "./pages/EgsuAiConfig";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -83,6 +84,7 @@ const App = () => (
           <Route path="/egsu/earth" element={<EgsuEarth />} />
           <Route path="/login" element={<UserAuth />} />
           <Route path="/register" element={<UserAuth />} />
+          <Route path="/egsu/ai-config" element={<EgsuAiConfig />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
