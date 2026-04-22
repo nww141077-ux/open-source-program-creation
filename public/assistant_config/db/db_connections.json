@@ -1,0 +1,28 @@
+{
+  "note": "Подключение к БД осуществляется через backend Cloud Functions. Прямые подключения к PostgreSQL из ИИ запрещены — только через API-эндпоинты.",
+  "connections": [
+    {
+      "name": "main_db",
+      "driver": "postgresql",
+      "access": "via_api_only",
+      "host": "managed by poehali.dev platform",
+      "schema": "t_p38294978_open_source_program_",
+      "api_gateway": "https://functions.poehali.dev",
+      "tables": [
+        "egsu_incidents",
+        "egsu_incident_actions",
+        "egsu_investigations",
+        "egsu_legal_articles",
+        "egsu_legal_documents",
+        "egsu_ai_messages",
+        "egsu_ai_actions",
+        "egsu_system_log",
+        "egsu_development_fund",
+        "egsu_user_subscriptions",
+        "users",
+        "admin_users"
+      ]
+    }
+  ],
+  "access_policy": "READ доступен для всех эндпоинтов. WRITE только через POST-запросы с корректным Bearer-токеном. DELETE и UPDATE — только через admin-команды ИИ."
+}

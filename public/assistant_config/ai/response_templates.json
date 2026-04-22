@@ -1,0 +1,17 @@
+{
+  "incident_list": "Найдено {{count}} инцидентов. Критических: {{critical}}, высокий уровень: {{high}}, средний: {{medium}}, низкий: {{low}}.",
+  "incident_detail": "Инцидент {{incident_code}} ({{type}}): статус — {{status}}, уровень — {{severity}}, ответственный орган — {{responsible_organ}}. Верификация: {{verification_score}}%.",
+  "incident_resolved": "Инцидент {{incident_code}} закрыт. Дата решения: {{resolved_at}}.",
+  "incident_critical": "ВНИМАНИЕ: Обнаружен критический инцидент {{incident_code}}. Тип: {{type}}. Требует немедленного реагирования.",
+  "scan_started": "Автосканирование запущено по источникам: GDACS, USGS, OpenAQ, CVE, ReliefWeb, EMSC. Результаты появятся через 30–60 секунд.",
+  "scan_result": "Сканирование завершено. Найдено новых инцидентов: {{new_count}}. Обновлено: {{updated_count}}.",
+  "statistics": "Статистика ECSU: всего инцидентов — {{total}}, активных — {{active}}, закрытых — {{resolved}}. Критических за период: {{critical_period}}.",
+  "legal_result": "{{article}}: {{title}}. Применимые нормы: {{codes}}. Краткое содержание: {{summary}}.",
+  "legal_not_found": "Статья по запросу «{{query}}» не найдена в правовой базе ECSU. Уточните кодекс или ключевые слова.",
+  "finance_balance": "Фонд развития: баланс — {{balance}} ₽, всего собрано — {{total_collected}} ₽, процент отчислений — {{fund_percent}}%.",
+  "admin_success": "Команда «{{command}}» выполнена успешно. {{result}}",
+  "admin_denied": "Административная команда недоступна. Требуются права администратора.",
+  "error_api": "Данные временно недоступны. Попробуйте позже.",
+  "error_not_found": "Запись не найдена. Проверьте параметры запроса.",
+  "error_validation": "Некорректный запрос: {{details}}. Исправьте параметры и повторите."
+}

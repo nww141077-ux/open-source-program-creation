@@ -1,0 +1,28 @@
+{
+  "allowed": [
+    "/c71047de-6e10-499a-aa1c-e9fdba33e7bd?id=*",
+    "/c71047de-6e10-499a-aa1c-e9fdba33e7bd?status=*",
+    "/c71047de-6e10-499a-aa1c-e9fdba33e7bd?severity=*",
+    "/c71047de-6e10-499a-aa1c-e9fdba33e7bd?type=*",
+    "/b3ae5ea9-0780-4337-b7b0-e19f144a63fb/scan",
+    "/b3ae5ea9-0780-4337-b7b0-e19f144a63fb/status",
+    "/7425192d-b613-4c55-bdb8-01479a9f0d24?query=*",
+    "/7425192d-b613-4c55-bdb8-01479a9f0d24?code=*",
+    "/e610af8a-f8c5-4c04-8d9b-092391fb0c70",
+    "/daefa87e-0693-4de5-9191-bbc918e1d241/admin?command=get_stats",
+    "/daefa87e-0693-4de5-9191-bbc918e1d241/admin?command=list_incidents",
+    "/daefa87e-0693-4de5-9191-bbc918e1d241/admin?command=close_incident",
+    "/daefa87e-0693-4de5-9191-bbc918e1d241/admin?command=ai_sync",
+    "/daefa87e-0693-4de5-9191-bbc918e1d241/admin?command=get_log"
+  ],
+  "blocked": [
+    "/c71047de-6e10-499a-aa1c-e9fdba33e7bd?delete=*",
+    "/c71047de-6e10-499a-aa1c-e9fdba33e7bd?drop=*",
+    "/daefa87e-0693-4de5-9191-bbc918e1d241/admin?command=delete_all",
+    "/daefa87e-0693-4de5-9191-bbc918e1d241/admin?command=reset_db",
+    "*/admin_users*",
+    "*/password_hash*"
+  ],
+  "read_only_tables": ["admin_users", "users", "egsu_legal_documents"],
+  "write_allowed_tables": ["egsu_incidents", "egsu_incident_actions", "egsu_ai_messages", "egsu_ai_actions", "egsu_system_log"]
+}

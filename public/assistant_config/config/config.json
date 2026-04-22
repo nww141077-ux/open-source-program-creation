@@ -1,0 +1,52 @@
+{
+  "api_base_url": "https://functions.poehali.dev",
+  "system_name": "ECSU 2.0",
+  "version": "2.0",
+  "databases": [
+    {
+      "name": "incidents_db",
+      "endpoint": "/c71047de-6e10-499a-aa1c-e9fdba33e7bd",
+      "description": "Инциденты ECSU — создание, верификация, расследование",
+      "methods": ["GET", "POST"],
+      "auth_type": "Bearer",
+      "table": "egsu_incidents"
+    },
+    {
+      "name": "scanner_db",
+      "endpoint": "/b3ae5ea9-0780-4337-b7b0-e19f144a63fb",
+      "description": "Автосканер открытых источников (GDACS, USGS, CVE, ReliefWeb, EMSC, OpenAQ)",
+      "methods": ["GET", "POST"],
+      "auth_type": "Bearer",
+      "table": "egsu_incidents (auto_scanned=true)"
+    },
+    {
+      "name": "legal_db",
+      "endpoint": "/7425192d-b613-4c55-bdb8-01479a9f0d24",
+      "description": "Правовая база — статьи УПК, ГПК, УК РФ, МГП",
+      "methods": ["GET", "POST"],
+      "auth_type": "Bearer",
+      "table": "egsu_legal_articles"
+    },
+    {
+      "name": "finance_db",
+      "endpoint": "/e610af8a-f8c5-4c04-8d9b-092391fb0c70",
+      "description": "Финансовый модуль — фонд развития, операции, баланс",
+      "methods": ["GET"],
+      "auth_type": "Bearer",
+      "table": "egsu_development_fund"
+    },
+    {
+      "name": "security_db",
+      "endpoint": "/15640332-461b-47d1-b024-8fa25fb344ef",
+      "description": "Безопасность — токены, сессии, события доступа",
+      "methods": ["GET", "POST"],
+      "auth_type": "Bearer",
+      "table": "egsu_security_events"
+    }
+  ],
+  "ai_endpoint": "/daefa87e-0693-4de5-9191-bbc918e1d241",
+  "rate_limit": {
+    "max_requests": 100,
+    "time_window": "1h"
+  }
+}

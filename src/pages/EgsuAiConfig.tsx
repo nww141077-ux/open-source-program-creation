@@ -13,15 +13,34 @@ const S = {
   muted: "rgba(255,255,255,0.35)",
 };
 
-type FileKey = "prompt" | "faq" | "dictionary" | "settings" | "dialogs" | "responses";
+type FileKey = "prompt" | "faq" | "dictionary" | "settings" | "dialogs" | "responses"
+  | "config" | "api_endpoints" | "db_schema" | "db_connections"
+  | "ai_instructions" | "response_templates" | "security" | "logging" | "allowed_queries";
+
+type FileGroup = { label: string; color: string; keys: FileKey[] };
 
 const FILES: { key: FileKey; label: string; icon: string; path: string; type: "json" | "text" }[] = [
-  { key: "prompt",     label: "Системный промпт",    icon: "Brain",      path: "/assistant_config/prompts/prompt.json",            type: "json" },
-  { key: "faq",        label: "База знаний (FAQ)",    icon: "BookOpen",   path: "/assistant_config/knowledge_base/faq.json",         type: "json" },
-  { key: "dictionary", label: "Словарь терминов",     icon: "Library",    path: "/assistant_config/knowledge_base/dictionary.json",  type: "json" },
-  { key: "settings",   label: "Настройки стиля",      icon: "Settings",   path: "/assistant_config/settings/settings.json",          type: "json" },
-  { key: "dialogs",    label: "Сценарии диалогов",    icon: "MessageCircle", path: "/assistant_config/dialogs/dialog_flows.json",   type: "json" },
-  { key: "responses",  label: "Типовые ответы",        icon: "Reply",      path: "/assistant_config/responses/responses.json",       type: "json" },
+  { key: "prompt",             label: "Системный промпт",      icon: "Brain",         path: "/assistant_config/prompts/prompt.json",                  type: "json" },
+  { key: "faq",                label: "База знаний (FAQ)",      icon: "BookOpen",      path: "/assistant_config/knowledge_base/faq.json",               type: "json" },
+  { key: "dictionary",         label: "Словарь терминов",       icon: "Library",       path: "/assistant_config/knowledge_base/dictionary.json",        type: "json" },
+  { key: "settings",           label: "Настройки стиля",        icon: "Settings",      path: "/assistant_config/settings/settings.json",               type: "json" },
+  { key: "dialogs",            label: "Сценарии диалогов",      icon: "MessageCircle", path: "/assistant_config/dialogs/dialog_flows.json",             type: "json" },
+  { key: "responses",          label: "Типовые ответы",          icon: "Reply",         path: "/assistant_config/responses/responses.json",             type: "json" },
+  { key: "config",             label: "Конфиг API/БД",           icon: "Plug",          path: "/assistant_config/config/config.json",                   type: "json" },
+  { key: "api_endpoints",      label: "API-эндпоинты",           icon: "Globe",         path: "/assistant_config/api/api_endpoints.json",               type: "json" },
+  { key: "db_schema",          label: "Схема базы данных",       icon: "Database",      path: "/assistant_config/db/db_schema.json",                    type: "json" },
+  { key: "db_connections",     label: "Подключения к БД",        icon: "Server",        path: "/assistant_config/db/db_connections.json",               type: "json" },
+  { key: "ai_instructions",    label: "Инструкции ИИ (БД)",      icon: "Cpu",           path: "/assistant_config/ai/ai_instructions.txt",               type: "text" },
+  { key: "response_templates", label: "Шаблоны ответов",         icon: "FileText",      path: "/assistant_config/ai/response_templates.json",           type: "json" },
+  { key: "security",           label: "Безопасность",            icon: "ShieldCheck",   path: "/assistant_config/config/security.json",                 type: "json" },
+  { key: "logging",            label: "Логирование",             icon: "ScrollText",    path: "/assistant_config/config/logging_config.json",           type: "json" },
+  { key: "allowed_queries",    label: "Разрешённые запросы",     icon: "ListChecks",    path: "/assistant_config/rules/allowed_queries.json",           type: "json" },
+];
+
+const FILE_GROUPS: FileGroup[] = [
+  { label: "ИИ-ассистент",   color: "#00c864", keys: ["prompt","faq","dictionary","settings","dialogs","responses"] },
+  { label: "API и БД",       color: "#0ea5e9", keys: ["config","api_endpoints","db_schema","db_connections","ai_instructions","response_templates"] },
+  { label: "Безопасность",   color: "#f59e0b", keys: ["security","logging","allowed_queries"] },
 ];
 
 type Snapshot = {
@@ -223,23 +242,33 @@ export default function EgsuAiConfig() {
       {tab === "editor" && (
         <div style={{ display: "flex", height: "calc(100vh - 130px)" }}>
 
-          {/* Боковая панель — файлы */}
-          <div style={{ width: 220, borderRight: `1px solid ${S.border}`, padding: "12px 8px", flexShrink: 0, overflowY: "auto" }}>
-            <div style={{ fontSize: 10, color: S.muted, letterSpacing: 1, textTransform: "uppercase", padding: "0 8px 8px" }}>Файлы конфигурации</div>
-            {FILES.map(f => (
-              <button key={f.key} onClick={() => { setActiveFile(f.key); setJsonError(""); }}
-                style={{
-                  width: "100%", textAlign: "left", background: activeFile === f.key ? "rgba(0,200,100,0.1)" : "none",
-                  border: activeFile === f.key ? `1px solid ${S.accent}33` : "1px solid transparent",
-                  borderRadius: 8, padding: "9px 10px", cursor: "pointer", marginBottom: 2,
-                  display: "flex", alignItems: "center", gap: 8,
-                }}>
-                <Icon name={f.icon as "Brain"} size={14} color={activeFile === f.key ? S.accent : S.muted} />
-                <span style={{ fontSize: 12, color: activeFile === f.key ? S.accent : S.text, flex: 1 }}>{f.label}</span>
-                {edited[f.key] && (
-                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: S.warn, flexShrink: 0 }} />
-                )}
-              </button>
+          {/* Боковая панель — файлы с группировкой */}
+          <div style={{ width: 240, borderRight: `1px solid ${S.border}`, padding: "10px 8px", flexShrink: 0, overflowY: "auto" }}>
+            {FILE_GROUPS.map(group => (
+              <div key={group.label} style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 9, color: group.color, letterSpacing: 1.5, textTransform: "uppercase", padding: "0 8px 6px", fontWeight: 800, opacity: 0.7 }}>
+                  {group.label}
+                </div>
+                {group.keys.map(key => {
+                  const f = FILES.find(f => f.key === key)!;
+                  return (
+                    <button key={f.key} onClick={() => { setActiveFile(f.key); setJsonError(""); }}
+                      style={{
+                        width: "100%", textAlign: "left",
+                        background: activeFile === f.key ? `${group.color}14` : "none",
+                        border: activeFile === f.key ? `1px solid ${group.color}33` : "1px solid transparent",
+                        borderRadius: 7, padding: "8px 10px", cursor: "pointer", marginBottom: 1,
+                        display: "flex", alignItems: "center", gap: 8,
+                      }}>
+                      <Icon name={f.icon as "Brain"} size={13} color={activeFile === f.key ? group.color : S.muted} />
+                      <span style={{ fontSize: 11.5, color: activeFile === f.key ? group.color : S.text, flex: 1, lineHeight: 1.3 }}>{f.label}</span>
+                      {edited[f.key] && (
+                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: S.warn, flexShrink: 0 }} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             ))}
           </div>
 

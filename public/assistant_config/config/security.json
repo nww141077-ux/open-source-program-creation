@@ -1,0 +1,33 @@
+{
+  "ssl_enabled": true,
+  "api_domain": "functions.poehali.dev",
+  "allowed_origins": ["*"],
+  "auth_type": "Bearer",
+  "token_storage": "localStorage (user_token / admin_token)",
+  "timeout_seconds": 30,
+  "rate_limit": {
+    "max_requests_per_hour": 100,
+    "block_on_exceed": true,
+    "block_duration_minutes": 60
+  },
+  "blocked_operations": [
+    "DELETE /egsu_incidents",
+    "DROP TABLE",
+    "TRUNCATE",
+    "UPDATE admin_users",
+    "UPDATE users SET password_hash"
+  ],
+  "sensitive_fields_hidden": [
+    "password_hash",
+    "jwt_secret",
+    "api_key",
+    "DATABASE_URL"
+  ],
+  "admin_required_for": [
+    "close_incident",
+    "update_incident",
+    "ai_sync",
+    "scan_incidents",
+    "get_log"
+  ]
+}

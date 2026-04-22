@@ -481,7 +481,12 @@ def handler(event: dict, context) -> dict:
             "capabilities": ["dialog", "legal", "cpvoa", "incidents", "multi-provider"]
         })
 
-    if method == "POST" and ("/chat" in path or path == "/"):
+    # db_action — ранняя проверка до валидации message
+    _db_action_early = body.get("db_action", "")
+    if method == "POST" and _db_action_early:
+        body["_route_to_db"] = True
+
+    if method == "POST" and ("/chat" in path or path == "/") and not body.get("_route_to_db"):
         user_message = body.get("message", "").strip()
         session_id = body.get("session_id", "default")
         history = body.get("history", [])
@@ -730,6 +735,133 @@ def handler(event: dict, context) -> dict:
             "result": action_result,
             "ai_comment": ai_comment,
             "executed_at": datetime.now(timezone.utc).isoformat(),
+        })
+
+    # ── POST /db — прямой доступ ИИ к БД через интернет-маршруты ─────────────
+    db_action = body.get("db_action", "")
+    if method == "POST" and ("/db" in path or body.get("_route_to_db") or db_action in ("db_select","db_count","db_stats","db_schema")):
+        if db_action == "db_schema":
+            return ok({
+                "schema": S,
+                "tables": {
+                    "incidents": {"desc": "Инциденты ECSU", "key_cols": ["id","incident_code","type","severity","status","responsible_organ"]},
+                    "legal": {"desc": "Правовая база (статьи УПК, ГПК, УК, МГП)", "key_cols": ["id","article_number","title","code"]},
+                    "log": {"desc": "Системный журнал событий", "key_cols": ["id","event_type","source","message"]},
+                    "finance": {"desc": "Фонд развития — операции и баланс", "key_cols": ["id","operation_type","amount","fund_balance"]},
+                },
+                "api_routes": {
+                    "incidents": "https://functions.poehali.dev/c71047de-6e10-499a-aa1c-e9fdba33e7bd",
+                    "scanner": "https://functions.poehali.dev/b3ae5ea9-0780-4337-b7b0-e19f144a63fb",
+                    "legal": "https://functions.poehali.dev/7425192d-b613-4c55-bdb8-01479a9f0d24",
+                    "finance": "https://functions.poehali.dev/e610af8a-f8c5-4c04-8d9b-092391fb0c70",
+                }
+            })
+
+        table = body.get("table", "")
+        action = db_action.replace("db_", "") if db_action.startswith("db_") else body.get("action", "select")  # select | count | stats
+        filters = body.get("filters", {})
+        limit = int(body.get("limit", 20))
+
+        ALLOWED_TABLES = {
+            "incidents": f"{S}.egsu_incidents",
+            "legal": f"{S}.egsu_legal_articles",
+            "log": f"{S}.egsu_system_log",
+            "ai_actions": f"{S}.egsu_ai_actions",
+            "finance": f"{S}.egsu_development_fund",
+            "users_count": f"{S}.users",
+            "subscriptions": f"{S}.egsu_user_subscriptions",
+        }
+
+        if table not in ALLOWED_TABLES:
+            return err(f"Таблица недоступна. Доступные: {', '.join(ALLOWED_TABLES.keys())}", 400)
+
+        tbl = ALLOWED_TABLES[table]
+        conn = psycopg2.connect(os.environ["DATABASE_URL"])
+        cur = conn.cursor()
+        result = {}
+
+        try:
+            if action == "count":
+                cur.execute(f"SELECT COUNT(*) FROM {tbl}")
+                result = {"count": cur.fetchone()[0], "table": table}
+
+            elif action == "stats" and table == "incidents":
+                cur.execute(f"SELECT severity, COUNT(*) FROM {tbl} GROUP BY severity")
+                by_severity = {r[0]: r[1] for r in cur.fetchall()}
+                cur.execute(f"SELECT status, COUNT(*) FROM {tbl} GROUP BY status")
+                by_status = {r[0]: r[1] for r in cur.fetchall()}
+                cur.execute(f"SELECT type, COUNT(*) FROM {tbl} GROUP BY type ORDER BY COUNT(*) DESC LIMIT 5")
+                by_type = {r[0]: r[1] for r in cur.fetchall()}
+                cur.execute(f"SELECT COUNT(*) FROM {tbl} WHERE created_at > NOW() - INTERVAL '24 hours'")
+                last_24h = cur.fetchone()[0]
+                cur.execute(f"SELECT COUNT(*) FROM {tbl} WHERE auto_scanned = true")
+                auto_cnt = cur.fetchone()[0]
+                result = {
+                    "by_severity": by_severity,
+                    "by_status": by_status,
+                    "by_type": by_type,
+                    "last_24h": last_24h,
+                    "auto_scanned": auto_cnt,
+                    "table": table,
+                }
+
+            elif action == "select":
+                where_parts = []
+                args = []
+                SAFE_COLS = {
+                    "incidents": ["id", "incident_code", "type", "severity", "status", "description", "responsible_organ", "scan_source", "auto_scanned", "created_at"],
+                    "legal": ["id", "article_number", "title", "code", "created_at"],
+                    "log": ["id", "event_type", "source", "message", "created_at"],
+                    "ai_actions": ["id", "action_type", "target_table", "target_id", "created_at"],
+                    "finance": ["id", "operation_type", "amount", "fund_balance", "created_at"],
+                    "users_count": ["id", "email", "username", "created_at"],
+                    "subscriptions": ["id", "user_name", "tariff_code", "status", "started_at"],
+                }
+                cols = ", ".join(SAFE_COLS.get(table, ["id", "created_at"]))
+
+                for k, v in filters.items():
+                    if k.isalnum() or "_" in k:
+                        where_parts.append(f"{k} = %s")
+                        args.append(v)
+
+                q = f"SELECT {cols} FROM {tbl}"
+                if where_parts:
+                    q += " WHERE " + " AND ".join(where_parts)
+                q += f" ORDER BY created_at DESC LIMIT {min(limit, 50)}"
+                cur.execute(q, args)
+                col_names = [desc[0] for desc in cur.description]
+                rows = [dict(zip(col_names, r)) for r in cur.fetchall()]
+                result = {"rows": rows, "count": len(rows), "table": table}
+
+            else:
+                result = {"error": f"action '{action}' не поддерживается. Доступные: select, count, stats"}
+
+        except Exception as e:
+            result = {"error": str(e)}
+        finally:
+            conn.close()
+
+        cur.execute if False else None
+        return ok(result)
+
+    # ── GET /db/schema — схема БД для ИИ ──────────────────────────────────────
+    if method == "GET" and "/db/schema" in path:
+        return ok({
+            "schema": S,
+            "tables": {
+                "incidents": {"desc": "Инциденты ECSU", "key_cols": ["id","incident_code","type","severity","status","responsible_organ"]},
+                "legal": {"desc": "Правовая база (статьи УПК, ГПК, УК, МГП)", "key_cols": ["id","article_number","title","code"]},
+                "log": {"desc": "Системный журнал событий", "key_cols": ["id","event_type","source","message"]},
+                "finance": {"desc": "Фонд развития — операции и баланс", "key_cols": ["id","operation_type","amount","fund_balance"]},
+                "subscriptions": {"desc": "Подписки пользователей", "key_cols": ["id","user_name","tariff_code","status"]},
+            },
+            "api_routes": {
+                "incidents": "/c71047de-6e10-499a-aa1c-e9fdba33e7bd",
+                "scanner": "/b3ae5ea9-0780-4337-b7b0-e19f144a63fb",
+                "legal": "/7425192d-b613-4c55-bdb8-01479a9f0d24",
+                "finance": "/e610af8a-f8c5-4c04-8d9b-092391fb0c70",
+                "security": "/15640332-461b-47d1-b024-8fa25fb344ef",
+            }
         })
 
     return err("Маршрут не найден", 404)

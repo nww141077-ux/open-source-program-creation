@@ -1,0 +1,21 @@
+{
+  "level": "INFO",
+  "storage": "database",
+  "table": "egsu_system_log",
+  "retention_days": 30,
+  "fields": ["timestamp", "endpoint", "method", "status_code", "session_id", "event_type", "source", "message"],
+  "log_events": [
+    "incident_created",
+    "incident_closed",
+    "incident_updated",
+    "scan_started",
+    "scan_completed",
+    "ai_command_executed",
+    "legal_query",
+    "auth_login",
+    "auth_failed",
+    "api_error"
+  ],
+  "alert_on": ["api_error", "auth_failed"],
+  "api_endpoint": "https://functions.poehali.dev/c771dff7-b826-46b9-ba5f-58f48879f8b5"
+}

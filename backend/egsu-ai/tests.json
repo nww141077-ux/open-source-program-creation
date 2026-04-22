@@ -5,7 +5,7 @@
       "method": "GET",
       "path": "/",
       "expectedStatus": 200,
-      "expectedBody": "active",
+      "expectedBody": "ECSU AI 2.0",
       "bodyMatcher": "contains"
     },
     {
@@ -14,35 +14,43 @@
       "path": "/",
       "body": {"message": "Привет", "session_id": "test-001", "history": [], "provider": "auto"},
       "expectedStatus": 200,
-      "expectedBody": "suggestions",
+      "expectedBody": "reply",
       "bodyMatcher": "contains"
     },
     {
-      "name": "Диалог — session_id в ответе",
+      "name": "DB — схема базы данных",
       "method": "POST",
       "path": "/",
-      "body": {"message": "Что такое УПК?", "session_id": "test-002", "history": []},
+      "body": {"db_action": "db_schema"},
       "expectedStatus": 200,
-      "expectedBody": "test-002",
+      "expectedBody": "schema",
       "bodyMatcher": "contains"
     },
     {
-      "name": "Диалог с контекстом ЦПВОА",
+      "name": "DB — количество инцидентов",
       "method": "POST",
       "path": "/",
-      "body": {
-        "message": "Анализируй инциденты",
-        "session_id": "test-cpvoa",
-        "history": [],
-        "cpvoa_context": {
-          "incidents": [{"id": "1", "category": "Кибер", "threat": "critical", "location": "IP: 1.2.3.4", "source": "Брандмауэр", "time": "10:00", "description": "Атака"}],
-          "sensors": {"radio": true, "camera": false},
-          "connection": "online",
-          "mode": "advanced"
-        }
-      },
+      "body": {"db_action": "db_count", "table": "incidents"},
       "expectedStatus": 200,
-      "expectedBody": "test-cpvoa",
+      "expectedBody": "count",
+      "bodyMatcher": "contains"
+    },
+    {
+      "name": "DB — статистика инцидентов",
+      "method": "POST",
+      "path": "/",
+      "body": {"db_action": "db_stats", "table": "incidents"},
+      "expectedStatus": 200,
+      "expectedBody": "by_severity",
+      "bodyMatcher": "contains"
+    },
+    {
+      "name": "DB — недоступная таблица",
+      "method": "POST",
+      "path": "/",
+      "body": {"db_action": "db_count", "table": "admin_users"},
+      "expectedStatus": 400,
+      "expectedBody": "error",
       "bodyMatcher": "contains"
     }
   ]

@@ -1,0 +1,80 @@
+{
+  "schema": "t_p38294978_open_source_program_",
+  "tables": [
+    {
+      "name": "egsu_incidents",
+      "description": "Основная таблица инцидентов ECSU",
+      "columns": [
+        "id", "incident_code", "type", "severity", "status",
+        "verification_score", "has_photo", "has_video", "has_witnesses",
+        "has_satellite", "has_official_source", "mgp_distinction",
+        "mgp_proportionality", "mgp_necessity", "responsible_organ",
+        "source_id", "external_url", "auto_scanned", "scan_source",
+        "description", "created_at", "updated_at"
+      ],
+      "status_values": ["pending_verification","verified","investigating","resolved","rejected"],
+      "severity_values": ["low","medium","high","critical"],
+      "type_values": ["ecology","water","air","cyber","human_rights","weapons","seismic","humanitarian"]
+    },
+    {
+      "name": "egsu_incident_actions",
+      "description": "Действия по инциденту (ОГР-шаги Регламента ECSU)",
+      "columns": ["id","incident_id","action_code","action_label","legal_basis","applied_at","applied_by"]
+    },
+    {
+      "name": "egsu_investigations",
+      "description": "Расследования инцидентов (ОГР-группы)",
+      "columns": ["id","incident_id","ogr_group","findings","mgp_assessment","conclusion","created_at"]
+    },
+    {
+      "name": "egsu_legal_articles",
+      "description": "Статьи правовых кодексов (УПК, ГПК, АПК, УК, МГП)",
+      "columns": ["id","code","article_number","title","text","keywords","created_at"]
+    },
+    {
+      "name": "egsu_legal_documents",
+      "description": "Полные правовые документы и конвенции",
+      "columns": ["id","name","type","content","source_url","created_at"]
+    },
+    {
+      "name": "egsu_ai_messages",
+      "description": "История диалогов ИИ-ассистента",
+      "columns": ["id","session_id","role","content","provider","tokens_used","created_at"]
+    },
+    {
+      "name": "egsu_ai_actions",
+      "description": "Административные действия ИИ (логирование)",
+      "columns": ["id","action_type","target_table","target_id","payload","result","created_at"]
+    },
+    {
+      "name": "egsu_system_log",
+      "description": "Системный журнал событий ECSU",
+      "columns": ["id","event_type","source","message","data","created_at"]
+    },
+    {
+      "name": "egsu_development_fund",
+      "description": "Фонд развития — операции и баланс",
+      "columns": ["id","operation_type","amount","source_description","fund_balance","created_at"]
+    },
+    {
+      "name": "egsu_user_subscriptions",
+      "description": "Подписки пользователей системы",
+      "columns": ["id","session_id","user_name","user_email","tariff_code","status","started_at","expires_at"]
+    },
+    {
+      "name": "users",
+      "description": "Зарегистрированные пользователи (вход/регистрация)",
+      "columns": ["id","email","username","password_hash","created_at","last_login"]
+    },
+    {
+      "name": "admin_users",
+      "description": "Администраторы системы",
+      "columns": ["id","username","password_hash","login_attempts","locked_until","created_at"]
+    }
+  ],
+  "relations": [
+    {"from": "egsu_incident_actions.incident_id", "to": "egsu_incidents.id"},
+    {"from": "egsu_investigations.incident_id", "to": "egsu_incidents.id"},
+    {"from": "egsu_ai_messages.session_id", "to": "egsu_user_subscriptions.session_id"}
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "base_url": "https://functions.poehali.dev",
+  "endpoints": [
+    {
+      "name": "egsu-ai",
+      "path": "/daefa87e-0693-4de5-9191-bbc918e1d241",
+      "methods": ["GET", "POST"],
+      "description": "Основной ИИ-ассистент ECSU 2.0. Диалог, административные команды, правовой анализ.",
+      "sub_paths": {
+        "GET /": "Статус и список доступных провайдеров",
+        "POST /": "Чат с ИИ (поле: message, history, context)",
+        "POST /admin": "Административные команды (поле: command, params)"
+      },
+      "admin_commands": [
+        "scan_incidents", "get_stats", "close_incident",
+        "update_incident", "list_incidents", "get_log", "ai_sync"
+      ],
+      "params": {
+        "message": {"type": "string", "required": true},
+        "session_id": {"type": "string", "required": false},
+        "history": {"type": "array", "required": false},
+        "context": {"type": "object", "required": false}
+      }
+    },
+    {
+      "name": "egsu-incidents",
+      "path": "/c71047de-6e10-499a-aa1c-e9fdba33e7bd",
+      "methods": ["GET", "POST"],
+      "description": "Управление инцидентами — создание, верификация по МГП, ОГР, расследования.",
+      "params": {
+        "id": {"type": "integer", "required": false},
+        "status": {"type": "string", "required": false, "values": ["pending_verification","verified","investigating","resolved","rejected"]},
+        "severity": {"type": "string", "required": false, "values": ["low","medium","high","critical"]},
+        "type": {"type": "string", "required": false, "values": ["ecology","water","air","cyber","human_rights","weapons"]}
+      },
+      "response_example": {
+        "id": 42,
+        "incident_code": "INC-2026-042",
+        "type": "ecology",
+        "severity": "critical",
+        "status": "verified",
+        "verification_score": 85,
+        "responsible_organ": "ОГР-Экология",
+        "date": "2026-04-23"
+      }
+    },
+    {
+      "name": "incident-scanner",
+      "path": "/b3ae5ea9-0780-4337-b7b0-e19f144a63fb",
+      "methods": ["GET", "POST"],
+      "description": "Автосканер открытых источников: GDACS, USGS, OpenAQ, CVE, ReliefWeb, EMSC, WHO.",
+      "sub_paths": {
+        "POST /scan": "Запуск сканирования по источникам",
+        "GET /status": "Статус последнего сканирования",
+        "GET /sources": "Список источников и их доступность"
+      },
+      "sources": ["gdacs","usgs","openaq","cve","reliefweb","who","emsc"]
+    },
+    {
+      "name": "legal-base",
+      "path": "/7425192d-b613-4c55-bdb8-01479a9f0d24",
+      "methods": ["GET", "POST"],
+      "description": "Правовая база — поиск статей УПК, ГПК, АПК, УК РФ, МГП.",
+      "params": {
+        "query": {"type": "string", "required": false},
+        "code": {"type": "string", "required": false, "values": ["УПК","ГПК","АПК","УК","МГП"]},
+        "article": {"type": "string", "required": false}
+      },
+      "response_example": {
+        "article": "ст. 105 УК РФ",
+        "title": "Убийство",
+        "text": "Убийство, то есть умышленное причинение смерти другому человеку...",
+        "code": "УК"
+      }
+    },
+    {
+      "name": "finance",
+      "path": "/e610af8a-f8c5-4c04-8d9b-092391fb0c70",
+      "methods": ["GET"],
+      "description": "Финансовый модуль — баланс фонда развития, история операций.",
+      "response_example": {
+        "fund_balance": 15000,
+        "total_collected": 48000,
+        "fund_percent": 10,
+        "history": []
+      }
+    },
+    {
+      "name": "security",
+      "path": "/15640332-461b-47d1-b024-8fa25fb344ef",
+      "methods": ["GET", "POST"],
+      "description": "Безопасность — события доступа, токены, сессии, блокировки.",
+      "params": {
+        "event_type": {"type": "string", "required": false},
+        "from_date": {"type": "string", "required": false}
+      }
+    }
+  ]
+}
