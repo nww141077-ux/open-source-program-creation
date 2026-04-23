@@ -15,7 +15,7 @@ const TX_LABELS: Record<string, string> = { income: "Поступление", ou
 const TX_COLORS: Record<string, string> = { income: "#00ff87", outcome: "#f43f5e", distribution: "#a855f7", transfer: "#3b82f6" };
 const TX_ICONS: Record<string, string> = { income: "ArrowDownLeft", outcome: "ArrowUpRight", distribution: "GitFork", transfer: "ArrowLeftRight" };
 
-type AccForm = { owner_name: string; account_type: string; account_number: string; bank_name: string; currency: string; label: string; distribution_percent: string };
+type AccForm = { owner_name: string; account_type: string; account_number: string; bank_name: string; currency: string; label: string; distribution_percent: string; card_number: string; card_holder: string; card_expiry: string; bik: string; correspondent_account: string; inn: string; swift: string; iban: string };
 type CardForm = { account_id: string; card_holder: string; card_last4: string; card_type: string; expiry_month: string; expiry_year: string };
 type TxForm = { account_id: string; tx_type: string; amount: string; currency: string; description: string; source: string };
 type RuleForm = { name: string; account_id: string; percent: string; description: string };
@@ -227,6 +227,97 @@ export default function FinanceLayout({
                         style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
                     </div>
                   </div>
+
+                  {/* ── Банковские реквизиты ── */}
+                  <div className="pt-2 pb-1">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Icon name="CreditCard" size={13} className="text-white/30" />
+                      <span className="text-white/30 text-xs uppercase tracking-widest font-semibold">Банковские реквизиты</span>
+                      <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+                      <span className="text-white/20 text-[10px]">опционально</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-white/40 text-xs uppercase tracking-wide block mb-1.5">Номер карты (16 цифр)</label>
+                    <input
+                      value={accForm.card_number}
+                      onChange={e => {
+                        const raw = e.target.value.replace(/\D/g, "").slice(0, 16);
+                        const masked = raw.length > 12 ? "**** **** **** " + raw.slice(12) : raw;
+                        setAccForm({ ...accForm, card_number: masked });
+                      }}
+                      placeholder="**** **** **** 1234"
+                      className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none font-mono tracking-widest"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-white/40 text-xs uppercase tracking-wide block mb-1.5">Владелец карты</label>
+                      <input value={accForm.card_holder} onChange={e => setAccForm({ ...accForm, card_holder: e.target.value.toUpperCase() })}
+                        placeholder="IVAN IVANOV"
+                        className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none uppercase"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                    </div>
+                    <div>
+                      <label className="text-white/40 text-xs uppercase tracking-wide block mb-1.5">Срок действия (MM/YY)</label>
+                      <input
+                        value={accForm.card_expiry}
+                        onChange={e => {
+                          let v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                          if (v.length >= 3) v = v.slice(0, 2) + "/" + v.slice(2);
+                          setAccForm({ ...accForm, card_expiry: v });
+                        }}
+                        placeholder="12/28"
+                        maxLength={5}
+                        className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none font-mono"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-white/40 text-xs uppercase tracking-wide block mb-1.5">БИК банка</label>
+                      <input value={accForm.bik} onChange={e => setAccForm({ ...accForm, bik: e.target.value.replace(/\D/g,"").slice(0,9) })}
+                        placeholder="044525225" maxLength={9}
+                        className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none font-mono"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                    </div>
+                    <div>
+                      <label className="text-white/40 text-xs uppercase tracking-wide block mb-1.5">ИНН</label>
+                      <input value={accForm.inn} onChange={e => setAccForm({ ...accForm, inn: e.target.value.replace(/\D/g,"").slice(0,12) })}
+                        placeholder="7710140679" maxLength={12}
+                        className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none font-mono"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-white/40 text-xs uppercase tracking-wide block mb-1.5">Корр. счёт</label>
+                    <input value={accForm.correspondent_account} onChange={e => setAccForm({ ...accForm, correspondent_account: e.target.value.replace(/\D/g,"").slice(0,20) })}
+                      placeholder="30101810400000000225"
+                      className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none font-mono"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-white/40 text-xs uppercase tracking-wide block mb-1.5">SWIFT / BIC</label>
+                      <input value={accForm.swift} onChange={e => setAccForm({ ...accForm, swift: e.target.value.toUpperCase().slice(0,11) })}
+                        placeholder="SABRRUMMXXX"
+                        className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none font-mono tracking-wider"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                    </div>
+                    <div>
+                      <label className="text-white/40 text-xs uppercase tracking-wide block mb-1.5">IBAN</label>
+                      <input value={accForm.iban} onChange={e => setAccForm({ ...accForm, iban: e.target.value.toUpperCase().replace(/\s/g,"").slice(0,34) })}
+                        placeholder="RU0204452500001234567890123"
+                        className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none font-mono text-xs"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                    </div>
+                  </div>
+
                   <button onClick={saveAccount} disabled={saving || !accForm.owner_name.trim()}
                     className="w-full py-3 rounded-xl font-bold text-sm transition-all hover:scale-[1.02] disabled:opacity-40"
                     style={{ background: G("#3b82f6, #a855f7"), color: "white" }}>

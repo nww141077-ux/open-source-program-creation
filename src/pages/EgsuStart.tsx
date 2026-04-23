@@ -15,6 +15,8 @@ const MODULES = [
   { path: "/egsu/export",        icon: "Download",        label: "Экспорт",              color: "#06b6d4",  desc: "Упаковка и резервирование",     key: "exp" },
   { path: "/egsu/owner",         icon: "Crown",           label: "Настройки владельца",  color: "#eab308",  desc: "Профиль и права",               key: "own" },
   { path: "/egsu/api",           icon: "Code2",           label: "API-менеджер",         color: "#64748b",  desc: "Интеграции и ключи",            key: "api" },
+  { path: "/egsu/graphium",      icon: "BookOpen",        label: "Графиум",              color: "#a855f7",  desc: "Личный блокнот и заметки",      key: "graphium" },
+  { path: "/egsu/civil-claims",  icon: "Scale",           label: "Гражданские иски",     color: "#00c864",  desc: "Иски и режим поглощения",       key: "civil" },
 ];
 
 const CITIZEN_TOOLS = [

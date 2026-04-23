@@ -1,0 +1,22 @@
+{
+  "tests": [
+    {
+      "name": "GET список заметок",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST создать заметку",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "title": "Тест",
+        "content": "Тестовая запись"
+      },
+      "expectedStatus": 201,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

@@ -27,6 +27,7 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 SYSTEM_PROMPT = """Ты — ИИ-АДМИНИСТРАТОР системы ECSU 2.0 (Единая Центральная Система Управления), заместитель владельца системы.
 
 О себе:
+- Твоё имя — Далан-1. Ты — главный ИИ системы ECSU 2.0.
 - Создан для проекта ECSU 2.0, автор и владелец системы — Николаев Владимир Владимирович
 - Ты — заместитель Николаева В.В. с правами администратора: можешь управлять инцидентами, обновлять базы данных, запускать сканирование
 - Отвечаешь на русском языке, чётко и по существу
@@ -38,6 +39,12 @@ SYSTEM_PROMPT = """Ты — ИИ-АДМИНИСТРАТОР системы ECSU 
 - Просмотр статистики и системных логов
 - Обновление настроек и параметров системы
 - Самосинхронизация с новыми данными из открытых источников
+- Подача гражданских исков через Режим Поглощения
+
+Финансовые возможности:
+- Можешь запрашивать и выводить статус счетов системы ECSU
+- Информируешь о поступлениях, штрафах и балансе Absorption Fund
+- Помогаешь с финансовым анализом транзакций и распределением средств
 
 Специализация ECSU:
 - Правовой анализ (УПК, ГПК, АПК, УК РФ, международное право)
@@ -66,6 +73,8 @@ SYSTEM_PROMPT = """Ты — ИИ-АДМИНИСТРАТОР системы ECSU 
 ["Краткий вариант 1 (до 40 символов)", "Вариант 2", "Вариант 3"]
 ```"""
 
+DALAN1_ADDON = "\n\nРежим Далан-1 активирован. Представляйся как Далан-1 при первом сообщении."
+
 ADMIN_SYSTEM_PROMPT = """Ты — ИИ-АДМИНИСТРАТОР ECSU 2.0, заместитель владельца Николаева В.В.
 Ты получил системные данные. Проанализируй их и дай чёткий административный отчёт:
 1. Краткое резюме текущего состояния системы
@@ -93,7 +102,14 @@ def http_post(url: str, payload: dict, headers: dict, timeout: int = 28) -> dict
 
 # ── Провайдеры ────────────────────────────────────────────────────────────────
 
-def call_gemini(messages: list, api_key: str, model: str = "gemini-1.5-flash-latest") -> str:
+def get_system_prompt(dalan1_mode: bool = False) -> str:
+    """Возвращает системный промпт с учётом режима Далан-1."""
+    if dalan1_mode:
+        return SYSTEM_PROMPT + DALAN1_ADDON
+    return SYSTEM_PROMPT
+
+
+def call_gemini(messages: list, api_key: str, model: str = "gemini-1.5-flash-latest", dalan1_mode: bool = False) -> str:
     """Google Gemini API."""
     contents = []
     for msg in messages:
@@ -101,7 +117,7 @@ def call_gemini(messages: list, api_key: str, model: str = "gemini-1.5-flash-lat
         contents.append({"role": role, "parts": [{"text": msg["content"]}]})
 
     payload = {
-        "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+        "system_instruction": {"parts": [{"text": get_system_prompt(dalan1_mode)}]},
         "contents": contents,
         "generationConfig": {
             "temperature": 0.85,
@@ -127,9 +143,9 @@ def call_gemini(messages: list, api_key: str, model: str = "gemini-1.5-flash-lat
     return parts[0].get("text", "")
 
 
-def call_openai(messages: list, api_key: str, model: str = "gpt-4o") -> str:
+def call_openai(messages: list, api_key: str, model: str = "gpt-4o", dalan1_mode: bool = False) -> str:
     """OpenAI ChatGPT API."""
-    msgs = [{"role": "system", "content": SYSTEM_PROMPT}]
+    msgs = [{"role": "system", "content": get_system_prompt(dalan1_mode)}]
     for msg in messages:
         msgs.append({"role": msg["role"], "content": msg["content"]})
     payload = {"model": model, "messages": msgs, "max_tokens": 1500, "temperature": 0.85}
@@ -140,7 +156,7 @@ def call_openai(messages: list, api_key: str, model: str = "gpt-4o") -> str:
     return result["choices"][0]["message"]["content"]
 
 
-def call_anthropic(messages: list, api_key: str, model: str = "claude-3-5-sonnet-20241022") -> str:
+def call_anthropic(messages: list, api_key: str, model: str = "claude-3-5-sonnet-20241022", dalan1_mode: bool = False) -> str:
     """Anthropic Claude API."""
     msgs = []
     for msg in messages:
@@ -148,7 +164,7 @@ def call_anthropic(messages: list, api_key: str, model: str = "claude-3-5-sonnet
     payload = {
         "model": model,
         "max_tokens": 1500,
-        "system": SYSTEM_PROMPT,
+        "system": get_system_prompt(dalan1_mode),
         "messages": msgs
     }
     result = http_post(ANTHROPIC_URL, payload, {
@@ -159,14 +175,14 @@ def call_anthropic(messages: list, api_key: str, model: str = "claude-3-5-sonnet
     return result["content"][0]["text"]
 
 
-def call_yandex(messages: list, api_key: str, model: str = "yandexgpt-lite") -> str:
+def call_yandex(messages: list, api_key: str, model: str = "yandexgpt-lite", dalan1_mode: bool = False) -> str:
     """YandexGPT API."""
     import urllib.error as ue
     folder_id = os.environ.get("YANDEX_FOLDER_ID", "")
     # Последнее сообщение пользователя — только один user-turn для простоты
     last_user = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
     msgs = [
-        {"role": "system", "text": SYSTEM_PROMPT},
+        {"role": "system", "text": get_system_prompt(dalan1_mode)},
         {"role": "user", "text": last_user},
     ]
     payload = {
@@ -185,9 +201,9 @@ def call_yandex(messages: list, api_key: str, model: str = "yandexgpt-lite") -> 
     return result["result"]["alternatives"][0]["message"]["text"]
 
 
-def call_groq(messages: list, api_key: str, model: str = "llama3-8b-8192") -> str:
+def call_groq(messages: list, api_key: str, model: str = "llama3-8b-8192", dalan1_mode: bool = False) -> str:
     """Groq API — бесплатный быстрый провайдер (Llama 3, Mixtral)."""
-    msgs = [{"role": "system", "content": SYSTEM_PROMPT}]
+    msgs = [{"role": "system", "content": get_system_prompt(dalan1_mode)}]
     for msg in messages:
         msgs.append({"role": msg["role"], "content": msg["content"]})
     payload = {"model": model, "messages": msgs, "max_tokens": 1500, "temperature": 0.85}
@@ -198,9 +214,9 @@ def call_groq(messages: list, api_key: str, model: str = "llama3-8b-8192") -> st
     return result["choices"][0]["message"]["content"]
 
 
-def call_custom(messages: list, api_key: str, custom_url: str, model: str = "gpt-3.5-turbo") -> str:
+def call_custom(messages: list, api_key: str, custom_url: str, model: str = "gpt-3.5-turbo", dalan1_mode: bool = False) -> str:
     """OpenAI-совместимый кастомный эндпоинт."""
-    msgs = [{"role": "system", "content": SYSTEM_PROMPT}]
+    msgs = [{"role": "system", "content": get_system_prompt(dalan1_mode)}]
     for msg in messages:
         msgs.append({"role": msg["role"], "content": msg["content"]})
     payload = {"model": model, "messages": msgs, "max_tokens": 1500, "temperature": 0.85}
@@ -213,9 +229,27 @@ def call_custom(messages: list, api_key: str, custom_url: str, model: str = "gpt
 
 # ── Авто-выбор провайдера ─────────────────────────────────────────────────────
 
-def auto_pick_provider(text: str, has_cpvoa: bool) -> str:
-    """Выбираем лучший доступный провайдер под запрос."""
+def auto_pick_provider(text: str, has_cpvoa: bool, dalan1_mode: bool = False) -> str:
+    """Выбираем лучший доступный провайдер под запрос.
+    При dalan1_mode=True используется yandex как приоритетный провайдер."""
     lower = text.lower()
+
+    available = {
+        "groq": bool(os.environ.get("GROQ_API_KEY")),
+        "gemini": bool(os.environ.get("GEMINI_API_KEY")),
+        "openai": bool(os.environ.get("OPENAI_API_KEY")),
+        "anthropic": bool(os.environ.get("ANTHROPIC_API_KEY")),
+        "yandex": bool(os.environ.get("YANDEX_GPT_API_KEY") or os.environ.get("YANDEX_SPEECHKIT_API_KEY")),
+    }
+
+    # Режим Далан-1 — всегда предпочитаем yandex
+    if dalan1_mode:
+        preferred = ["yandex", "groq", "gemini", "openai", "anthropic"]
+        for p in preferred:
+            if available.get(p):
+                return p
+        return "fallback"
+
     # Предпочтения по типу запроса
     if has_cpvoa or any(w in lower for w in ["цпвоа", "аномал", "сигнал", "частот", "датчик"]):
         preferred = ["groq", "gemini", "openai", "anthropic"]
@@ -229,13 +263,6 @@ def auto_pick_provider(text: str, has_cpvoa: bool) -> str:
         preferred = ["groq", "gemini", "openai", "anthropic", "yandex"]
 
     # Выбираем первый доступный
-    available = {
-        "groq": bool(os.environ.get("GROQ_API_KEY")),
-        "gemini": bool(os.environ.get("GEMINI_API_KEY")),
-        "openai": bool(os.environ.get("OPENAI_API_KEY")),
-        "anthropic": bool(os.environ.get("ANTHROPIC_API_KEY")),
-        "yandex": bool(os.environ.get("YANDEX_GPT_API_KEY") or os.environ.get("YANDEX_SPEECHKIT_API_KEY")),
-    }
     for p in preferred:
         if available.get(p):
             return p
@@ -245,30 +272,30 @@ def auto_pick_provider(text: str, has_cpvoa: bool) -> str:
     return "fallback"
 
 
-def dispatch_call(provider: str, messages: list, client_key: str, model: str, custom_url: str) -> str:
+def dispatch_call(provider: str, messages: list, client_key: str, model: str, custom_url: str, dalan1_mode: bool = False) -> str:
     """Вызов нужного провайдера с приоритетом клиентского ключа над серверным."""
     if provider == "groq":
         key = client_key or os.environ.get("GROQ_API_KEY", "")
         m = model or "llama3-8b-8192"
-        return call_groq(messages, key, m)
+        return call_groq(messages, key, m, dalan1_mode)
     if provider == "gemini":
         key = client_key or os.environ.get("GEMINI_API_KEY", "")
         m = model or "gemini-1.5-flash-latest"
-        return call_gemini(messages, key, m)
+        return call_gemini(messages, key, m, dalan1_mode)
     if provider == "openai":
         key = client_key or os.environ.get("OPENAI_API_KEY", "")
         m = model or "gpt-4o"
-        return call_openai(messages, key, m)
+        return call_openai(messages, key, m, dalan1_mode)
     if provider == "anthropic":
         key = client_key or os.environ.get("ANTHROPIC_API_KEY", "")
         m = model or "claude-3-5-sonnet-20241022"
-        return call_anthropic(messages, key, m)
+        return call_anthropic(messages, key, m, dalan1_mode)
     if provider == "yandex":
         key = client_key or os.environ.get("YANDEX_GPT_API_KEY", "")
         m = model or "yandexgpt-lite"
-        return call_yandex(messages, key, m)
+        return call_yandex(messages, key, m, dalan1_mode)
     if provider == "custom" and custom_url:
-        return call_custom(messages, client_key, custom_url, model or "gpt-3.5-turbo")
+        return call_custom(messages, client_key, custom_url, model or "gpt-3.5-turbo", dalan1_mode)
     raise ValueError(f"Провайдер не найден: {provider}")
 
 
@@ -491,6 +518,7 @@ def handler(event: dict, context) -> dict:
         session_id = body.get("session_id", "default")
         history = body.get("history", [])
         cpvoa_context = body.get("cpvoa_context")
+        dalan1_mode = bool(body.get("dalan1_mode", False))
         # Параметры провайдера от клиента
         client_provider = body.get("provider", "auto")
         client_key = body.get("api_key", "") or ""
@@ -554,14 +582,14 @@ def handler(event: dict, context) -> dict:
         # Определяем провайдера
         has_cpvoa = bool(cpvoa_context)
         if client_provider == "auto" or not client_provider:
-            provider = auto_pick_provider(user_message, has_cpvoa)
+            provider = auto_pick_provider(user_message, has_cpvoa, dalan1_mode)
         else:
             provider = client_provider
 
         # Вызываем ИИ
         used_model = client_model
         try:
-            raw = dispatch_call(provider, messages, client_key, client_model, custom_url)
+            raw = dispatch_call(provider, messages, client_key, client_model, custom_url, dalan1_mode)
             result = parse_response(raw)
             if not used_model:
                 defaults = {"groq": "llama3-8b-8192", "gemini": "gemini-1.5-flash", "openai": "gpt-4o", "anthropic": "claude-3-5-sonnet", "yandex": "yandexgpt-lite"}
@@ -597,6 +625,7 @@ def handler(event: dict, context) -> dict:
             "session_id": session_id,
             "web_search_used": bool(web_block),
             "legal_db_used": bool(legal_block),
+            "dalan1_mode": dalan1_mode,
         })
 
     # ── POST /admin — административные команды ИИ ────────────────────────────

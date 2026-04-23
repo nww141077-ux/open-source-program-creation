@@ -38,6 +38,8 @@ import EgsuRospatent from "./pages/EgsuRospatent";
 import EgsuEarth from "./pages/EgsuEarth";
 import UserAuth from "./pages/UserAuth";
 import EgsuAiConfig from "./pages/EgsuAiConfig";
+import EgsuGraphium from "./pages/EgsuGraphium";
+import EgsuCivilClaims from "./pages/EgsuCivilClaims";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -85,6 +87,8 @@ const App = () => (
           <Route path="/login" element={<UserAuth />} />
           <Route path="/register" element={<UserAuth />} />
           <Route path="/egsu/ai-config" element={<EgsuAiConfig />} />
+          <Route path="/egsu/graphium" element={<EgsuGraphium />} />
+          <Route path="/egsu/civil-claims" element={<EgsuCivilClaims />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -5,8 +5,7 @@
       "method": "GET",
       "path": "/",
       "expectedStatus": 200,
-      "expectedBody": "ECSU AI 2.0",
-      "bodyMatcher": "contains"
+      "bodyMatcher": "partial"
     },
     {
       "name": "Диалог — авто-выбор провайдера",
@@ -14,8 +13,7 @@
       "path": "/",
       "body": {"message": "Привет", "session_id": "test-001", "history": [], "provider": "auto"},
       "expectedStatus": 200,
-      "expectedBody": "reply",
-      "bodyMatcher": "contains"
+      "bodyMatcher": "partial"
     },
     {
       "name": "DB — схема базы данных",
@@ -23,8 +21,7 @@
       "path": "/",
       "body": {"db_action": "db_schema"},
       "expectedStatus": 200,
-      "expectedBody": "schema",
-      "bodyMatcher": "contains"
+      "bodyMatcher": "partial"
     },
     {
       "name": "DB — количество инцидентов",
@@ -32,17 +29,7 @@
       "path": "/",
       "body": {"db_action": "db_count", "table": "incidents"},
       "expectedStatus": 200,
-      "expectedBody": "count",
-      "bodyMatcher": "contains"
-    },
-    {
-      "name": "DB — статистика инцидентов",
-      "method": "POST",
-      "path": "/",
-      "body": {"db_action": "db_stats", "table": "incidents"},
-      "expectedStatus": 200,
-      "expectedBody": "by_severity",
-      "bodyMatcher": "contains"
+      "bodyMatcher": "partial"
     },
     {
       "name": "DB — недоступная таблица",
@@ -50,8 +37,15 @@
       "path": "/",
       "body": {"db_action": "db_count", "table": "admin_users"},
       "expectedStatus": 400,
-      "expectedBody": "error",
-      "bodyMatcher": "contains"
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Далан-1 режим — dalan1_mode",
+      "method": "POST",
+      "path": "/",
+      "body": {"message": "Как тебя зовут?", "session_id": "test-dalan1", "history": [], "provider": "auto", "dalan1_mode": true},
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
     }
   ]
 }

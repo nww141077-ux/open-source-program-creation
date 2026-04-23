@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
 const G = (s: string) => `linear-gradient(135deg, ${s})`;
@@ -32,6 +33,7 @@ export default function SecurityLayout({
   toast, children,
   penaltyRates, eventLabels, fmt,
 }: Props) {
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen font-body" style={{ background: "#060a12" }}>
 
@@ -70,6 +72,13 @@ export default function SecurityLayout({
               </div>
             </div>
           )}
+          <button
+            onClick={() => navigate("/egsu/civil-claims")}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-105"
+            style={{ background: "rgba(0,200,100,0.12)", border: "1px solid rgba(0,200,100,0.30)", color: "#00c864" }}>
+            <Icon name="Scale" size={13} />
+            <span className="hidden md:inline">Гражданские иски</span>
+          </button>
           <button onClick={() => setShowReport(true)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-105"
             style={{ background: G("#f43f5e, #f59e0b"), color: "white" }}>

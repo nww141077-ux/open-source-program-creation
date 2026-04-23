@@ -1,0 +1,23 @@
+{
+  "tests": [
+    {
+      "name": "GET список исков",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST подать иск",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "claimant_name": "Иванов Иван Иванович",
+        "violation_type": "data_theft",
+        "violation_description": "Тестовая запись: несанкционированное хищение персональных данных"
+      },
+      "expectedStatus": 201,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import SecurityLayout from "./egsu-security/SecurityLayout";
 import SecurityOverview from "./egsu-security/SecurityOverview";
@@ -57,7 +56,6 @@ function fmt(n: number) {
 }
 
 export default function EgsuSecurity() {
-  const navigate = useNavigate();
   const [tab, setTab] = useState<"overview" | "events" | "blocked" | "withdraw" | "manual">("overview");
   const [stats, setStats] = useState<Stats | null>(null);
   const [events, setEvents] = useState<SecurityEvent[]>([]);
@@ -196,8 +194,6 @@ export default function EgsuSecurity() {
     showToast(`✓ ${d.message}`);
     load();
   };
-
-  void navigate;
 
   return (
     <SecurityLayout

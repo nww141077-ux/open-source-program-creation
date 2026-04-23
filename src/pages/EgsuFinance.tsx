@@ -327,7 +327,7 @@ export default function EgsuFinance() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
 
-  const [accForm, setAccForm] = useState({ owner_name: "", account_type: "bank", account_number: "", bank_name: "", currency: "RUB", label: "", distribution_percent: "0" });
+  const [accForm, setAccForm] = useState({ owner_name: "", account_type: "bank", account_number: "", bank_name: "", currency: "RUB", label: "", distribution_percent: "0", card_number: "", card_holder: "", card_expiry: "", bik: "", correspondent_account: "", inn: "", swift: "", iban: "" });
   const [cardForm, setCardForm] = useState({ account_id: "", card_holder: "", card_last4: "", card_type: "visa", expiry_month: "", expiry_year: "" });
   const [txForm, setTxForm] = useState({ account_id: "", tx_type: "income", amount: "", currency: "RUB", description: "", source: "" });
   const [ruleForm, setRuleForm] = useState({ name: "", account_id: "", percent: "", description: "" });
@@ -344,7 +344,7 @@ export default function EgsuFinance() {
         sf(`${API}/transactions`), sf(`${API}/rules`),
       ]);
       if (s) setStats(s);
-      setAccounts(Array.isArray(a) ? a : []);
+      setAccounts(Array.isArray(a) ? a.filter((acc: Account) => acc.is_active !== false) : []);
       setCards(Array.isArray(c) ? c : []);
       setTransactions(Array.isArray(t) ? t : []);
       setRules(Array.isArray(r) ? r : []);
@@ -358,10 +358,13 @@ export default function EgsuFinance() {
   const saveAccount = async () => {
     if (!accForm.owner_name.trim()) return;
     setSaving(true);
-    const r = await fetch(`${API}/accounts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...accForm, distribution_percent: parseFloat(accForm.distribution_percent) || 0 }) });
+    const payload: Record<string, unknown> = { ...accForm, distribution_percent: parseFloat(accForm.distribution_percent) || 0 };
+    // Очищаем пустые реквизиты перед отправкой
+    (["card_number","card_holder","card_expiry","bik","correspondent_account","inn","swift","iban"] as const).forEach(k => { if (!payload[k]) delete payload[k]; });
+    const r = await fetch(`${API}/accounts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     const d = parse(await r.json());
     setSaving(false);
-    if ((d as { id?: number }).id) { showToast("Счёт добавлен"); setModal(null); setAccForm({ owner_name: "", account_type: "bank", account_number: "", bank_name: "", currency: "RUB", label: "", distribution_percent: "0" }); load(); }
+    if ((d as { id?: number }).id) { showToast("Счёт добавлен"); setModal(null); setAccForm({ owner_name: "", account_type: "bank", account_number: "", bank_name: "", currency: "RUB", label: "", distribution_percent: "0", card_number: "", card_holder: "", card_expiry: "", bik: "", correspondent_account: "", inn: "", swift: "", iban: "" }); load(); }
     else showToast("Ошибка: " + ((d as { error?: string }).error || ""));
   };
 
@@ -410,6 +413,48 @@ export default function EgsuFinance() {
       fmt={fmt}
     >
       {loading && <div className="text-center py-20 text-white/30">Загружаю...</div>}
+
+      {/* БАННЕР — нет реальных реквизитов */}
+      {!loading && accounts.length === 0 && (
+        <div className="mb-6 flex items-start gap-4 p-5 rounded-2xl"
+          style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.28)" }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(245,158,11,0.15)" }}>
+            <Icon name="AlertCircle" size={20} style={{ color: "#f59e0b" }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-bold text-sm mb-1" style={{ color: "#f59e0b" }}>Добавьте реальные реквизиты для получения поступлений</div>
+            <div className="text-white/40 text-xs leading-relaxed">
+              У вас нет активных счетов с реквизитами. Нажмите «Добавить счёт» и заполните номер карты, BIK, IBAN или SWIFT — это необходимо для получения платежей в системе ECSU.
+            </div>
+          </div>
+          <button onClick={() => setModal("account")}
+            className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all hover:scale-105"
+            style={{ background: "rgba(245,158,11,0.20)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.35)" }}>
+            <Icon name="PlusCircle" size={13} />
+            Добавить счёт
+          </button>
+        </div>
+      )}
+      {!loading && accounts.length > 0 && !accounts.some(a => a.account_number || (a as Account & { card_number?: string }).card_number) && (
+        <div className="mb-6 flex items-start gap-4 p-5 rounded-2xl"
+          style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.28)" }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(245,158,11,0.15)" }}>
+            <Icon name="CreditCard" size={20} style={{ color: "#f59e0b" }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-bold text-sm mb-1" style={{ color: "#f59e0b" }}>Добавьте реальные реквизиты для получения поступлений</div>
+            <div className="text-white/40 text-xs leading-relaxed">
+              Счёт создан, но реквизиты не заполнены. Откройте счёт и добавьте номер карты, BIK, IBAN или SWIFT для приёма платежей.
+            </div>
+          </div>
+          <button onClick={() => setModal("account")}
+            className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all hover:scale-105"
+            style={{ background: "rgba(245,158,11,0.20)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.35)" }}>
+            <Icon name="PlusCircle" size={13} />
+            Добавить реквизиты
+          </button>
+        </div>
+      )}
 
       {/* OVERVIEW */}
       {!loading && tab === "overview" && (
