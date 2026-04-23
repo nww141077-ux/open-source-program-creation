@@ -178,7 +178,25 @@ def call_anthropic(messages: list, api_key: str, model: str = "claude-3-5-sonnet
 def call_yandex(messages: list, api_key: str, model: str = "yandexgpt-lite", dalan1_mode: bool = False) -> str:
     """YandexGPT API."""
     import urllib.error as ue
-    folder_id = os.environ.get("YANDEX_FOLDER_ID", "")
+    # Ищем folder_id из всех возможных переменных окружения
+    folder_id = (
+        os.environ.get("YANDEX_FOLDER_ID") or
+        os.environ.get("Y") or
+        os.environ.get("YA") or
+        ""
+    )
+    # Ищем api_key из всех возможных переменных если не передан
+    if not api_key:
+        api_key = (
+            os.environ.get("YANDEX_GPT_API_KEY") or
+            os.environ.get("API") or
+            os.environ.get("AJEF1DCRFIDSUKP1RIF6") or
+            ""
+        )
+    if not folder_id:
+        raise ValueError("YANDEX_FOLDER_ID не задан. Укажи folder_id в настройках ИИ.")
+    if not api_key:
+        raise ValueError("YANDEX_GPT_API_KEY не задан.")
     # Последнее сообщение пользователя — только один user-turn для простоты
     last_user = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
     msgs = [
@@ -196,8 +214,8 @@ def call_yandex(messages: list, api_key: str, model: str = "yandexgpt-lite", dal
             "Authorization": f"Api-Key {api_key}"
         })
     except ue.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")
-        raise ValueError(f"YandexGPT HTTP {e.code}: {body}")
+        body_txt = e.read().decode("utf-8", errors="replace")
+        raise ValueError(f"YandexGPT HTTP {e.code}: {body_txt}")
     return result["result"]["alternatives"][0]["message"]["text"]
 
 
@@ -234,12 +252,14 @@ def auto_pick_provider(text: str, has_cpvoa: bool, dalan1_mode: bool = False) ->
     При dalan1_mode=True используется yandex как приоритетный провайдер."""
     lower = text.lower()
 
+    yandex_key = bool(os.environ.get("YANDEX_GPT_API_KEY") or os.environ.get("API") or os.environ.get("AJEF1DCRFIDSUKP1RIF6"))
+    yandex_folder = bool(os.environ.get("YANDEX_FOLDER_ID") or os.environ.get("Y") or os.environ.get("YA"))
     available = {
         "groq": bool(os.environ.get("GROQ_API_KEY")),
         "gemini": bool(os.environ.get("GEMINI_API_KEY")),
         "openai": bool(os.environ.get("OPENAI_API_KEY")),
         "anthropic": bool(os.environ.get("ANTHROPIC_API_KEY")),
-        "yandex": bool(os.environ.get("YANDEX_GPT_API_KEY") or os.environ.get("YANDEX_SPEECHKIT_API_KEY")),
+        "yandex": yandex_key and yandex_folder,
     }
 
     # Режим Далан-1 — всегда предпочитаем yandex
@@ -494,12 +514,14 @@ def handler(event: dict, context) -> dict:
             pass
 
     if method == "GET":
+        _yk = bool(os.environ.get("YANDEX_GPT_API_KEY") or os.environ.get("API") or os.environ.get("AJEF1DCRFIDSUKP1RIF6"))
+        _yf = bool(os.environ.get("YANDEX_FOLDER_ID") or os.environ.get("Y") or os.environ.get("YA"))
         available = {
             "groq": bool(os.environ.get("GROQ_API_KEY")),
             "gemini": bool(os.environ.get("GEMINI_API_KEY")),
             "openai": bool(os.environ.get("OPENAI_API_KEY")),
             "anthropic": bool(os.environ.get("ANTHROPIC_API_KEY")),
-            "yandex": bool(os.environ.get("YANDEX_GPT_API_KEY")),
+            "yandex": _yk and _yf,
         }
         return ok({
             "status": "active",
