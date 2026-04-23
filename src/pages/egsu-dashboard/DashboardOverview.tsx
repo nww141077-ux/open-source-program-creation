@@ -75,6 +75,22 @@ const COUNTRY_COORDS: Record<string, [number, number]> = {
   "Канада": [210, 155], "Индия": [650, 250], "Россия": [620, 145],
   "США": [185, 210], "Австралия": [790, 380], "Франция": [470, 175],
   "Япония": [800, 205], "Аргентина": [265, 400], "ЮАР": [510, 370],
+  // English names from real DB
+  "Japan": [800, 205], "Australia": [790, 380], "Indonesia": [755, 310],
+  "China": [730, 210], "India": [650, 250], "Russia": [620, 145],
+  "USA": [185, 210], "United States": [185, 210], "Canada": [210, 155],
+  "Brazil": [280, 340], "Germany": [490, 165], "France": [470, 175],
+  "Kenya": [540, 310], "Nigeria": [480, 290], "Norway": [490, 130],
+  "New Zealand": [840, 415], "Solomon Islands": [830, 320],
+  "Tonga": [860, 355], "Costa Rica": [210, 295], "Mongolia": [720, 180],
+  "Mongolia, China": [720, 185], "Nevada": [155, 215],
+  "South Of Kermadec Islands": [855, 380], "SOUTH OF KERMADEC ISLANDS": [855, 380],
+  "Carlsberg Ridge": [590, 265], "CARLSBERG RIDGE": [590, 265],
+  "OFF EAST COAST OF HONSHU, JAPAN": [810, 200],
+  "MOLUCCA SEA": [760, 295], "KURIL ISLANDS": [820, 165],
+  "Timor-Leste": [775, 320], "Philippines": [775, 270],
+  "Chile": [255, 380], "Mexico": [190, 265], "Argentina": [265, 400],
+  "Global": [500, 250],
 };
 
 // Сферические координаты (lon, lat) для 3D-глобуса
@@ -84,6 +100,22 @@ const COUNTRY_GEO: Record<string, [number, number]> = {
   "Канада": [-96, 56], "Индия": [78, 22], "Россия": [60, 60],
   "США": [-98, 38], "Австралия": [134, -25], "Франция": [2, 46],
   "Япония": [138, 36], "Аргентина": [-64, -34], "ЮАР": [25, -29],
+  // English names from real DB
+  "Japan": [138, 36], "Australia": [134, -25], "Indonesia": [117, -2],
+  "China": [104, 35], "India": [78, 22], "Russia": [60, 60],
+  "USA": [-98, 38], "United States": [-98, 38], "Canada": [-96, 56],
+  "Brazil": [-52, -14], "Germany": [10, 51], "France": [2, 46],
+  "Kenya": [37, 1], "Nigeria": [8, 9], "Norway": [10, 62],
+  "New Zealand": [172, -41], "Solomon Islands": [160, -9],
+  "Tonga": [-175, -21], "Costa Rica": [-84, 10], "Mongolia": [105, 46],
+  "Mongolia, China": [105, 44], "Nevada": [-117, 39],
+  "South Of Kermadec Islands": [-178, -32], "SOUTH OF KERMADEC ISLANDS": [-178, -32],
+  "Carlsberg Ridge": [63, 7], "CARLSBERG RIDGE": [63, 7],
+  "OFF EAST COAST OF HONSHU, JAPAN": [142, 37],
+  "MOLUCCA SEA": [127, 1], "KURIL ISLANDS": [151, 46],
+  "Timor-Leste": [125, -8], "Philippines": [122, 13],
+  "Chile": [-71, -30], "Mexico": [-102, 24], "Argentina": [-64, -34],
+  "Global": [0, 0],
 };
 
 const SEV_COLOR: Record<string, string> = {

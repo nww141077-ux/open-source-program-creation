@@ -304,16 +304,15 @@ const LS_KEYS = "ecsu_ai_keys_v3";
 const LS_MODELS = "ecsu_ai_models_v3";
 const LS_CUSTOM_URL = "ecsu_ai_custom_url_v3";
 
-// Удаляем все старые ключи предыдущих версий
+// Удаляем все старые ключи предыдущих версий и сбрасываем на dalan1
 ["ezsu_ai_provider","ezsu_ai_keys","ezsu_ai_models","ezsu_ai_custom_url",
  "ecsu_ai_provider","ecsu_ai_keys","ecsu_ai_models","ecsu_ai_custom_url",
  "ecsu_ai_provider_v2","ecsu_ai_keys_v2","ecsu_ai_models_v2","ecsu_ai_custom_url_v2",
+ "ecsu_ai_provider_v3",
 ].forEach(k => localStorage.removeItem(k));
 
-// Устанавливаем yandex по умолчанию
-if (!localStorage.getItem(LS_PROVIDER)) {
-  localStorage.setItem(LS_PROVIDER, "yandex");
-}
+// Далан-1 по умолчанию всегда
+localStorage.setItem(LS_PROVIDER, "dalan1");
 
 export default function AiChat({ onClose, initialCpvoaContext, initialMessage }: Props) {
   const [tab, setTab] = useState<"chat" | "cpvoa" | "admin" | "settings" | "servers">(initialCpvoaContext ? "cpvoa" : "chat");
