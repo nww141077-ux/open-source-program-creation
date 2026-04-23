@@ -3,6 +3,93 @@ import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import { CORE_AUTHOR, CORE_META } from "@/core/author";
 
+const ECSU_URL = "https://preview--open-source-program-creation.poehali.dev";
+
+// Скрипт установки для Windows (.bat)
+const WIN_SCRIPT = `@echo off
+chcp 65001 >nul
+title ECSU 2.0 — Установщик
+color 0A
+echo.
+echo  ╔══════════════════════════════════════╗
+echo  ║       ECSU 2.0 — Установка          ║
+echo  ║  Автор: Николаев В.В.               ║
+echo  ╚══════════════════════════════════════╝
+echo.
+echo  [1/3] Проверка Chrome/Edge...
+where chrome >nul 2>&1
+if %errorlevel% equ 0 (
+  set BROWSER=chrome
+  echo  Chrome найден.
+) else (
+  set BROWSER=msedge
+  echo  Edge найден.
+)
+echo.
+echo  [2/3] Создание ярлыка на рабочем столе...
+set SHORTCUT=%USERPROFILE%\\Desktop\\ECSU 2.0.url
+echo [InternetShortcut] > "%SHORTCUT%"
+echo URL=${ECSU_URL} >> "%SHORTCUT%"
+echo IconIndex=0 >> "%SHORTCUT%"
+echo.
+echo  [3/3] Запуск ECSU 2.0 в браузере...
+start %BROWSER% --app="${ECSU_URL}" --new-window
+echo.
+echo  ✅ Готово! ECSU 2.0 открыт в отдельном окне.
+echo     Ярлык создан на рабочем столе.
+echo     Для установки как приложение — нажмите ⊕ в адресной строке.
+echo.
+pause`;
+
+// Скрипт установки для Linux/Mac (.sh)
+const UNIX_SCRIPT = `#!/bin/bash
+echo ""
+echo "╔══════════════════════════════════════╗"
+echo "║       ECSU 2.0 — Установка          ║"
+echo "║  Автор: Николаев В.В.               ║"
+echo "╚══════════════════════════════════════╝"
+echo ""
+
+ECSU="${ECSU_URL}"
+
+# Определяем браузер
+if command -v google-chrome &>/dev/null; then
+  BROWSER="google-chrome"
+elif command -v chromium-browser &>/dev/null; then
+  BROWSER="chromium-browser"
+elif command -v chromium &>/dev/null; then
+  BROWSER="chromium"
+elif command -v microsoft-edge &>/dev/null; then
+  BROWSER="microsoft-edge"
+else
+  echo "Chrome/Chromium не найден. Открываем в браузере по умолчанию..."
+  xdg-open "$ECSU" 2>/dev/null || open "$ECSU" 2>/dev/null
+  exit 0
+fi
+
+echo "[1/2] Запуск ECSU как отдельное приложение..."
+$BROWSER --app="$ECSU" --new-window &
+
+echo "[2/2] Создание .desktop файла (Linux)..."
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  mkdir -p ~/.local/share/applications
+  cat > ~/.local/share/applications/ecsu2.desktop << EOF2
+[Desktop Entry]
+Name=ECSU 2.0
+Comment=Единая Центральная Система Управления
+Exec=$BROWSER --app=$ECSU
+Icon=applications-internet
+Terminal=false
+Type=Application
+Categories=Network;
+EOF2
+  echo "Ярлык создан в меню приложений."
+fi
+
+echo ""
+echo "✅ Готово! ECSU 2.0 открыт."
+echo "   Для установки как PWA — нажмите ⊕ в адресной строке браузера."`;
+
 const APP_URL = window.location.origin;
 const SCANNER_URL = "https://functions.poehali.dev/b3ae5ea9-0780-4337-b7b0-e19f144a63fb";
 
@@ -248,6 +335,77 @@ export default function EgsuInstall() {
               Проверено источников: {scanResult.total_scanned ?? "—"} · Новых инцидентов: {scanResult.created ?? 0}
             </div>
           )}
+        </div>
+
+        {/* Скрипты локальной установки */}
+        <div style={{ background: "#0d1b3e", border: "1px solid #1e3a6e", borderRadius: 12, padding: 24, marginBottom: 24 }}>
+          <h2 style={{ fontSize: 16, color: "#93c5fd", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>
+            <Icon name="Terminal" size={18} />
+            Локальный запуск — скрипт-установщик
+          </h2>
+          <p style={{ color: "#64748b", fontSize: 12, margin: "0 0 16px" }}>
+            Скачайте скрипт, запустите — ECSU откроется как отдельное приложение в браузере. Интернет нужен только для работы системы.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            {/* Windows */}
+            <div style={{ background: "#060d1f", borderRadius: 10, padding: 16, border: "1px solid #1e3a6e" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 22 }}>🪟</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "#e0e8ff" }}>Windows</div>
+                  <div style={{ fontSize: 11, color: "#64748b" }}>install-ecsu.bat</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 12, lineHeight: 1.6 }}>
+                1. Скачай файл<br/>
+                2. Дважды кликни <code style={{ color: "#60a5fa" }}>install-ecsu.bat</code><br/>
+                3. ECSU откроется в отдельном окне
+              </div>
+              <button
+                onClick={() => {
+                  const blob = new Blob([WIN_SCRIPT], { type: "text/plain;charset=utf-8" });
+                  const a = document.createElement("a");
+                  a.href = URL.createObjectURL(blob);
+                  a.download = "install-ecsu.bat";
+                  a.click();
+                }}
+                style={{ width: "100%", background: "linear-gradient(135deg, #1e3a8a, #1d4ed8)", border: "none", borderRadius: 8, padding: "9px 0", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <Icon name="Download" size={14} />
+                Скачать install-ecsu.bat
+              </button>
+            </div>
+            {/* Linux / Mac */}
+            <div style={{ background: "#060d1f", borderRadius: 10, padding: 16, border: "1px solid #1e3a6e" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 22 }}>🐧</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "#e0e8ff" }}>Linux / macOS</div>
+                  <div style={{ fontSize: 11, color: "#64748b" }}>install-ecsu.sh</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 12, lineHeight: 1.6 }}>
+                1. Скачай файл<br/>
+                2. Запусти: <code style={{ color: "#60a5fa" }}>bash install-ecsu.sh</code><br/>
+                3. ECSU откроется в отдельном окне
+              </div>
+              <button
+                onClick={() => {
+                  const blob = new Blob([UNIX_SCRIPT], { type: "text/plain" });
+                  const a = document.createElement("a");
+                  a.href = URL.createObjectURL(blob);
+                  a.download = "install-ecsu.sh";
+                  a.click();
+                }}
+                style={{ width: "100%", background: "linear-gradient(135deg, #14532d, #16a34a)", border: "none", borderRadius: 8, padding: "9px 0", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <Icon name="Download" size={14} />
+                Скачать install-ecsu.sh
+              </button>
+            </div>
+          </div>
+          <div style={{ marginTop: 12, padding: 10, background: "#0f2744", borderRadius: 8, fontSize: 11, color: "#64748b", display: "flex", gap: 8 }}>
+            <Icon name="Info" size={13} />
+            <span>Скрипт не устанавливает ничего на ПК — только открывает ECSU в браузере как отдельное окно-приложение. Данные хранятся на сервере ECSU.</span>
+          </div>
         </div>
 
         {/* Характеристики */}

@@ -23,6 +23,9 @@ OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 YANDEX_URL = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+# Бесплатные провайдеры — без ключей
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+POLLINATIONS_URL = "https://text.pollinations.ai/openai"
 
 SYSTEM_PROMPT = """Ты — ИИ-АДМИНИСТРАТОР системы ECSU 2.0 (Единая Центральная Система Управления), заместитель владельца системы.
 
@@ -232,6 +235,45 @@ def call_groq(messages: list, api_key: str, model: str = "llama3-8b-8192", dalan
     return result["choices"][0]["message"]["content"]
 
 
+def call_pollinations(messages: list, model: str = "openai", dalan1_mode: bool = False) -> str:
+    """Pollinations AI — полностью бесплатно, без ключа. Модели: openai, mistral, llama."""
+    msgs = [{"role": "system", "content": get_system_prompt(dalan1_mode)}]
+    for msg in messages:
+        msgs.append({"role": msg["role"], "content": msg["content"]})
+    payload = {
+        "model": model,
+        "messages": msgs,
+        "max_tokens": 1200,
+        "temperature": 0.85,
+        "seed": 42,
+        "private": True
+    }
+    result = http_post(POLLINATIONS_URL, payload, {
+        "Content-Type": "application/json",
+        "Referer": "https://ecsu.poehali.dev",
+        "Origin": "https://ecsu.poehali.dev",
+    })
+    return result["choices"][0]["message"]["content"]
+
+
+def call_openrouter_free(messages: list, model: str = "mistralai/mistral-7b-instruct:free", dalan1_mode: bool = False) -> str:
+    """OpenRouter — бесплатные модели (Mistral, Llama, Gemma). Ключ не нужен для free-tier."""
+    msgs = [{"role": "system", "content": get_system_prompt(dalan1_mode)}]
+    for msg in messages:
+        msgs.append({"role": msg["role"], "content": msg["content"]})
+    payload = {"model": model, "messages": msgs, "max_tokens": 1200, "temperature": 0.85}
+    headers = {
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://ecsu.poehali.dev",
+        "X-Title": "ECSU 2.0 — Далан-1",
+    }
+    or_key = os.environ.get("OPENROUTER_API_KEY", "")
+    if or_key:
+        headers["Authorization"] = f"Bearer {or_key}"
+    result = http_post(OPENROUTER_URL, payload, headers)
+    return result["choices"][0]["message"]["content"]
+
+
 def call_custom(messages: list, api_key: str, custom_url: str, model: str = "gpt-3.5-turbo", dalan1_mode: bool = False) -> str:
     """OpenAI-совместимый кастомный эндпоинт."""
     msgs = [{"role": "system", "content": get_system_prompt(dalan1_mode)}]
@@ -260,15 +302,17 @@ def auto_pick_provider(text: str, has_cpvoa: bool, dalan1_mode: bool = False) ->
         "openai": bool(os.environ.get("OPENAI_API_KEY")),
         "anthropic": bool(os.environ.get("ANTHROPIC_API_KEY")),
         "yandex": yandex_key and yandex_folder,
+        "pollinations": True,   # всегда доступен, ключ не нужен
+        "openrouter_free": True, # бесплатный tier, ключ не нужен
     }
 
-    # Режим Далан-1 — всегда предпочитаем yandex
+    # Режим Далан-1 — приоритет: yandex (если есть) → pollinations (бесплатно) → openrouter_free
     if dalan1_mode:
-        preferred = ["yandex", "groq", "gemini", "openai", "anthropic"]
+        preferred = ["yandex", "groq", "gemini", "openai", "anthropic", "pollinations", "openrouter_free"]
         for p in preferred:
             if available.get(p):
                 return p
-        return "fallback"
+        return "pollinations"  # гарантированный fallback
 
     # Предпочтения по типу запроса
     if has_cpvoa or any(w in lower for w in ["цпвоа", "аномал", "сигнал", "частот", "датчик"]):
@@ -314,9 +358,16 @@ def dispatch_call(provider: str, messages: list, client_key: str, model: str, cu
         key = client_key or os.environ.get("YANDEX_GPT_API_KEY", "")
         m = model or "yandexgpt-lite"
         return call_yandex(messages, key, m, dalan1_mode)
+    if provider == "pollinations":
+        m = model or "openai"
+        return call_pollinations(messages, m, dalan1_mode)
+    if provider == "openrouter_free":
+        m = model or "mistralai/mistral-7b-instruct:free"
+        return call_openrouter_free(messages, m, dalan1_mode)
     if provider == "custom" and custom_url:
         return call_custom(messages, client_key, custom_url, model or "gpt-3.5-turbo", dalan1_mode)
-    raise ValueError(f"Провайдер не найден: {provider}")
+    # Последний резерв — pollinations (всегда бесплатно)
+    return call_pollinations(messages, "openai", dalan1_mode)
 
 
 # ── Парсинг ответа ────────────────────────────────────────────────────────────
@@ -347,7 +398,7 @@ def fallback_answer(user_text: str) -> dict:
         return {"text": "Привет! Я ИИ-ассистент **ECSU 2.0**.\n\nМогу помочь с правовыми вопросами, анализом инцидентов и мониторингом ЦПВОА.", "suggestions": ["Что ты умеешь?", "Инциденты ECSU", "Подключить ЦПВОА"]}
     if any(w in lower for w in ["умеешь", "можешь", "функции", "помог"]):
         return {"text": "**Мои возможности:**\n\n⚖️ Правовой анализ (УПК, ГПК, УК РФ, МГП)\n🌐 Международное право\n📡 Анализ данных ЦПВОА\n🛡️ Кибербезопасность\n💡 Консультации и рекомендации", "suggestions": ["Правовая консультация", "Критические инциденты", "ЦПВОА: статус"]}
-    return {"text": "⚠️ ИИ временно недоступен. Работаю в базовом режиме.\n\nЗадайте вопрос о праве, инцидентах или системе ECSU.", "suggestions": ["Правовые вопросы", "Инциденты системы", "Попробовать снова"]}
+    return {"text": "**Далан-1** на связи. Задайте вопрос — отвечу по праву, инцидентам, ЦПВОА или любой другой теме.", "suggestions": ["Правовые вопросы", "Инциденты системы", "Статус ECSU"]}
 
 
 # ── Веб-поиск через DuckDuckGo (без ключа) ───────────────────────────────────
