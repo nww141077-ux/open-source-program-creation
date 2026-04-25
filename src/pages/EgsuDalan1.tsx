@@ -3,12 +3,16 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
+const EMAIL_API = "https://functions.poehali.dev/60627924-ce4d-4f89-a2dd-5addbe419732";
+
 const TABS = [
   { id: "overview", label: "Обзор", icon: "Cpu" },
+  { id: "bios", label: "BIOS", icon: "HardDrive" },
   { id: "files", label: "Состав кейса", icon: "FolderOpen" },
   { id: "integration", label: "Интеграция", icon: "GitMerge" },
   { id: "alice", label: "ИИ Алиса", icon: "Brain" },
   { id: "cluster", label: "Кластер ЕЦСУ", icon: "Network" },
+  { id: "send", label: "Отправить", icon: "Send" },
   { id: "results", label: "Результаты", icon: "BarChart2" },
   { id: "contacts", label: "Контакты", icon: "User" },
 ];
@@ -208,10 +212,61 @@ const ALICE_ADVANTAGES = [
   },
 ];
 
+const BIOS_FILES = [
+  { name: "README.md", desc: "Краткая инструкция (5 минут на чтение)", icon: "FileText", size: "~2 КБ" },
+  { name: "dalan1_core.c", desc: "Основной код ИИ-модуля (< 10 КБ), функции init/predict/apply", icon: "Code", size: "< 10 КБ" },
+  { name: "dalan1_core.h", desc: "Заголовочный файл: struct power_state, struct sensor_data", icon: "Code2", size: "~1 КБ" },
+  { name: "dalan1_model.tflite", desc: "Обученная модель ИИ: вход — температура/нагрузка/напряжение; выход — множитель CPU/вентиляторы", icon: "Database", size: "< 5 КБ" },
+  { name: "bios_integration.c", desc: "Интеграция в POST: bios_dalan1_hook(), read_hardware_sensors(), write_msr_settings()", icon: "Cpu", size: "~3 КБ" },
+  { name: "autostart/setup_dalan1.sh", desc: "Скрипт установки: копирует файлы, добавляет автозагрузку, настраивает права", icon: "Terminal", size: "~1 КБ" },
+  { name: "autostart/autostart_dalan1.sh", desc: "Автозапуск dalan1_monitor в фоне, логирует в dalan1.log", icon: "Play", size: "~1 КБ" },
+  { name: "docs/energy_optimization_guide.md", desc: "Руководство: температура ≤ 75°C, C-states/P-states, кривые вентиляторов", icon: "BookOpen", size: "~4 КБ" },
+];
+
+const BIOS_NOTES = [
+  { icon: "HardDrive", color: "#f59e0b", title: "Резервное копирование", desc: "Перед записью прошивки ОБЯЗАТЕЛЬНО: flashrom -r backup.rom" },
+  { icon: "Cpu", color: "#3b82f6", title: "Программатор", desc: "Для физической записи используйте CH341A или TL866II+" },
+  { icon: "Timer", color: "#22c55e", title: "Вызовы модели", desc: "Каждые 5 секунд, вычисления только при изменении нагрузки > 10 %" },
+  { icon: "Moon", color: "#a855f7", title: "Спящий режим", desc: "Автоматически при простое системы для экономии энергии" },
+  { icon: "Scale", color: "#818cf8", title: "Размер модуля", desc: "Общий размер < 15 КБ (модель + код)" },
+];
+
 export default function EgsuDalan1() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [emailType, setEmailType] = useState("bios_case");
+  const [customSubject, setCustomSubject] = useState("");
+  const [customMessage, setCustomMessage] = useState("");
+  const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "ok" | "error">("idle");
+  const [sendError, setSendError] = useState("");
+
+  const sendEmail = async () => {
+    setSendStatus("sending");
+    setSendError("");
+    try {
+      const res = await fetch(EMAIL_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: emailType,
+          subject: customSubject,
+          message: customMessage,
+          sender_name: "Николаев Владимир Владимирович",
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setSendStatus("ok");
+      } else {
+        setSendStatus("error");
+        setSendError(data.error || "Неизвестная ошибка");
+      }
+    } catch {
+      setSendStatus("error");
+      setSendError("Ошибка соединения с сервером");
+    }
+  };
 
   const copyCode = (code: string, id: string) => {
     navigator.clipboard.writeText(code);
@@ -897,6 +952,290 @@ export default function EgsuDalan1() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* BIOS */}
+        {activeTab === "bios" && (
+          <div className="space-y-4">
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.25)" }}
+            >
+              <h2 className="font-bold text-sm mb-2 flex items-center gap-2">
+                <Icon name="HardDrive" size={15} style={{ color: "#818cf8" }} />
+                Кейс для конструктора: BIOS/UEFI
+              </h2>
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
+                Минимизированный пакет файлов для интеграции «Далан 1» в BIOS/UEFI.
+                Фокус — на снижении энергопотребления при работе конструктора (сборки).
+              </p>
+            </div>
+
+            {/* Files */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              <h2 className="font-bold text-sm mb-3 flex items-center gap-2">
+                <Icon name="FolderOpen" size={14} style={{ color: "#818cf8" }} />
+                Структура директории dalan_1_bios_ai/
+              </h2>
+              <div className="space-y-2">
+                {BIOS_FILES.map((f) => (
+                  <div
+                    key={f.name}
+                    className="flex items-center gap-3 p-3 rounded-xl"
+                    style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(99,102,241,0.1)" }}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: "rgba(99,102,241,0.12)" }}
+                    >
+                      <Icon name={f.icon as any} size={14} style={{ color: "#818cf8" }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-mono font-semibold text-white truncate">{f.name}</div>
+                      <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{f.desc}</div>
+                    </div>
+                    <div className="text-xs flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>{f.size}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Steps */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              <h2 className="font-bold text-sm mb-3 flex items-center gap-2">
+                <Icon name="Terminal" size={14} style={{ color: "#818cf8" }} />
+                Инструкция для конструктора
+              </h2>
+              {[
+                { step: "01", title: "Подготовка", code: null, items: ["Получите доступ к проекту coreboot", "Убедитесь в поддержке TFLite Micro"] },
+                { step: "02", title: "Интеграция файлов", code: "cp dalan_1_bios_ai/* /path/to/your/bios/project/\n\n# В .config добавить:\nCONFIG_DALAN1_AI=y", items: [] },
+                { step: "03", title: "Сборка прошивки", code: "make\n# Результат: build/bios.rom", items: [] },
+                { step: "04", title: "Тестирование", code: "qemu-system-x86_64 -bios build/bios.rom", items: ["Реальное железо: записать bios.rom программатором CH341A"] },
+                { step: "05", title: "Проверка работы", code: null, items: ["Убедитесь, что «Далан 1» вызывается после POST", "Логи: dalan1.log, sensors.log", "Сравните энергопотребление с ваттметром / powerstat"] },
+              ].map((s) => (
+                <div key={s.step} className="py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span
+                      className="text-xs px-2 py-0.5 rounded font-bold"
+                      style={{ background: "rgba(99,102,241,0.2)", color: "#818cf8" }}
+                    >
+                      Шаг {s.step}
+                    </span>
+                    <span className="text-sm font-semibold" style={{ color: "#a5b4fc" }}>{s.title}</span>
+                  </div>
+                  {s.items.map((item, i) => (
+                    <div key={i} className="flex items-start gap-1.5 text-xs mb-1" style={{ color: "rgba(255,255,255,0.55)" }}>
+                      <span style={{ color: "#6366f1" }}>›</span>{item}
+                    </div>
+                  ))}
+                  {s.code && (
+                    <div className="relative mt-2 rounded-lg p-3 font-mono text-xs"
+                      style={{ background: "rgba(0,0,0,0.4)", color: "#a5b4fc" }}>
+                      <pre style={{ whiteSpace: "pre-wrap" }}>{s.code}</pre>
+                      <button
+                        onClick={() => copyCode(s.code!, `bios-${s.step}`)}
+                        className="absolute top-2 right-2 p-1.5 rounded-md"
+                        style={{ background: copiedCode === `bios-${s.step}` ? "rgba(99,102,241,0.3)" : "rgba(255,255,255,0.05)", color: copiedCode === `bios-${s.step}` ? "#818cf8" : "rgba(255,255,255,0.3)" }}
+                      >
+                        <Icon name={copiedCode === `bios-${s.step}` ? "Check" : "Copy"} size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Notes */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              <h2 className="font-bold text-sm mb-3 flex items-center gap-2">
+                <Icon name="Info" size={14} style={{ color: "#818cf8" }} />
+                Важные замечания
+              </h2>
+              {BIOS_NOTES.map((n) => (
+                <div key={n.title} className="flex items-start gap-3 py-2.5"
+                  style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: `${n.color}18` }}
+                  >
+                    <Icon name={n.icon as any} size={13} style={{ color: n.color }} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-white">{n.title}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.45)" }}>{n.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Expected results */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)" }}
+            >
+              <h2 className="font-bold text-sm mb-3 flex items-center gap-2">
+                <Icon name="CheckCircle" size={14} style={{ color: "#22c55e" }} />
+                Ожидаемые результаты
+              </h2>
+              {[
+                "Снижение энергопотребления системы на 10–25 %",
+                "Стабильная работа BIOS с ИИ-оптимизацией",
+                "Быстрая инициализация (< 1 секунды)",
+                "Минимальные затраты на сборку и интеграцию",
+              ].map((r) => (
+                <div key={r} className="flex items-center gap-2 text-xs py-1" style={{ color: "rgba(255,255,255,0.65)" }}>
+                  <Icon name="Check" size={12} style={{ color: "#22c55e" }} />
+                  {r}
+                </div>
+              ))}
+            </div>
+
+            {/* Quick send */}
+            <button
+              onClick={() => setActiveTab("send")}
+              className="w-full py-3 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
+              style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)", color: "white" }}
+            >
+              <Icon name="Send" size={16} />
+              Отправить кейс конструктору на email
+            </button>
+          </div>
+        )}
+
+        {/* SEND EMAIL */}
+        {activeTab === "send" && (
+          <div className="space-y-4">
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.25)" }}
+            >
+              <h2 className="font-bold text-sm mb-1 flex items-center gap-2">
+                <Icon name="Send" size={15} style={{ color: "#818cf8" }} />
+                Отправка email-уведомления
+              </h2>
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
+                Письмо придёт на <span style={{ color: "#a5b4fc" }}>nikolaevvladimir77@yandex.ru</span>
+              </p>
+            </div>
+
+            {/* Type selector */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              <div className="text-xs font-semibold mb-3" style={{ color: "rgba(255,255,255,0.5)" }}>Тип уведомления</div>
+              <div className="space-y-2">
+                {[
+                  { id: "bios_case", label: "🖥️ Кейс BIOS для конструктора", desc: "Полный кейс ИИ-модуля «Далан 1»" },
+                  { id: "device_online", label: "✅ Устройство подключено", desc: "Новый узел в кластере ЕЦСУ" },
+                  { id: "limit_warning", label: "⚠️ Лимит функций", desc: "Использовано 23/25 функций" },
+                  { id: "backup_done", label: "💾 Резервное копирование", desc: "Бэкап кластера завершён" },
+                  { id: "device_offline", label: "🔴 Устройство офлайн", desc: "Узел потерял связь" },
+                  { id: "low_energy", label: "⚡ Низкая энергия", desc: "Критический уровень энергии" },
+                  { id: "custom", label: "✏️ Своё сообщение", desc: "Произвольный текст" },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setEmailType(t.id)}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all"
+                    style={{
+                      background: emailType === t.id ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.03)",
+                      border: emailType === t.id ? "1px solid rgba(99,102,241,0.4)" : "1px solid rgba(255,255,255,0.05)",
+                    }}
+                  >
+                    <div className="flex-1">
+                      <div className="text-xs font-semibold text-white">{t.label}</div>
+                      <div className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{t.desc}</div>
+                    </div>
+                    {emailType === t.id && <Icon name="Check" size={14} style={{ color: "#818cf8" }} />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom fields */}
+            {emailType === "custom" && (
+              <div
+                className="p-4 rounded-2xl space-y-3"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.15)" }}
+              >
+                <div>
+                  <div className="text-xs font-semibold mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>Тема письма</div>
+                  <input
+                    value={customSubject}
+                    onChange={(e) => setCustomSubject(e.target.value)}
+                    placeholder="Введите тему..."
+                    className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
+                    style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(99,102,241,0.2)" }}
+                  />
+                </div>
+                <div>
+                  <div className="text-xs font-semibold mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>Текст сообщения</div>
+                  <textarea
+                    value={customMessage}
+                    onChange={(e) => setCustomMessage(e.target.value)}
+                    placeholder="Введите текст..."
+                    rows={4}
+                    className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none resize-none"
+                    style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(99,102,241,0.2)" }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Status */}
+            {sendStatus === "ok" && (
+              <div
+                className="p-4 rounded-2xl flex items-center gap-3"
+                style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)" }}
+              >
+                <Icon name="CheckCircle" size={20} style={{ color: "#22c55e" }} />
+                <div>
+                  <div className="text-sm font-semibold" style={{ color: "#22c55e" }}>Письмо отправлено!</div>
+                  <div className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>Проверьте nikolaevvladimir77@yandex.ru</div>
+                </div>
+              </div>
+            )}
+            {sendStatus === "error" && (
+              <div
+                className="p-4 rounded-2xl flex items-center gap-3"
+                style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)" }}
+              >
+                <Icon name="AlertCircle" size={20} style={{ color: "#ef4444" }} />
+                <div>
+                  <div className="text-sm font-semibold" style={{ color: "#ef4444" }}>Ошибка отправки</div>
+                  <div className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>{sendError}</div>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => { setSendStatus("idle"); sendEmail(); }}
+              disabled={sendStatus === "sending"}
+              className="w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+              style={{
+                background: sendStatus === "sending" ? "rgba(99,102,241,0.4)" : "linear-gradient(135deg, #6366f1, #a855f7)",
+                color: "white",
+                opacity: sendStatus === "sending" ? 0.7 : 1,
+              }}
+            >
+              <Icon name={sendStatus === "sending" ? "Loader" : "Send"} size={16} />
+              {sendStatus === "sending" ? "Отправляем..." : "Отправить на nikolaevvladimir77@yandex.ru"}
+            </button>
+
+            <p className="text-center text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
+              Письма отправляются через защищённый SMTP Яндекс
+            </p>
           </div>
         )}
 
