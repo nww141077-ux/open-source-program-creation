@@ -625,7 +625,7 @@ export default function EgsuFinance() {
               <h1 className="font-display text-2xl font-bold text-white uppercase">Карты</h1>
               <p className="text-white/30 text-sm mt-1">{cards.length} привязанных карт</p>
             </div>
-            <button onClick={() => setModal("card")}
+            <button onClick={() => { if (accounts.length > 0 && !cardForm.account_id) setCardForm(f => ({ ...f, account_id: String(accounts[0].id) })); setModal("card"); }}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-105"
               style={{ background: G("#a855f7, #3b82f6"), color: "white" }}>
               <Icon name="Plus" size={15} />Добавить карту
@@ -635,7 +635,7 @@ export default function EgsuFinance() {
             <div className="text-center py-20">
               <Icon name="CreditCard" size={40} className="mx-auto mb-3 text-white/20" />
               <p className="text-white/30">Карты не добавлены</p>
-              <button onClick={() => setModal("card")} className="mt-4 px-5 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105"
+              <button onClick={() => { if (accounts.length > 0 && !cardForm.account_id) setCardForm(f => ({ ...f, account_id: String(accounts[0].id) })); setModal("card"); }} className="mt-4 px-5 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105"
                 style={{ background: G("#a855f7, #3b82f6"), color: "white" }}>Добавить карту</button>
             </div>
           ) : (

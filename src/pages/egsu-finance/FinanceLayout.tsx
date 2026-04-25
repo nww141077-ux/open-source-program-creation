@@ -8,9 +8,9 @@ type Tab = "overview" | "accounts" | "cards" | "transactions" | "rules";
 
 type Account = { id: number; owner_name: string; account_type: string; account_number: string; bank_name: string; currency: string; label: string; is_active: boolean; is_primary: boolean; distribution_percent: number; balance: number; created_at: string; cards_count: number };
 
-const TYPE_ICONS: Record<string, string> = { bank: "Building2", card: "CreditCard", crypto: "Coins", system: "Server" };
-const TYPE_LABELS: Record<string, string> = { bank: "Банковский счёт", card: "Карточный счёт", crypto: "Крипто-кошелёк", system: "Системный счёт" };
-const TYPE_COLORS: Record<string, string> = { bank: "#3b82f6", card: "#a855f7", crypto: "#f59e0b", system: "#00ff87" };
+const TYPE_ICONS: Record<string, string> = { bank: "Building2", card: "CreditCard", crypto: "Coins", system: "Server", personal: "User" };
+const TYPE_LABELS: Record<string, string> = { bank: "Банковский счёт", card: "Карточный счёт", crypto: "Крипто-кошелёк", system: "Системный счёт", personal: "Личный счёт" };
+const TYPE_COLORS: Record<string, string> = { bank: "#3b82f6", card: "#a855f7", crypto: "#f59e0b", system: "#00ff87", personal: "#f43f5e" };
 const CARD_COLORS: Record<string, string> = { visa: "#1a56db", mastercard: "#f43f5e", mir: "#00aa44", crypto: "#f59e0b" };
 const TX_LABELS: Record<string, string> = { income: "Поступление", outcome: "Расход", distribution: "Распределение", transfer: "Перевод" };
 const TX_COLORS: Record<string, string> = { income: "#00ff87", outcome: "#f43f5e", distribution: "#a855f7", transfer: "#3b82f6" };
@@ -139,7 +139,7 @@ export default function FinanceLayout({
                 style={{ background: "rgba(59,130,246,0.12)", color: "#3b82f6", border: "1px solid rgba(59,130,246,0.2)" }}>
                 <Icon name="PlusCircle" size={13} />Добавить счёт
               </button>
-              <button onClick={() => setModal("card")}
+              <button onClick={() => { if (accounts.length > 0 && !cardForm.account_id) setCardForm({ ...cardForm, account_id: String(accounts[0].id) }); setModal("card"); }}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all hover:scale-105"
                 style={{ background: "rgba(168,85,247,0.12)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.2)" }}>
                 <Icon name="PlusCircle" size={13} />Добавить карту
