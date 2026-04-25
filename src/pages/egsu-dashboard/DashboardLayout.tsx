@@ -127,6 +127,12 @@ export default function DashboardLayout({ activeTab, setActiveTab, chatOpen, set
             <Icon name="ArrowRightLeft" size={14} />
             <span className="hidden md:block">Эмиграция</span>
           </button>
+          <button onClick={() => navigate("/egsu/dalan1")}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105"
+            style={{ background: "rgba(168,85,247,0.15)", color: "#c084fc", border: "1px solid rgba(168,85,247,0.35)" }}>
+            <Icon name="Cpu" size={14} />
+            <span className="hidden md:block">Далан 1</span>
+          </button>
           <button onClick={() => navigate("/egsu/install")}
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105"
             style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)" }}>
