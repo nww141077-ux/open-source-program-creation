@@ -1,12 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+
+const DALAN_API = "https://functions.poehali.dev/daefa87e-0693-4de5-9191-bbc918e1d241";
 
 const EMAIL_API = "https://functions.poehali.dev/60627924-ce4d-4f89-a2dd-5addbe419732";
 
 const TABS = [
   { id: "overview", label: "Обзор", icon: "Cpu" },
+  { id: "chat", label: "Диалог", icon: "MessageCircle" },
   { id: "bios", label: "BIOS", icon: "HardDrive" },
   { id: "bot", label: "Бот Алиса+MAX", icon: "BotMessageSquare" },
   { id: "files", label: "Состав кейса", icon: "FolderOpen" },
@@ -16,6 +19,15 @@ const TABS = [
   { id: "send", label: "Отправить", icon: "Send" },
   { id: "results", label: "Результаты", icon: "BarChart2" },
   { id: "contacts", label: "Контакты", icon: "User" },
+];
+
+const QUICK_PROMPTS = [
+  "Что такое ЕЦСУ и чем ты управляешь?",
+  "Расскажи о себе — кто такой Далан-1?",
+  "Как оптимизировать энергопотребление BIOS?",
+  "Объясни архитектуру кластера ЕЦСУ",
+  "Как интегрировать бота с Яндекс Алисой?",
+  "Помоги написать конфигурацию cluster_config.json",
 ];
 
 const BOT_FILES = [
@@ -350,6 +362,19 @@ const BIOS_NOTES = [
   { icon: "Scale", color: "#818cf8", title: "Размер модуля", desc: "Общий размер < 15 КБ (модель + код)" },
 ];
 
+interface ChatMsg {
+  role: "user" | "assistant";
+  text: string;
+  time: string;
+  loading?: boolean;
+  suggestions?: string[];
+}
+
+const getTime = () => {
+  const d = new Date();
+  return `${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
+};
+
 export default function EgsuDalan1() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
@@ -359,6 +384,68 @@ export default function EgsuDalan1() {
   const [customMessage, setCustomMessage] = useState("");
   const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "ok" | "error">("idle");
   const [sendError, setSendError] = useState("");
+
+  // ── ЧАТ ──────────────────────────────────────────────────────────────────
+  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([
+    {
+      role: "assistant",
+      text: "Здравствуй. Я — Далан-1, главный ИИ системы ЕЦСУ 2.0. Заместитель Николаева В.В. по управлению кластером. Готов к диалогу — задай любой вопрос.",
+      time: getTime(),
+      suggestions: ["Что такое ЕЦСУ?", "Расскажи о себе", "Статус кластера"],
+    },
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatHistory = useRef<{ role: string; text: string }[]>([]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
+  const sendChat = async (text?: string) => {
+    const msg = (text ?? chatInput).trim();
+    if (!msg || chatLoading) return;
+    setChatInput("");
+
+    const userMsg: ChatMsg = { role: "user", text: msg, time: getTime() };
+    const loadingMsg: ChatMsg = { role: "assistant", text: "", time: getTime(), loading: true };
+
+    setChatMessages((prev) => [...prev, userMsg, loadingMsg]);
+    setChatLoading(true);
+
+    chatHistory.current.push({ role: "user", text: msg });
+
+    try {
+      const res = await fetch(DALAN_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: msg,
+          provider: "dalan1",
+          history: chatHistory.current.slice(-10),
+          session_id: "dalan1_chat",
+        }),
+      });
+      const data = await res.json();
+      const reply: string = data.response || data.text || data.answer || "Нет ответа от системы.";
+      const suggestions: string[] = data.suggestions || [];
+
+      chatHistory.current.push({ role: "assistant", text: reply });
+
+      setChatMessages((prev) => [
+        ...prev.slice(0, -1),
+        { role: "assistant", text: reply, time: getTime(), suggestions },
+      ]);
+    } catch {
+      setChatMessages((prev) => [
+        ...prev.slice(0, -1),
+        { role: "assistant", text: "Ошибка связи с Далан-1. Проверьте подключение к серверу ЕЦСУ.", time: getTime() },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
 
   const sendEmail = async () => {
     setSendStatus("sending");
@@ -1071,6 +1158,132 @@ export default function EgsuDalan1() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* CHAT */}
+        {activeTab === "chat" && (
+          <div className="flex flex-col" style={{ height: "calc(100vh - 220px)", minHeight: 400 }}>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto space-y-3 pb-2" style={{ scrollbarWidth: "none" }}>
+
+              {/* Quick prompts — показываем только если одно приветствие */}
+              {chatMessages.length === 1 && (
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold px-1" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    Быстрые вопросы:
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {QUICK_PROMPTS.map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => sendChat(p)}
+                        className="text-xs px-3 py-1.5 rounded-full transition-all hover:scale-[1.02]"
+                        style={{ background: "rgba(99,102,241,0.12)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.25)" }}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {chatMessages.map((m, i) => (
+                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} gap-2`}>
+                  {m.role === "assistant" && (
+                    <div
+                      className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+                      style={{ background: "linear-gradient(135deg, #22c864, #6366f1)" }}
+                    >
+                      <Icon name="Cpu" size={14} className="text-white" />
+                    </div>
+                  )}
+                  <div className="max-w-[85%] space-y-1.5">
+                    <div
+                      className="px-4 py-3 rounded-2xl text-sm leading-relaxed"
+                      style={
+                        m.role === "user"
+                          ? { background: "linear-gradient(135deg, #6366f1, #a855f7)", color: "white", borderBottomRightRadius: 6 }
+                          : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.9)", border: "1px solid rgba(99,102,241,0.15)", borderBottomLeftRadius: 6 }
+                      }
+                    >
+                      {m.loading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            {[0,1,2].map((j) => (
+                              <div key={j} className="w-1.5 h-1.5 rounded-full"
+                                style={{ background: "#818cf8", animation: `bounce 1.2s ${j * 0.2}s infinite` }} />
+                            ))}
+                          </div>
+                          <span className="text-xs" style={{ color: "#818cf8" }}>Далан-1 обрабатывает...</span>
+                        </div>
+                      ) : (
+                        <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
+                      )}
+                    </div>
+                    <div className="text-xs px-1" style={{ color: "rgba(255,255,255,0.25)" }}>{m.time}</div>
+
+                    {/* Suggestions */}
+                    {m.suggestions && m.suggestions.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {m.suggestions.map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => sendChat(s)}
+                            className="text-xs px-2.5 py-1 rounded-full transition-all hover:scale-[1.02]"
+                            style={{ background: "rgba(34,200,100,0.1)", color: "#22c864", border: "1px solid rgba(34,200,100,0.2)" }}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {m.role === "user" && (
+                    <div
+                      className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+                      style={{ background: "rgba(99,102,241,0.2)" }}
+                    >
+                      <Icon name="User" size={14} style={{ color: "#818cf8" }} />
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Input */}
+            <div
+              className="mt-3 flex gap-2 items-end p-3 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(99,102,241,0.2)" }}
+            >
+              <textarea
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } }}
+                placeholder="Сообщение Далан-1... (Enter — отправить)"
+                rows={1}
+                disabled={chatLoading}
+                className="flex-1 bg-transparent text-sm text-white outline-none resize-none"
+                style={{ color: "white", lineHeight: "1.5", maxHeight: 120 }}
+              />
+              <button
+                onClick={() => sendChat()}
+                disabled={chatLoading || !chatInput.trim()}
+                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all"
+                style={{
+                  background: chatLoading || !chatInput.trim() ? "rgba(99,102,241,0.2)" : "linear-gradient(135deg, #6366f1, #a855f7)",
+                  color: chatLoading || !chatInput.trim() ? "rgba(255,255,255,0.3)" : "white",
+                }}
+              >
+                <Icon name="Send" size={15} />
+              </button>
+            </div>
+
+            <p className="text-center text-xs mt-2" style={{ color: "rgba(255,255,255,0.2)" }}>
+              Далан-1 · ЕЦСУ 2.0 · Enter для отправки · Shift+Enter — новая строка
+            </p>
           </div>
         )}
 
