@@ -18,9 +18,9 @@ export default function Index() {
           <Icon name="BrainCircuit" size={40} className="text-white" />
         </div>
         <div className="text-center">
-          <div className="text-3xl font-bold text-white tracking-tight">EGSU</div>
+          <div className="text-3xl font-bold text-white tracking-tight">ECSU</div>
           <div className="text-sm text-indigo-400/70 mt-1">
-            Единая государственная система управления · 2.0
+            Единая Центральная Система Управления · 2.0
           </div>
         </div>
       </div>
