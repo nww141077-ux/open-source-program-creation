@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
@@ -331,12 +332,36 @@ export default function FinanceLayout({
                 <>
                   <div>
                     <label className="text-white/40 text-xs uppercase tracking-wide block mb-1.5">Счёт *</label>
-                    <select value={cardForm.account_id} onChange={e => setCardForm({ ...cardForm, account_id: e.target.value })}
-                      className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none"
-                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                      <option value="" style={{ background: "#0d1220" }}>— выберите счёт —</option>
-                      {accounts.map(a => <option key={a.id} value={a.id} style={{ background: "#0d1220" }}>{a.label || a.owner_name}</option>)}
-                    </select>
+                    {accounts.length === 0 ? (
+                      <div className="w-full px-3 py-3 rounded-xl text-sm text-center" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                        Сначала добавьте счёт
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {accounts.map(a => (
+                          <button key={a.id} type="button"
+                            onClick={() => setCardForm({ ...cardForm, account_id: String(a.id) })}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
+                            style={{
+                              background: cardForm.account_id === String(a.id) ? `${TYPE_COLORS[a.account_type] || "#a855f7"}18` : "rgba(255,255,255,0.04)",
+                              border: `1px solid ${cardForm.account_id === String(a.id) ? (TYPE_COLORS[a.account_type] || "#a855f7") + "60" : "rgba(255,255,255,0.08)"}`,
+                            }}>
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                              style={{ background: `${TYPE_COLORS[a.account_type] || "#a855f7"}20` }}>
+                              <Icon name={(TYPE_ICONS[a.account_type] || "CreditCard") as any} size={13}
+                                style={{ color: TYPE_COLORS[a.account_type] || "#a855f7" }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-white text-xs font-semibold truncate">{a.label || a.owner_name}</div>
+                              <div className="text-white/30 text-xs font-mono truncate">{a.account_number || a.bank_name}</div>
+                            </div>
+                            {cardForm.account_id === String(a.id) && (
+                              <Icon name="CheckCircle" size={15} style={{ color: TYPE_COLORS[a.account_type] || "#a855f7", flexShrink: 0 }} />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="text-white/40 text-xs uppercase tracking-wide block mb-1.5">Тип карты</label>
