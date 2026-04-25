@@ -122,6 +122,46 @@ flashrom -r backup.rom
 <p>Программатор для записи: <b>CH341A</b> или <b>TL866II+</b></p>
 <hr><p style="color:#888;font-size:12px">Единая Центральная Система Управления · ЕЦСУ 2.0 · © 2026 {sender_name}</p>""",
         },
+        "bot_case": {
+            "subject": "🤖 ЕЦСУ: Кейс бота Яндекс Алиса + MAX для конструктора",
+            "body": f"""<h2 style="color:#6366f1">Кейс мультиплатформенного бота — Яндекс Алиса &amp; MAX</h2>
+<p><b>Разработчик:</b> {sender_name}</p>
+<p><b>Дата:</b> {now}</p>
+<hr>
+<h3>Архив: bot_constructor.zip</h3>
+<h4>Структура папки bot_constructor/</h4>
+<ul>
+  <li><b>configs/yandex.json</b> — webhook_url, oauth_token, skill_id</li>
+  <li><b>configs/max.json</b> — bot_token, api_url, webhook_url</li>
+  <li><b>adapters/adapter_yandex.js</b> — адаптер Яндекс Диалоги</li>
+  <li><b>adapters/adapter_max.js</b> — адаптер MAX</li>
+  <li><b>adapters/adapter_base.js</b> — базовый класс адаптера</li>
+  <li><b>logic/bot_logic.js</b> — основная логика обработки</li>
+  <li><b>logic/dialogs.json</b> — сценарии диалогов (приветствия, прощания)</li>
+  <li><b>platform_selector.js</b> — выбор адаптера по платформе</li>
+  <li><b>webhook_handler.js</b> — обработчик входящих запросов</li>
+  <li><b>server.js</b> — Express-сервер, порт 3000</li>
+  <li><b>package.json</b> — express ^4.18.2, dotenv ^16.3.1</li>
+  <li><b>README.md</b> — инструкция по развёртыванию</li>
+</ul>
+<hr>
+<h3>Инструкция для конструктора</h3>
+<pre style="background:#f5f5f5;padding:10px;font-size:12px">
+1. git clone [ссылка]
+2. npm install
+3. Настройте configs/yandex.json и configs/max.json (токены, URL)
+4. node server.js
+5. Подключите webhook в Яндекс Диалоги и MAX
+6. Протестируйте бота через платформы
+</pre>
+<h3>Дополнительно (опционально)</h3>
+<ul>
+  <li>logs.js — логирование запросов</li>
+  <li>tests/ — юнит-тесты</li>
+  <li>docker-compose.yml — контейнеризация</li>
+</ul>
+<hr><p style="color:#888;font-size:12px">Единая Центральная Система Управления · ЕЦСУ 2.0 · © 2026 {sender_name}</p>""",
+        },
         "custom": {
             "subject": subject or "Сообщение от ЕЦСУ",
             "body": f"""<h2 style="color:#6366f1">ЕЦСУ — Сообщение</h2>

@@ -8,6 +8,7 @@ const EMAIL_API = "https://functions.poehali.dev/60627924-ce4d-4f89-a2dd-5addbe4
 const TABS = [
   { id: "overview", label: "Обзор", icon: "Cpu" },
   { id: "bios", label: "BIOS", icon: "HardDrive" },
+  { id: "bot", label: "Бот Алиса+MAX", icon: "BotMessageSquare" },
   { id: "files", label: "Состав кейса", icon: "FolderOpen" },
   { id: "integration", label: "Интеграция", icon: "GitMerge" },
   { id: "alice", label: "ИИ Алиса", icon: "Brain" },
@@ -15,6 +16,124 @@ const TABS = [
   { id: "send", label: "Отправить", icon: "Send" },
   { id: "results", label: "Результаты", icon: "BarChart2" },
   { id: "contacts", label: "Контакты", icon: "User" },
+];
+
+const BOT_FILES = [
+  {
+    name: "configs/yandex.json",
+    icon: "FileJson",
+    color: "#f59e0b",
+    desc: "Настройки Яндекс Алисы: webhook_url, oauth_token, skill_id",
+    code: `{
+  "webhook_url": "https://your-server.com/yandex",
+  "oauth_token": "YOUR_OAUTH_TOKEN",
+  "skill_id": "YOUR_SKILL_ID"
+}`,
+  },
+  {
+    name: "configs/max.json",
+    icon: "FileJson",
+    color: "#3b82f6",
+    desc: "Настройки платформы MAX: bot_token, api_url, webhook_url",
+    code: `{
+  "bot_token": "YOUR_MAX_TOKEN",
+  "api_url": "https://api.max.ru",
+  "webhook_url": "https://your-server.com/max"
+}`,
+  },
+  {
+    name: "adapters/adapter_yandex.js",
+    icon: "Code",
+    color: "#a855f7",
+    desc: "Адаптер Яндекс Диалоги: formatRequest / formatResponse",
+    code: `class YandexAdapter {
+  formatRequest(msg) {
+    return { user_input: msg.request.command };
+  }
+  formatResponse(response) {
+    return {
+      response: { text: response.text, tts: response.tts }
+    };
+  }
+}`,
+  },
+  {
+    name: "adapters/adapter_max.js",
+    icon: "Code",
+    color: "#22c55e",
+    desc: "Адаптер MAX: formatRequest / formatResponse",
+    code: `class MaxAdapter {
+  formatRequest(msg) {
+    return { user_input: msg.text };
+  }
+  formatResponse(response) {
+    return { text: response.text };
+  }
+}`,
+  },
+  {
+    name: "logic/dialogs.json",
+    icon: "MessageSquare",
+    color: "#06b6d4",
+    desc: "Сценарии диалогов: приветствия и прощания для обеих платформ",
+    code: `{
+  "greetings": {
+    "yandex": "Здравствуйте! Чем могу помочь?",
+    "max": "Привет! Чем могу помочь?"
+  },
+  "farewells": {
+    "yandex": "До свидания!",
+    "max": "Пока!"
+  }
+}`,
+  },
+  {
+    name: "platform_selector.js",
+    icon: "GitBranch",
+    color: "#f43f5e",
+    desc: "Выбор активного адаптера по платформе: yandex / max",
+    code: `const adapters = {
+  yandex: new YandexAdapter(),
+  max: new MaxAdapter()
+};
+function getAdapter(platform) {
+  return adapters[platform];
+}
+module.exports = { getAdapter };`,
+  },
+  {
+    name: "webhook_handler.js",
+    icon: "Webhook",
+    color: "#818cf8",
+    desc: "Обработчик входящих запросов: getAdapter → botLogic → ответ",
+    code: `async function handleRequest(req, res) {
+  const platform = req.body.platform;
+  const adapter = getAdapter(platform);
+  const internalMsg = adapter.formatRequest(req.body);
+  const response = await botLogic.handleMessage(internalMsg);
+  res.json(adapter.formatResponse(response));
+}`,
+  },
+  {
+    name: "server.js",
+    icon: "Server",
+    color: "#f59e0b",
+    desc: "Express-сервер: POST /webhook → handleRequest, порт 3000",
+    code: `const express = require('express');
+const handleRequest = require('./webhook_handler');
+const app = express();
+app.use(express.json());
+app.post('/webhook', handleRequest);
+app.listen(3000, () => console.log('Бот слушает на порту 3000'));`,
+  },
+];
+
+const BOT_STEPS = [
+  { step: "01", title: "Клонировать репозиторий", code: "git clone [ссылка]" },
+  { step: "02", title: "Установить зависимости", code: "npm install" },
+  { step: "03", title: "Настроить токены", code: "# configs/yandex.json — oauth_token, skill_id\n# configs/max.json — bot_token" },
+  { step: "04", title: "Запустить сервер", code: "node server.js" },
+  { step: "05", title: "Подключить webhook", code: "# В консоли Яндекс Диалоги:\nhttps://your-server.com/yandex\n\n# В настройках MAX:\nhttps://your-server.com/max" },
 ];
 
 const DEVICES = [
@@ -952,6 +1071,202 @@ export default function EgsuDalan1() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* BOT ALICE+MAX */}
+        {activeTab === "bot" && (
+          <div className="space-y-4">
+
+            {/* Header */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.25)" }}
+            >
+              <h2 className="font-bold text-sm mb-2 flex items-center gap-2">
+                <Icon name="BotMessageSquare" size={15} style={{ color: "#818cf8" }} />
+                Бот для Яндекс Алисы и MAX
+              </h2>
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
+                Готовый кейс для конструктора: бот работает на двух платформах через единый код.
+                Архив <span style={{ color: "#a5b4fc" }}>bot_constructor.zip</span> содержит все файлы и инструкцию.
+              </p>
+              <div className="flex gap-3 mt-3">
+                {[
+                  { label: "Яндекс Алиса", color: "#f59e0b" },
+                  { label: "MAX", color: "#3b82f6" },
+                  { label: "Express.js", color: "#22c55e" },
+                ].map((b) => (
+                  <span key={b.label} className="text-xs px-2.5 py-1 rounded-full font-semibold"
+                    style={{ background: `${b.color}18`, color: b.color }}>
+                    {b.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Platform cards */}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { icon: "Mic", color: "#f59e0b", title: "Яндекс Алиса", items: ["Яндекс Диалоги", "OAuth токен", "TTS / голос"] },
+                { icon: "MessageCircle", color: "#3b82f6", title: "MAX", items: ["api.max.ru", "Bot Token", "Текстовые ответы"] },
+              ].map((p) => (
+                <div key={p.title} className="p-3 rounded-xl"
+                  style={{ background: `${p.color}0d`, border: `1px solid ${p.color}30` }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icon name={p.icon as any} size={14} style={{ color: p.color }} />
+                    <span className="text-xs font-bold text-white">{p.title}</span>
+                  </div>
+                  {p.items.map((i) => (
+                    <div key={i} className="flex items-center gap-1.5 text-xs py-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+                      <span style={{ color: p.color }}>›</span>{i}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+
+            {/* Files */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              <h2 className="font-bold text-sm mb-3 flex items-center gap-2">
+                <Icon name="FolderOpen" size={14} style={{ color: "#818cf8" }} />
+                Структура bot_constructor/
+              </h2>
+              <div className="space-y-2">
+                {BOT_FILES.map((f) => (
+                  <div key={f.name} className="rounded-xl overflow-hidden"
+                    style={{ border: `1px solid ${f.color}20` }}>
+                    <div
+                      className="flex items-center gap-3 p-3 cursor-pointer"
+                      style={{ background: "rgba(0,0,0,0.25)" }}
+                    >
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background: `${f.color}18` }}>
+                        <Icon name={f.icon as any} size={13} style={{ color: f.color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-mono font-semibold" style={{ color: f.color }}>{f.name}</div>
+                        <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{f.desc}</div>
+                      </div>
+                      <button
+                        onClick={() => copyCode(f.code, f.name)}
+                        className="flex-shrink-0 p-1.5 rounded-lg"
+                        style={{ background: "rgba(255,255,255,0.05)", color: copiedCode === f.name ? f.color : "rgba(255,255,255,0.3)" }}
+                      >
+                        <Icon name={copiedCode === f.name ? "Check" : "Copy"} size={12} />
+                      </button>
+                    </div>
+                    <div className="px-3 pb-3 pt-1">
+                      <pre className="text-xs font-mono overflow-x-auto"
+                        style={{ color: "rgba(255,255,255,0.5)", whiteSpace: "pre-wrap" }}>{f.code}</pre>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* package.json */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-bold text-sm flex items-center gap-2">
+                  <Icon name="Package" size={14} style={{ color: "#818cf8" }} />
+                  package.json
+                </h2>
+                <button onClick={() => copyCode(`{\n  "name": "multiplatform-bot",\n  "version": "1.0.0",\n  "dependencies": {\n    "express": "^4.18.2",\n    "dotenv": "^16.3.1"\n  }\n}`, "pkg")}
+                  className="text-xs px-2 py-1 rounded-lg flex items-center gap-1"
+                  style={{ background: "rgba(99,102,241,0.12)", color: copiedCode === "pkg" ? "#22c55e" : "#818cf8" }}>
+                  <Icon name={copiedCode === "pkg" ? "Check" : "Copy"} size={11} />
+                  {copiedCode === "pkg" ? "Скопировано" : "Копировать"}
+                </button>
+              </div>
+              <div className="rounded-lg p-3 font-mono text-xs"
+                style={{ background: "rgba(0,0,0,0.4)", color: "#a5b4fc" }}>
+                <pre>{`{
+  "name": "multiplatform-bot",
+  "version": "1.0.0",
+  "dependencies": {
+    "express": "^4.18.2",
+    "dotenv": "^16.3.1"
+  }
+}`}</pre>
+              </div>
+            </div>
+
+            {/* Steps */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              <h2 className="font-bold text-sm mb-3 flex items-center gap-2">
+                <Icon name="List" size={14} style={{ color: "#818cf8" }} />
+                Инструкция по настройке
+              </h2>
+              {BOT_STEPS.map((s) => (
+                <div key={s.step} className="py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded"
+                      style={{ background: "rgba(99,102,241,0.2)", color: "#818cf8" }}>
+                      {s.step}
+                    </span>
+                    <span className="text-sm font-semibold" style={{ color: "#a5b4fc" }}>{s.title}</span>
+                  </div>
+                  <div className="relative rounded-lg p-3 font-mono text-xs"
+                    style={{ background: "rgba(0,0,0,0.4)", color: "#a5b4fc" }}>
+                    <pre style={{ whiteSpace: "pre-wrap" }}>{s.code}</pre>
+                    <button
+                      onClick={() => copyCode(s.code, `bot-step-${s.step}`)}
+                      className="absolute top-2 right-2 p-1.5 rounded-md"
+                      style={{ background: "rgba(255,255,255,0.05)", color: copiedCode === `bot-step-${s.step}` ? "#22c55e" : "rgba(255,255,255,0.3)" }}>
+                      <Icon name={copiedCode === `bot-step-${s.step}` ? "Check" : "Copy"} size={12} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Optional */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              <h2 className="font-bold text-sm mb-3 flex items-center gap-2">
+                <Icon name="Plus" size={14} style={{ color: "#818cf8" }} />
+                Дополнительные файлы (опционально)
+              </h2>
+              {[
+                { icon: "ScrollText", color: "#f59e0b", name: "logs.js", desc: "Логирование запросов и ответов бота" },
+                { icon: "TestTube", color: "#22c55e", name: "tests/", desc: "Папка с юнит-тестами для логики бота" },
+                { icon: "Container", color: "#3b82f6", name: "docker-compose.yml", desc: "Контейнеризация для продакшн-развёртывания" },
+              ].map((f) => (
+                <div key={f.name} className="flex items-center gap-3 py-2.5"
+                  style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: `${f.color}18` }}>
+                    <Icon name={f.icon as any} size={13} style={{ color: f.color }} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-mono font-semibold text-white">{f.name}</div>
+                    <div className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{f.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Send button */}
+            <button
+              onClick={() => { setEmailType("custom"); setCustomSubject("Кейс бота Яндекс Алиса + MAX для конструктора"); setCustomMessage("Передаю кейс мультиплатформенного бота bot_constructor.zip для быстрой интеграции с Яндекс Алисой и MAX. Состав: configs/, adapters/, logic/, platform_selector.js, webhook_handler.js, server.js, package.json, README.md."); setActiveTab("send"); }}
+              className="w-full py-3 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
+              style={{ background: "linear-gradient(135deg, #f59e0b, #3b82f6)", color: "white" }}
+            >
+              <Icon name="Send" size={16} />
+              Отправить кейс конструктору на email
+            </button>
           </div>
         )}
 
