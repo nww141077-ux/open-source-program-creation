@@ -8,8 +8,73 @@ const TABS = [
   { id: "files", label: "Состав кейса", icon: "FolderOpen" },
   { id: "integration", label: "Интеграция", icon: "GitMerge" },
   { id: "alice", label: "ИИ Алиса", icon: "Brain" },
+  { id: "cluster", label: "Кластер ЕЦСУ", icon: "Network" },
   { id: "results", label: "Результаты", icon: "BarChart2" },
   { id: "contacts", label: "Контакты", icon: "User" },
+];
+
+const DEVICES = [
+  {
+    id: "pc-main",
+    label: "ПК (pc-main)",
+    type: "desktop",
+    icon: "Monitor",
+    status: "online",
+    roles: ["База данных", "Вычисления", "Хранилище"],
+    energyRate: 10,
+    color: "#22c55e",
+  },
+  {
+    id: "phone-1",
+    label: "Смартфон 1 (phone-1)",
+    type: "mobile",
+    icon: "Smartphone",
+    status: "online",
+    roles: ["Кэш", "Обмен сообщениями"],
+    energyRate: 5,
+    color: "#3b82f6",
+  },
+  {
+    id: "phone-2",
+    label: "Смартфон 2 (phone-2)",
+    type: "mobile",
+    icon: "Smartphone",
+    status: "online",
+    roles: ["Кэш", "Резервное копирование"],
+    energyRate: 5,
+    color: "#a855f7",
+  },
+];
+
+const CLUSTER_METRICS = [
+  { label: "Функции", current: 23, max: 25, unit: "", color: "#f59e0b", warn: true },
+  { label: "Вычислительное время", current: 0.3, max: 250, unit: " ч", color: "#22c55e", warn: false },
+  { label: "Энергия", current: 97, max: 100, unit: "%", color: "#ef4444", warn: false },
+];
+
+const API_ENDPOINTS = [
+  { method: "GET", path: "/api/status", desc: "Текущий статус кластера ЕЦСУ" },
+  { method: "POST", path: "/api/tasks", desc: "Управление задачами устройств" },
+  { method: "POST", path: "/api/email", desc: "Отправка уведомлений на email" },
+  { method: "GET", path: "/api/devices", desc: "Список устройств и их состояние" },
+  { method: "POST", path: "/api/sync", desc: "Принудительная синхронизация" },
+  { method: "GET", path: "/api/backup", desc: "Запуск резервного копирования" },
+];
+
+const EMAIL_TEMPLATES = [
+  { icon: "Plug", title: "Новое устройство подключено", desc: "Уведомление при появлении нового узла в кластере" },
+  { icon: "AlertTriangle", title: "Достигнут лимит функций", desc: "Предупреждение при использовании 23/25 функций" },
+  { icon: "HardDrive", title: "Резервное копирование завершено", desc: "Ежедневный отчёт в 02:00 о бэкапе" },
+  { icon: "WifiOff", title: "Устройство офлайн", desc: "Срочное уведомление при потере связи с узлом" },
+  { icon: "Zap", title: "Низкий уровень энергии", desc: "Предупреждение при достижении критического уровня" },
+];
+
+const CLUSTER_STAGES = [
+  { num: "01", title: "Веб-интерфейс ЕЦСУ", icon: "Layout", items: ["Дизайн панели управления с дашбордом", "Отображение статуса устройств кластера", "Визуализация метрик ресурсов в реальном времени"] },
+  { num: "02", title: "API ЕЦСУ", icon: "Plug", items: ["Эндпоинты /api/status, /api/tasks, /api/email", "Интеграция с SMTP-сервером Яндекса", "Авторизация и безопасность запросов"] },
+  { num: "03", title: "Email-синхронизация", icon: "Mail", items: ["Регистрация бота ecsu-bot@yandex.ru", "Генерация App Password в настройках Яндекс Почты", "Настройка шаблонов уведомлений"] },
+  { num: "04", title: "Мобильные агенты", icon: "Smartphone", items: ["Развёртывание mobile_agent.js на смартфонах", "Тестирование отправки отчётов на email", "Настройка уведомлений при низкой энергии"] },
+  { num: "05", title: "Тестирование", icon: "TestTube", items: ["Проверка доставки email (≤ 5 сек)", "Симуляция сбоев устройств", "Нагрузочное тестирование (100+ задач)"] },
 ];
 
 const FILES = [
@@ -551,6 +616,287 @@ export default function EgsuDalan1() {
                 </ul>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* CLUSTER */}
+        {activeTab === "cluster" && (
+          <div className="space-y-4">
+
+            {/* Header info */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.25)" }}
+            >
+              <h2 className="font-bold text-sm mb-2 flex items-center gap-2">
+                <Icon name="Network" size={15} style={{ color: "#818cf8" }} />
+                ЕЦСУ — Локальный облачный кластер
+              </h2>
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
+                Три устройства объединены в единый кластер с синхронизацией через email{" "}
+                <span style={{ color: "#a5b4fc" }}>nikolaevvladimir77@yandex.ru</span>.
+                ПК выступает мастер-узлом, смартфоны — кэш и резервное копирование.
+              </p>
+            </div>
+
+            {/* Devices */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              <h2 className="font-bold text-sm mb-3 flex items-center gap-2">
+                <Icon name="Server" size={14} style={{ color: "#818cf8" }} />
+                Устройства кластера
+              </h2>
+              <div className="space-y-3">
+                {DEVICES.map((d) => (
+                  <div
+                    key={d.id}
+                    className="p-3 rounded-xl"
+                    style={{ background: "rgba(0,0,0,0.2)", border: `1px solid ${d.color}22` }}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center"
+                          style={{ background: `${d.color}18` }}
+                        >
+                          <Icon name={d.icon as any} size={15} style={{ color: d.color }} />
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-white">{d.label}</div>
+                          <div className="text-xs font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>{d.id}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full" style={{ background: d.color }} />
+                        <span className="text-xs" style={{ color: d.color }}>онлайн</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {d.roles.map((r) => (
+                        <span
+                          key={r}
+                          className="text-xs px-2 py-0.5 rounded-full"
+                          style={{ background: `${d.color}15`, color: d.color }}
+                        >
+                          {r}
+                        </span>
+                      ))}
+                      <span className="text-xs px-2 py-0.5 rounded-full ml-auto"
+                        style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)" }}>
+                        {d.energyRate} Вт/ч
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Metrics */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              <h2 className="font-bold text-sm mb-4 flex items-center gap-2">
+                <Icon name="BarChart2" size={14} style={{ color: "#818cf8" }} />
+                Метрики кластера
+              </h2>
+              <div className="space-y-4">
+                {CLUSTER_METRICS.map((m) => {
+                  const pct = Math.round((m.current / m.max) * 100);
+                  return (
+                    <div key={m.label}>
+                      <div className="flex justify-between items-center mb-1">
+                        <div className="flex items-center gap-1.5 text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
+                          {m.warn && <Icon name="AlertTriangle" size={11} style={{ color: "#f59e0b" }} />}
+                          {m.label}
+                        </div>
+                        <span className="text-xs font-bold text-white">
+                          {m.current}{m.unit} / {m.max}{m.unit}
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>
+                        <div
+                          className="h-2 rounded-full"
+                          style={{ width: `${pct}%`, background: m.color }}
+                        />
+                      </div>
+                      <div className="text-right text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{pct}%</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* cluster_config.json */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-bold text-sm flex items-center gap-2">
+                  <Icon name="FileJson" size={14} style={{ color: "#818cf8" }} />
+                  cluster_config.json
+                </h2>
+                <button
+                  onClick={() => copyCode(`{
+  "system_name": "Единая Центральная Система Управления",
+  "version": "1.0",
+  "sync_email": "nikolaevvladimir77@yandex.ru",
+  "master_device": "pc-main",
+  "devices": [
+    {"id": "pc-main", "type": "desktop", "roles": ["database","compute","storage"], "energy_rate": 10},
+    {"id": "phone-1", "type": "mobile", "roles": ["cache","messaging"], "energy_rate": 5},
+    {"id": "phone-2", "type": "mobile", "roles": ["cache","backup"], "energy_rate": 5}
+  ],
+  "limits": {
+    "max_functions": 25, "current_functions": 23,
+    "max_compute_time": 250.0, "used_compute_time": 0.3,
+    "energy_budget": 100, "current_energy": -3
+  }
+}`, "config")}
+                  className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors"
+                  style={{ background: "rgba(99,102,241,0.12)", color: "#818cf8" }}
+                >
+                  <Icon name={copiedCode === "config" ? "Check" : "Copy"} size={11} />
+                  {copiedCode === "config" ? "Скопировано" : "Копировать"}
+                </button>
+              </div>
+              <div
+                className="rounded-lg p-3 font-mono text-xs overflow-x-auto"
+                style={{ background: "rgba(0,0,0,0.4)", color: "#a5b4fc" }}
+              >
+                <pre>{`{
+  "system_name": "Единая Центральная Система Управления",
+  "version": "1.0",
+  "sync_email": "nikolaevvladimir77@yandex.ru",
+  "master_device": "pc-main",
+  "limits": {
+    "max_functions": 25,
+    "current_functions": 23,
+    "energy_budget": 100,
+    "current_energy": -3
+  }
+}`}</pre>
+              </div>
+            </div>
+
+            {/* API endpoints */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              <h2 className="font-bold text-sm mb-3 flex items-center gap-2">
+                <Icon name="Plug" size={14} style={{ color: "#818cf8" }} />
+                API эндпоинты ЕЦСУ
+              </h2>
+              <div className="space-y-2">
+                {API_ENDPOINTS.map((e) => (
+                  <div key={e.path} className="flex items-center gap-2 py-2"
+                    style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                    <span
+                      className="text-xs font-bold px-2 py-0.5 rounded flex-shrink-0"
+                      style={{
+                        background: e.method === "GET" ? "rgba(34,197,94,0.15)" : "rgba(59,130,246,0.15)",
+                        color: e.method === "GET" ? "#22c55e" : "#3b82f6",
+                      }}
+                    >
+                      {e.method}
+                    </span>
+                    <code className="text-xs font-mono flex-shrink-0" style={{ color: "#a5b4fc" }}>{e.path}</code>
+                    <span className="text-xs ml-auto text-right" style={{ color: "rgba(255,255,255,0.4)" }}>{e.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Email templates */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              <h2 className="font-bold text-sm mb-3 flex items-center gap-2">
+                <Icon name="Mail" size={14} style={{ color: "#818cf8" }} />
+                Шаблоны email-уведомлений
+              </h2>
+              {EMAIL_TEMPLATES.map((t) => (
+                <div key={t.title} className="flex items-start gap-3 py-2.5"
+                  style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: "rgba(99,102,241,0.12)" }}
+                  >
+                    <Icon name={t.icon as any} size={13} style={{ color: "#818cf8" }} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-white">{t.title}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{t.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Stages */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              <h2 className="font-bold text-sm mb-3 flex items-center gap-2">
+                <Icon name="GitBranch" size={14} style={{ color: "#818cf8" }} />
+                Этапы разработки
+              </h2>
+              {CLUSTER_STAGES.map((s) => (
+                <div key={s.num} className="flex items-start gap-3 py-3"
+                  style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}
+                  >
+                    <Icon name={s.icon as any} size={13} className="text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>Этап {s.num}</span>
+                      <span className="text-sm font-semibold" style={{ color: "#a5b4fc" }}>{s.title}</span>
+                    </div>
+                    <ul className="space-y-0.5">
+                      {s.items.map((item, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
+                          <span style={{ color: "#6366f1", flexShrink: 0 }}>›</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Acceptance criteria */}
+            <div
+              className="p-4 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              <h2 className="font-bold text-sm mb-3 flex items-center gap-2">
+                <Icon name="ClipboardCheck" size={14} style={{ color: "#818cf8" }} />
+                Критерии приёмки
+              </h2>
+              {[
+                { param: "Доставка email", req: "≤ 5 секунд" },
+                { param: "Время отклика интерфейса", req: "≤ 1 секунды" },
+                { param: "Доступность кластера", req: "≥ 99 %" },
+                { param: "Точность отчётов", req: "100 %" },
+                { param: "Резервное копирование", req: "ежедневно в 02:00" },
+                { param: "Сроки разработки", req: "2–3 недели" },
+              ].map((c) => (
+                <div key={c.param} className="flex justify-between items-center py-2 text-xs"
+                  style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <span style={{ color: "rgba(255,255,255,0.5)" }}>{c.param}</span>
+                  <span className="font-semibold" style={{ color: "#22c55e" }}>{c.req}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
