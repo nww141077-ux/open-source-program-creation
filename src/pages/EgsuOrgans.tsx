@@ -38,6 +38,10 @@ interface Incident { id: number; incident_code: string; type: string; title: str
 interface OwnerOrder { id: number; incident_code: string; order_text: string; target_organ: string; priority: string; status: string; created_at: string; incident_title: string; }
 interface PressRelease { id: number; incident_code: string; title: string; content: string; channel: string; status: string; published_at: string; created_at: string; incident_title: string; incident_type: string; severity: string; }
 
+interface Member { id: number; organ_code: string; full_name: string; role: string; position: string; is_owner: boolean; status: string; joined_at: string; }
+interface DialogMessage { id: number; organ_code: string; author_name: string; author_role: string; is_owner: boolean; message: string; msg_type: string; created_at: string; }
+interface ExternalContact { id: number; agency_name: string; agency_short: string; country: string; category: string; address: string; phone: string; email: string; website: string; reception_info: string; online_form_url: string; notes: string; }
+
 type AppealStep = "list" | "form" | "sent";
 
 interface AppealForm {
@@ -110,6 +114,21 @@ export default function EgsuOrgans() {
   const [savingPress, setSavingPress] = useState(false);
   const [publishingPress, setPublishingPress] = useState<number|null>(null);
   const [pressMsg, setPressMsg] = useState("");
+
+  // --- Новые state для детального просмотра органа ---
+  const [openOrgan, setOpenOrgan] = useState<Organ|null>(null);
+  const [organTab, setOrganTab] = useState<"organ-info"|"organ-members"|"organ-chat"|"organ-contacts">("organ-info");
+  const [members, setMembers] = useState<Member[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [memberForm, setMemberForm] = useState({ full_name: "", role: "Участник", position: "" });
+  const [savingMember, setSavingMember] = useState(false);
+  const [dialogMessages, setDialogMessages] = useState<DialogMessage[]>([]);
+  const [dialogLoading, setDialogLoading] = useState(false);
+  const [chatMsg, setChatMsg] = useState("");
+  const [sendingChat, setSendingChat] = useState(false);
+  const [externalContacts, setExternalContacts] = useState<ExternalContact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactFilter, setContactFilter] = useState("");
 
   const [form, setForm] = useState<AppealForm>({
     organ_code: "",
@@ -211,17 +230,90 @@ export default function EgsuOrgans() {
     } catch (_e) { /* ignore */ } finally { setPublishingPress(null); }
   }
 
-   
+  // --- Функции загрузки данных органа ---
+  async function loadMembers(organCode: string) {
+    setMembersLoading(true);
+    try {
+      const r = await fetch(`${ORGANS_API}/members?organ=${encodeURIComponent(organCode)}`);
+      const d = await r.json();
+      const p = typeof d === "string" ? JSON.parse(d) : d;
+      setMembers(p.members || []);
+    } catch (_e) { /* ignore */ } finally { setMembersLoading(false); }
+  }
+
+  async function loadDialog(organCode: string) {
+    setDialogLoading(true);
+    try {
+      const r = await fetch(`${ORGANS_API}/dialog?organ=${encodeURIComponent(organCode)}`);
+      const d = await r.json();
+      const p = typeof d === "string" ? JSON.parse(d) : d;
+      setDialogMessages(p.messages || []);
+    } catch (_e) { /* ignore */ } finally { setDialogLoading(false); }
+  }
+
+  async function loadExternalContacts() {
+    setContactsLoading(true);
+    try {
+      const r = await fetch(`${ORGANS_API}/external-contacts`);
+      const d = await r.json();
+      const p = typeof d === "string" ? JSON.parse(d) : d;
+      setExternalContacts(p.contacts || []);
+    } catch (_e) { /* ignore */ } finally { setContactsLoading(false); }
+  }
+
+  async function addMember() {
+    if (!memberForm.full_name || !openOrgan) return;
+    setSavingMember(true);
+    try {
+      await fetch(`${ORGANS_API}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ organ_code: openOrgan.code, ...memberForm })
+      });
+      setMemberForm({ full_name: "", role: "Участник", position: "" });
+      loadMembers(openOrgan.code);
+    } catch (_e) { /* ignore */ } finally { setSavingMember(false); }
+  }
+
+  async function sendChatMessage() {
+    if (!chatMsg.trim() || !openOrgan) return;
+    setSendingChat(true);
+    try {
+      await fetch(`${ORGANS_API}/dialog`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organ_code: openOrgan.code,
+          author_name: "Николаев Владимир Владимирович",
+          author_role: "Владелец системы",
+          is_owner: true,
+          message: chatMsg.trim(),
+          msg_type: "message"
+        })
+      });
+      setChatMsg("");
+      loadDialog(openOrgan.code);
+    } catch (_e) { /* ignore */ } finally { setSendingChat(false); }
+  }
+
   useEffect(() => {
     if (tab === "incidents") loadIncidents();
     if (tab === "orders") loadOrders();
     if (tab === "press") loadPress();
   }, [tab]);
 
-   
   useEffect(() => {
     if (tab === "incidents") loadIncidents();
   }, [incFilter]);
+
+  // --- useEffect для openOrgan ---
+  useEffect(() => {
+    if (openOrgan) {
+      if (organTab === "organ-members") loadMembers(openOrgan.code);
+      if (organTab === "organ-chat") loadDialog(openOrgan.code);
+      if (organTab === "organ-contacts") loadExternalContacts();
+    }
+  }, [openOrgan, organTab]);
 
   function openForm(organ: Organ) {
     setSelectedOrgan(organ);
@@ -340,7 +432,7 @@ export default function EgsuOrgans() {
               style={{
                 background: tab === t.id ? "rgba(0,255,135,0.15)" : "rgba(255,255,255,0.04)",
                 color: tab === t.id ? "#00ff87" : "rgba(255,255,255,0.4)",
-                border: `1px solid ${tab === t.id ? "rgba(0,255,135,0.35)" : "rgba(255,255,255,0.08)"}`,
+                border: `1px solid ${tab === t.id ? "rgba(0,255,135,0.3)" : "rgba(255,255,255,0.07)"}`,
               }}>
               <Icon name={t.icon as "Building2"} size={14} />
               {t.label}
@@ -436,7 +528,8 @@ export default function EgsuOrgans() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredOrgans.map(organ => (
                   <div key={organ.id}
-                    className="p-5 rounded-2xl transition-all hover:scale-[1.01] group"
+                    onClick={() => setOpenOrgan(organ)}
+                    className="p-5 rounded-2xl transition-all hover:scale-[1.01] group cursor-pointer"
                     style={{ background: "rgba(255,255,255,0.02)", border: `1px solid rgba(255,255,255,0.06)` }}>
 
                     {/* Шапка */}
@@ -473,12 +566,20 @@ export default function EgsuOrgans() {
                       <div className="text-[11px] text-white/50 font-mono leading-relaxed">{organ.competence}</div>
                     </div>
 
-                    {/* Кнопка */}
-                    <button onClick={() => openForm(organ)}
-                      className="w-full py-3 rounded-xl text-xs font-black tracking-wider transition-all hover:scale-[1.02] active:scale-95"
-                      style={{ background: `linear-gradient(135deg, ${organ.color}25, ${organ.color}10)`, color: organ.color, border: `1px solid ${organ.color}35` }}>
-                      Подать обращение →
-                    </button>
+                    {/* Нижняя строка: бейдж + кнопка */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] px-2 py-1 rounded-lg font-semibold"
+                        style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                        <Icon name="Eye" size={10} className="inline mr-1" />
+                        Открыть
+                      </span>
+                      <button
+                        onClick={e => { e.stopPropagation(); openForm(organ); }}
+                        className="flex-1 py-3 rounded-xl text-xs font-black tracking-wider transition-all hover:scale-[1.02] active:scale-95"
+                        style={{ background: `linear-gradient(135deg, ${organ.color}25, ${organ.color}10)`, color: organ.color, border: `1px solid ${organ.color}35` }}>
+                        Подать обращение →
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -501,117 +602,121 @@ export default function EgsuOrgans() {
             <div className="flex gap-2 mb-5 flex-wrap">
               {[["all","Все"],["suspected","Предполагаемые"],["verified","Верифицированные"]].map(([v,l]) => (
                 <button key={v} onClick={() => setIncFilter(v as typeof incFilter)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
                   style={{
                     background: incFilter === v ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.04)",
                     color: incFilter === v ? "#f59e0b" : "rgba(255,255,255,0.4)",
-                    border: `1px solid ${incFilter === v ? "rgba(245,158,11,0.35)" : "rgba(255,255,255,0.08)"}`,
+                    border: `1px solid ${incFilter === v ? "rgba(245,158,11,0.3)" : "rgba(255,255,255,0.07)"}`,
                   }}>{l}</button>
               ))}
+              <button onClick={loadIncidents} className="ml-auto px-3 py-2 rounded-xl text-xs font-bold transition-all hover:scale-105"
+                style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                <Icon name="RefreshCw" size={13} />
+              </button>
             </div>
-            {incLoading && <div className="text-white/30 text-sm py-8 text-center">Загрузка...</div>}
+
+            {/* Форма нового инцидента */}
+            {selectedIncident && (
+              <div className="mb-6 p-5 rounded-2xl" style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold text-white/60 uppercase tracking-wider">Распоряжение по: {selectedIncident.title}</span>
+                  <button onClick={() => setSelectedIncident(null)} className="text-white/25 hover:text-white/50"><Icon name="X" size={14} /></button>
+                </div>
+                <textarea value={orderForm.order_text} onChange={e => setOrderForm(f => ({...f, order_text: e.target.value}))}
+                  placeholder="Текст распоряжения..."
+                  rows={3}
+                  className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none resize-none mb-3"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(245,158,11,0.2)" }} />
+                <div className="flex gap-3 mb-3">
+                  <input value={orderForm.target_organ} onChange={e => setOrderForm(f => ({...f, target_organ: e.target.value}))}
+                    placeholder="Целевой орган (код)"
+                    className="flex-1 px-3 py-2 rounded-xl text-white text-sm outline-none"
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                  <select value={orderForm.priority} onChange={e => setOrderForm(f => ({...f, priority: e.target.value}))}
+                    className="flex-1 px-3 py-2 rounded-xl text-white text-sm outline-none"
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                    <option value="low" style={{ background: "#0d1220" }}>Низкий</option>
+                    <option value="normal" style={{ background: "#0d1220" }}>Обычный</option>
+                    <option value="high" style={{ background: "#0d1220" }}>Высокий</option>
+                    <option value="critical" style={{ background: "#0d1220" }}>Критический</option>
+                  </select>
+                </div>
+                <button onClick={saveOrder} disabled={savingOrder || !orderForm.order_text}
+                  className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 disabled:opacity-40"
+                  style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.3)" }}>
+                  {savingOrder ? "Сохранение..." : "Создать распоряжение"}
+                </button>
+              </div>
+            )}
+
+            {incLoading && <div className="text-white/30 text-sm py-8 text-center">Загрузка инцидентов...</div>}
             <div className="space-y-3">
               {incidents.map(inc => {
-                const sevColor = inc.severity === "critical" ? "#f43f5e" : inc.severity === "high" ? "#f59e0b" : inc.severity === "medium" ? "#a855f7" : "#3b82f6";
-                const stBg = inc.status === "verified" ? "rgba(0,255,135,0.1)" : inc.status === "pending_verification" ? "rgba(245,158,11,0.1)" : "rgba(59,130,246,0.1)";
-                const stColor = inc.status === "verified" ? "#00ff87" : inc.status === "pending_verification" ? "#f59e0b" : "#3b82f6";
-                const stLabel = inc.status === "verified" ? "Верифицирован" : inc.status === "pending_verification" ? "На верификации" : "Новый";
+                const sevColor: Record<string,string> = { low: "#10b981", medium: "#f59e0b", high: "#f97316", critical: "#f43f5e" };
+                const sc = sevColor[inc.severity] || "#ffffff";
                 return (
-                  <div key={inc.id} className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid rgba(255,255,255,0.07)` }}>
-                    <div className="flex items-start justify-between gap-3 mb-2">
+                  <div key={inc.id} className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid rgba(255,255,255,0.06)` }}>
+                    <div className="flex items-start gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="font-mono text-xs font-bold" style={{ color: "#00ff87" }}>{inc.incident_code}</span>
-                          <span className="px-2 py-0.5 rounded text-xs font-bold" style={{ background: stBg, color: stColor }}>{stLabel}</span>
-                          <span className="px-2 py-0.5 rounded text-xs font-bold" style={{ background: `${sevColor}20`, color: sevColor }}>{inc.severity?.toUpperCase()}</span>
+                          <span className="font-mono text-xs font-bold" style={{ color: "#f59e0b" }}>{inc.incident_code}</span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: `${sc}15`, color: sc }}>{inc.severity}</span>
+                          <span className="text-[10px] text-white/25">{inc.type}</span>
                         </div>
-                        <div className="font-semibold text-white text-sm">{inc.title}</div>
-                        <div className="text-white/40 text-xs mt-1">{inc.country} · {inc.responsible_organ || "Без органа"}</div>
+                        <div className="font-semibold text-white text-sm mb-1">{inc.title}</div>
+                        <div className="text-white/35 text-xs mb-2 line-clamp-2">{inc.description}</div>
+                        <div className="flex items-center gap-3 text-[10px] text-white/25">
+                          <span>{inc.country}</span>
+                          <span>AI: {Math.round(inc.ai_confidence * 100)}%</span>
+                          <span>{inc.actions_count} действий</span>
+                          <span>{new Date(inc.created_at).toLocaleDateString("ru-RU")}</span>
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <div className="text-white/25 text-xs">{new Date(inc.created_at).toLocaleDateString("ru-RU")}</div>
-                        <div className="text-xs mt-1" style={{ color: "#a855f7" }}>AI: {inc.ai_confidence}%</div>
-                      </div>
-                    </div>
-                    {inc.description && <div className="text-white/35 text-xs mb-3 line-clamp-2">{inc.description}</div>}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-white/25">Действий: {inc.actions_count}</span>
-                      <span className="text-xs text-white/25">·</span>
-                      <span className="text-xs text-white/25">Распоряжений: {inc.orders_count}</span>
-                      <button onClick={() => { setSelectedIncident(inc); setTab("orders"); }}
-                        className="ml-auto px-3 py-1 rounded-lg text-xs font-bold transition-all hover:scale-105"
-                        style={{ background: "rgba(168,85,247,0.12)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.2)" }}>
-                        <Icon name="ClipboardList" size={11} className="inline mr-1" />
-                        Выдать распоряжение
-                      </button>
-                      <button onClick={() => { setPressForm(f => ({...f, incident_id: String(inc.id), title: `Официальное заявление по инциденту ${inc.incident_code}`, content: `По инциденту ${inc.incident_code}: ${inc.title}.\n\n${inc.description || ""}\n\nСтрана: ${inc.country}. Орган: ${inc.responsible_organ || "EGSU"}.`})); setTab("press"); }}
-                        className="px-3 py-1 rounded-lg text-xs font-bold transition-all hover:scale-105"
-                        style={{ background: "rgba(6,182,212,0.12)", color: "#06b6d4", border: "1px solid rgba(6,182,212,0.2)" }}>
-                        <Icon name="Send" size={11} className="inline mr-1" />
-                        В прессу
+                      <button onClick={() => setSelectedIncident(inc)}
+                        className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105"
+                        style={{ background: "rgba(245,158,11,0.1)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.2)" }}>
+                        + Распоряжение
                       </button>
                     </div>
                   </div>
                 );
               })}
-              {!incLoading && incidents.length === 0 && (
-                <div className="text-center py-12 text-white/25 text-sm">Инциденты не найдены</div>
-              )}
+              {!incLoading && incidents.length === 0 && <div className="text-center py-12 text-white/25 text-sm">Инцидентов не обнаружено</div>}
             </div>
           </div>
         )}
 
         {tab === "orders" && (
           <div>
-            {selectedIncident && (
-              <div className="mb-6 p-5 rounded-2xl" style={{ background: "rgba(168,85,247,0.07)", border: "2px solid rgba(168,85,247,0.25)" }}>
-                <div className="font-bold text-white mb-3 flex items-center gap-2">
-                  <Icon name="ClipboardList" size={16} style={{ color: "#a855f7" }} />
-                  Новое распоряжение по: <span style={{ color: "#a855f7" }}>{selectedIncident.incident_code}</span>
-                </div>
-                <div className="text-white/50 text-xs mb-3">{selectedIncident.title}</div>
-                <textarea value={orderForm.order_text} onChange={e => setOrderForm(f => ({...f, order_text: e.target.value}))}
-                  placeholder="Текст распоряжения..."
-                  rows={3}
-                  className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none mb-3 resize-none"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(168,85,247,0.2)" }} />
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <input value={orderForm.target_organ} onChange={e => setOrderForm(f => ({...f, target_organ: e.target.value}))}
-                    placeholder="Орган (напр. OGR-SECURITY)"
-                    className="px-3 py-2 rounded-xl text-white text-sm outline-none"
-                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
-                  <select value={orderForm.priority} onChange={e => setOrderForm(f => ({...f, priority: e.target.value}))}
-                    className="px-3 py-2 rounded-xl text-white text-sm outline-none"
-                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                    <option value="normal" style={{ background: "#0d1220" }}>Обычный</option>
-                    <option value="high" style={{ background: "#0d1220" }}>Высокий</option>
-                    <option value="critical" style={{ background: "#0d1220" }}>Критический</option>
-                  </select>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={saveOrder} disabled={savingOrder || !orderForm.order_text}
-                    className="px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-105 disabled:opacity-40"
-                    style={{ background: "rgba(168,85,247,0.15)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.3)" }}>
-                    {savingOrder ? "Сохранение..." : "Выдать распоряжение"}
-                  </button>
-                  <button onClick={() => setSelectedIncident(null)} className="px-4 py-2 rounded-xl text-sm text-white/40 hover:text-white/60 transition-colors">Отмена</button>
-                </div>
-              </div>
-            )}
+            <div className="flex items-center justify-between mb-5">
+              <span className="text-sm font-bold text-white/60">Распоряжения владельца системы</span>
+              <button onClick={loadOrders} className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-105"
+                style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                <Icon name="RefreshCw" size={13} />
+              </button>
+            </div>
             {ordersLoading && <div className="text-white/30 text-sm py-8 text-center">Загрузка...</div>}
             <div className="space-y-3">
-              {orders.map(o => {
-                const pColor = o.priority === "critical" ? "#f43f5e" : o.priority === "high" ? "#f59e0b" : "#a855f7";
+              {orders.map(ord => {
+                const prColor: Record<string,string> = { low: "#10b981", normal: "#3b82f6", high: "#f59e0b", critical: "#f43f5e" };
+                const pc = prColor[ord.priority] || "#ffffff";
+                const stColor: Record<string,string> = { pending: "#f59e0b", executed: "#00ff87", cancelled: "#f43f5e" };
+                const sc = stColor[ord.status] || "#ffffff";
                 return (
-                  <div key={o.id} className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(168,85,247,0.12)" }}>
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="font-mono text-xs font-bold" style={{ color: "#a855f7" }}>{o.incident_code || "—"}</span>
-                      <span className="px-2 py-0.5 rounded text-xs font-bold" style={{ background: `${pColor}20`, color: pColor }}>{o.priority?.toUpperCase()}</span>
-                      <span className="text-xs text-white/25 ml-auto">{new Date(o.created_at).toLocaleDateString("ru-RU")}</span>
+                  <div key={ord.id} className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          {ord.incident_code && <span className="font-mono text-xs font-bold" style={{ color: "#f59e0b" }}>{ord.incident_code}</span>}
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: `${pc}15`, color: pc }}>{ord.priority}</span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: `${sc}15`, color: sc }}>{ord.status}</span>
+                        </div>
+                        {ord.incident_title && <div className="text-white/35 text-xs mb-1">{ord.incident_title}</div>}
+                        <div className="text-white/80 text-sm">{ord.order_text}</div>
+                        {ord.target_organ && <div className="text-white/30 text-xs mt-1">Орган: {ord.target_organ}</div>}
+                      </div>
+                      <div className="text-white/25 text-xs shrink-0">{new Date(ord.created_at).toLocaleDateString("ru-RU")}</div>
                     </div>
-                    {o.incident_title && <div className="text-white/40 text-xs mb-1.5">{o.incident_title}</div>}
-                    <div className="text-white text-sm">{o.order_text}</div>
-                    {o.target_organ && <div className="text-white/30 text-xs mt-1.5">→ {o.target_organ}</div>}
                   </div>
                 );
               })}
@@ -623,20 +728,21 @@ export default function EgsuOrgans() {
         {tab === "press" && (
           <div>
             {pressMsg && (
-              <div className="mb-4 p-3 rounded-xl text-sm font-bold text-center" style={{ background: "rgba(6,182,212,0.12)", color: "#06b6d4", border: "1px solid rgba(6,182,212,0.25)" }}>{pressMsg}</div>
-            )}
-            {/* Форма создания пресс-релиза */}
-            <div className="mb-6 p-5 rounded-2xl" style={{ background: "rgba(6,182,212,0.06)", border: "2px solid rgba(6,182,212,0.2)" }}>
-              <div className="font-bold text-white mb-4 flex items-center gap-2">
-                <Icon name="Newspaper" size={16} style={{ color: "#06b6d4" }} />
-                Новый пресс-релиз
+              <div className="mb-4 px-4 py-3 rounded-xl text-sm font-bold text-center"
+                style={{ background: "rgba(0,255,135,0.1)", color: "#00ff87", border: "1px solid rgba(0,255,135,0.2)" }}>
+                {pressMsg}
               </div>
+            )}
+
+            {/* Форма нового пресс-релиза */}
+            <div className="mb-6 p-5 rounded-2xl" style={{ background: "rgba(6,182,212,0.05)", border: "1px solid rgba(6,182,212,0.15)" }}>
+              <div className="text-xs font-bold text-white/50 uppercase tracking-wider mb-3">Новый пресс-релиз</div>
               <input value={pressForm.title} onChange={e => setPressForm(f => ({...f, title: e.target.value}))}
                 placeholder="Заголовок пресс-релиза..."
                 className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none mb-3"
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(6,182,212,0.2)" }} />
               <textarea value={pressForm.content} onChange={e => setPressForm(f => ({...f, content: e.target.value}))}
-                placeholder="Текст официального заявления..."
+                placeholder="Текст пресс-релиза..."
                 rows={4}
                 className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none mb-3 resize-none"
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(6,182,212,0.2)" }} />
@@ -714,6 +820,262 @@ export default function EgsuOrgans() {
           </div>
         )}
 
+        {/* Модальное окно детального просмотра органа */}
+        {openOrgan && (
+          <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4"
+            style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}>
+            <div className="w-full md:max-w-2xl max-h-[92vh] flex flex-col rounded-t-3xl md:rounded-3xl overflow-hidden"
+              style={{ background: "#0d1220", border: "1px solid rgba(0,255,135,0.15)" }}>
+
+              {/* Шапка */}
+              <div className="flex items-center gap-3 px-5 py-4 shrink-0"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ background: `${openOrgan.color}20`, border: `1px solid ${openOrgan.color}40` }}>
+                  <Icon name={openOrgan.icon as "Shield"} size={18} style={{ color: openOrgan.color }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-white text-sm truncate">{openOrgan.name}</div>
+                  <div className="text-white/35 text-xs truncate">{openOrgan.code} · Гражданская позиция</div>
+                </div>
+                <button onClick={() => setOpenOrgan(null)} className="text-white/30 hover:text-white/70 transition-colors shrink-0">
+                  <Icon name="X" size={20} />
+                </button>
+              </div>
+
+              {/* Вкладки органа */}
+              <div className="flex border-b shrink-0 overflow-x-auto"
+                style={{ borderColor: "rgba(255,255,255,0.07)" }}>
+                {[
+                  { id: "organ-info", label: "Инфо", icon: "Info" },
+                  { id: "organ-members", label: "Персонал", icon: "Users" },
+                  { id: "organ-chat", label: "Диалог", icon: "MessageCircle" },
+                  { id: "organ-contacts", label: "Внешние контакты", icon: "Globe" },
+                ].map(t => (
+                  <button key={t.id} onClick={() => setOrganTab(t.id as typeof organTab)}
+                    className="flex items-center gap-1.5 px-4 py-3 text-xs font-semibold whitespace-nowrap transition-colors"
+                    style={{
+                      color: organTab === t.id ? "#00ff87" : "rgba(255,255,255,0.3)",
+                      borderBottom: `2px solid ${organTab === t.id ? "#00ff87" : "transparent"}`,
+                    }}>
+                    <Icon name={t.icon as "Info"} size={13} />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Контент */}
+              <div className="flex-1 overflow-y-auto p-5">
+
+                {/* Инфо */}
+                {organTab === "organ-info" && (
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                      <div className="text-white/40 text-xs mb-1">Полное название</div>
+                      <div className="text-white text-sm font-semibold">{openOrgan.full_name}</div>
+                    </div>
+                    <div className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                      <div className="text-white/40 text-xs mb-1">Описание</div>
+                      <div className="text-white/70 text-sm">{openOrgan.description}</div>
+                    </div>
+                    <div className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                      <div className="text-white/40 text-xs mb-1">Компетенция</div>
+                      <div className="text-white/70 text-sm">{openOrgan.competence}</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-4 rounded-2xl text-center" style={{ background: "rgba(0,255,135,0.06)", border: "1px solid rgba(0,255,135,0.15)" }}>
+                        <div className="font-bold text-2xl" style={{ color: "#00ff87" }}>{openOrgan.response_days}</div>
+                        <div className="text-white/40 text-xs mt-1">дней на ответ</div>
+                      </div>
+                      <div className="p-4 rounded-2xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                        <div className="font-bold text-sm text-white">{openOrgan.contact_internal}</div>
+                        <div className="text-white/40 text-xs mt-1">внутренний код</div>
+                      </div>
+                    </div>
+                    <div className="p-3 rounded-xl text-xs text-center" style={{ background: "rgba(245,158,11,0.07)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.15)" }}>
+                      Все органы работают на гражданской позиции. Легализация в процессе.
+                    </div>
+                    <button onClick={() => { setOpenOrgan(null); openForm(openOrgan); }}
+                      className="w-full py-3 rounded-2xl font-bold text-sm text-white transition-all hover:scale-[1.02]"
+                      style={{ background: `linear-gradient(135deg, ${openOrgan.color}40, ${openOrgan.color}20)`, border: `1px solid ${openOrgan.color}40`, color: openOrgan.color }}>
+                      <Icon name="Send" size={14} className="inline mr-2" />
+                      Подать обращение в этот орган
+                    </button>
+                  </div>
+                )}
+
+                {/* Персонал */}
+                {organTab === "organ-members" && (
+                  <div className="space-y-4">
+                    {/* Форма добавления */}
+                    <div className="p-4 rounded-2xl" style={{ background: "rgba(0,255,135,0.05)", border: "1px solid rgba(0,255,135,0.15)" }}>
+                      <div className="text-white/60 text-xs font-semibold mb-3 uppercase tracking-wide">Добавить участника</div>
+                      <input value={memberForm.full_name} onChange={e => setMemberForm(f => ({...f, full_name: e.target.value}))}
+                        placeholder="ФИО участника"
+                        className="w-full px-3 py-2 rounded-xl text-white text-sm outline-none mb-2"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <input value={memberForm.role} onChange={e => setMemberForm(f => ({...f, role: e.target.value}))}
+                          placeholder="Роль"
+                          className="px-3 py-2 rounded-xl text-white text-sm outline-none"
+                          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                        <input value={memberForm.position} onChange={e => setMemberForm(f => ({...f, position: e.target.value}))}
+                          placeholder="Должность"
+                          className="px-3 py-2 rounded-xl text-white text-sm outline-none"
+                          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                      </div>
+                      <button onClick={addMember} disabled={savingMember || !memberForm.full_name}
+                        className="w-full py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
+                        style={{ background: "rgba(0,255,135,0.12)", color: "#00ff87", border: "1px solid rgba(0,255,135,0.25)" }}>
+                        {savingMember ? "Добавляется..." : "+ Добавить"}
+                      </button>
+                    </div>
+                    {/* Список участников */}
+                    {membersLoading && <div className="text-white/30 text-sm text-center py-6">Загрузка...</div>}
+                    <div className="space-y-2">
+                      {members.map(m => (
+                        <div key={m.id} className="flex items-center gap-3 p-3 rounded-xl"
+                          style={{ background: m.is_owner ? "rgba(168,85,247,0.07)" : "rgba(255,255,255,0.03)", border: `1px solid ${m.is_owner ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.06)"}` }}>
+                          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-bold text-sm"
+                            style={{ background: m.is_owner ? "rgba(168,85,247,0.2)" : "rgba(0,255,135,0.1)", color: m.is_owner ? "#a855f7" : "#00ff87" }}>
+                            {m.full_name.charAt(0)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-white text-sm truncate">{m.full_name}</div>
+                            <div className="text-white/40 text-xs">{m.role}{m.position ? ` · ${m.position}` : ""}</div>
+                          </div>
+                          {m.is_owner && <span className="text-xs px-2 py-0.5 rounded-lg font-bold shrink-0" style={{ background: "rgba(168,85,247,0.15)", color: "#a855f7" }}>Владелец</span>}
+                        </div>
+                      ))}
+                      {!membersLoading && members.length === 0 && <div className="text-white/25 text-sm text-center py-8">Персонал не добавлен</div>}
+                    </div>
+                  </div>
+                )}
+
+                {/* Диалог / Чат */}
+                {organTab === "organ-chat" && (
+                  <div className="flex flex-col h-full" style={{ minHeight: "400px" }}>
+                    <div className="mb-3 p-3 rounded-xl text-xs" style={{ background: "rgba(59,130,246,0.07)", color: "#3b82f6", border: "1px solid rgba(59,130,246,0.15)" }}>
+                      Диалог ведётся с гражданской позиции. Запросы и предложения могут направляться во внешние органы.
+                    </div>
+                    {/* Сообщения */}
+                    <div className="flex-1 overflow-y-auto space-y-3 mb-4" style={{ maxHeight: "350px" }}>
+                      {dialogLoading && <div className="text-white/30 text-sm text-center py-6">Загрузка...</div>}
+                      {dialogMessages.map(msg => (
+                        <div key={msg.id} className={`flex ${msg.is_owner ? "justify-end" : "justify-start"}`}>
+                          <div className="max-w-[80%]">
+                            <div className={`text-xs mb-1 ${msg.is_owner ? "text-right" : ""}`}
+                              style={{ color: msg.is_owner ? "#a855f7" : "#00ff87" }}>
+                              {msg.author_name} · {msg.author_role}
+                            </div>
+                            <div className="px-4 py-2.5 rounded-2xl text-sm text-white"
+                              style={{ background: msg.is_owner ? "rgba(168,85,247,0.15)" : "rgba(255,255,255,0.06)", border: `1px solid ${msg.is_owner ? "rgba(168,85,247,0.25)" : "rgba(255,255,255,0.08)"}` }}>
+                              {msg.message}
+                            </div>
+                            <div className={`text-white/20 text-xs mt-1 ${msg.is_owner ? "text-right" : ""}`}>
+                              {new Date(msg.created_at).toLocaleString("ru-RU", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {!dialogLoading && dialogMessages.length === 0 && (
+                        <div className="text-white/25 text-sm text-center py-8">Начните диалог</div>
+                      )}
+                    </div>
+                    {/* Ввод */}
+                    <div className="flex gap-2 shrink-0">
+                      <input value={chatMsg} onChange={e => setChatMsg(e.target.value)}
+                        onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendChatMessage()}
+                        placeholder="Сообщение, запрос или предложение..."
+                        className="flex-1 px-4 py-2.5 rounded-2xl text-white text-sm outline-none"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                      <button onClick={sendChatMessage} disabled={sendingChat || !chatMsg.trim()}
+                        className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all hover:scale-105 disabled:opacity-40 shrink-0"
+                        style={{ background: "rgba(0,255,135,0.15)", border: "1px solid rgba(0,255,135,0.3)" }}>
+                        <Icon name="Send" size={16} style={{ color: "#00ff87" }} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Внешние контакты */}
+                {organTab === "organ-contacts" && (
+                  <div>
+                    <div className="mb-3 p-3 rounded-xl text-xs" style={{ background: "rgba(6,182,212,0.07)", color: "#06b6d4", border: "1px solid rgba(6,182,212,0.15)" }}>
+                      Реальные контакты государственных органов и международных организаций для направления запросов и рекомендаций с гражданской позиции.
+                    </div>
+                    <input value={contactFilter} onChange={e => setContactFilter(e.target.value)}
+                      placeholder="Поиск по названию или стране..."
+                      className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none mb-4"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                    {contactsLoading && <div className="text-white/30 text-sm text-center py-6">Загрузка...</div>}
+                    <div className="space-y-3">
+                      {externalContacts
+                        .filter(c => !contactFilter || c.agency_name.toLowerCase().includes(contactFilter.toLowerCase()) || c.country.toLowerCase().includes(contactFilter.toLowerCase()) || (c.agency_short || "").toLowerCase().includes(contactFilter.toLowerCase()))
+                        .map(c => {
+                          const catColor: Record<string,string> = { law_enforcement: "#f59e0b", security: "#a855f7", defense: "#f43f5e", justice: "#3b82f6", international: "#06b6d4", intelligence: "#ec4899", rights: "#10b981", diplomacy: "#00ff87" };
+                          const color = catColor[c.category] || "#ffffff";
+                          return (
+                            <div key={c.id} className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                              <div className="flex items-start gap-3 mb-3">
+                                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-bold text-xs"
+                                  style={{ background: `${color}15`, color, border: `1px solid ${color}30` }}>
+                                  {c.agency_short ? c.agency_short.slice(0,3) : c.agency_name.slice(0,2)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-bold text-white text-sm">{c.agency_name}</div>
+                                  <div className="text-white/40 text-xs">{c.country}</div>
+                                </div>
+                              </div>
+                              {c.address && <div className="text-white/40 text-xs mb-2"><Icon name="MapPin" size={11} className="inline mr-1" />{c.address}</div>}
+                              <div className="flex flex-wrap gap-2">
+                                {c.phone && (
+                                  <a href={`tel:${c.phone}`} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-105"
+                                    style={{ background: "rgba(0,255,135,0.08)", color: "#00ff87", border: "1px solid rgba(0,255,135,0.2)" }}>
+                                    <Icon name="Phone" size={11} />
+                                    {c.phone}
+                                  </a>
+                                )}
+                                {c.email && (
+                                  <a href={`mailto:${c.email}`} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-105"
+                                    style={{ background: "rgba(59,130,246,0.08)", color: "#3b82f6", border: "1px solid rgba(59,130,246,0.2)" }}>
+                                    <Icon name="Mail" size={11} />
+                                    {c.email}
+                                  </a>
+                                )}
+                                {c.website && (
+                                  <a href={c.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-105"
+                                    style={{ background: "rgba(168,85,247,0.08)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.2)" }}>
+                                    <Icon name="Globe" size={11} />
+                                    Сайт
+                                  </a>
+                                )}
+                                {c.online_form_url && (
+                                  <a href={c.online_form_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-105"
+                                    style={{ background: "rgba(6,182,212,0.08)", color: "#06b6d4", border: "1px solid rgba(6,182,212,0.2)" }}>
+                                    <Icon name="Send" size={11} />
+                                    Интернет-приёмная
+                                  </a>
+                                )}
+                              </div>
+                              {c.reception_info && <div className="mt-2 text-white/30 text-xs">{c.reception_info}</div>}
+                            </div>
+                          );
+                        })}
+                      {!contactsLoading && externalContacts.filter(c => !contactFilter || c.agency_name.toLowerCase().includes(contactFilter.toLowerCase()) || c.country.toLowerCase().includes(contactFilter.toLowerCase()) || (c.agency_short || "").toLowerCase().includes(contactFilter.toLowerCase())).length === 0 && (
+                        <div className="text-white/25 text-sm text-center py-8">
+                          {contactFilter ? "Ничего не найдено" : "Внешние контакты не загружены"}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
 
       <footer className="text-center py-4 text-[10px] text-white/15"
@@ -776,134 +1138,139 @@ export default function EgsuOrgans() {
               className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/20 outline-none resize-none"
               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
             />
-            <div className="text-right text-[10px] text-white/20 mt-1">{form.description.length} симв.</div>
           </div>
 
           {/* Место */}
+          <div>
+            <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Место / Адрес</label>
+            <input
+              value={form.location}
+              onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
+              placeholder="Город, адрес или регион (необязательно)"
+              className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/20 outline-none"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+            />
+          </div>
+
+          {/* Доказательства */}
+          <div>
+            <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Доказательства</label>
+            <textarea
+              value={form.evidence_desc}
+              onChange={e => setForm(f => ({ ...f, evidence_desc: e.target.value }))}
+              rows={2}
+              placeholder="Опишите имеющиеся доказательства: фото, видео, документы, свидетели..."
+              className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/20 outline-none resize-none"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+            />
+          </div>
+
+          {/* Контакты */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Место / регион</label>
+              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Email</label>
               <input
-                value={form.location}
-                onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-                placeholder="Адрес, город, регион..."
+                value={form.contact_email}
+                onChange={e => setForm(f => ({ ...f, contact_email: e.target.value }))}
+                placeholder="your@email.com"
+                type="email"
                 className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/20 outline-none"
                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Доказательства</label>
+              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Телефон</label>
               <input
-                value={form.evidence_desc}
-                onChange={e => setForm(f => ({ ...f, evidence_desc: e.target.value }))}
-                placeholder="Документы, фото, видео..."
+                value={form.contact_phone}
+                onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))}
+                placeholder="+7 (999) 000-00-00"
+                type="tel"
                 className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/20 outline-none"
                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
               />
             </div>
           </div>
 
-          {/* Контакты / анонимность */}
-          <div className="p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-            <label className="flex items-center gap-3 cursor-pointer mb-4">
-              <input type="checkbox" checked={form.is_anonymous}
-                onChange={e => setForm(f => ({ ...f, is_anonymous: e.target.checked }))}
-                className="w-4 h-4 rounded accent-purple-500" />
-              <div>
-                <div className="text-sm font-semibold text-white/80">Подать анонимно</div>
-                <div className="text-[10px] text-white/30">Контактные данные не будут сохранены. Для полностью защищённого канала — используйте ВИП.</div>
-              </div>
-            </label>
-            {!form.is_anonymous && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Email (для ответа)</label>
-                  <input
-                    value={form.contact_email}
-                    onChange={e => setForm(f => ({ ...f, contact_email: e.target.value }))}
-                    type="email"
-                    placeholder="your@email.com"
-                    className="w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-white/20 outline-none"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Телефон</label>
-                  <input
-                    value={form.contact_phone}
-                    onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))}
-                    type="tel"
-                    placeholder="+7 (999) 000-00-00"
-                    className="w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-white/20 outline-none"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+          {/* Анонимность */}
+          <label className="flex items-center gap-3 p-4 rounded-xl cursor-pointer"
+            style={{ background: "rgba(168,85,247,0.05)", border: "1px solid rgba(168,85,247,0.15)" }}>
+            <input
+              type="checkbox"
+              checked={form.is_anonymous}
+              onChange={e => setForm(f => ({ ...f, is_anonymous: e.target.checked }))}
+              className="w-4 h-4 accent-purple-500"
+            />
+            <div>
+              <div className="text-sm font-bold text-white/80">Анонимное обращение</div>
+              <div className="text-[11px] text-white/35">Ваши контактные данные не будут переданы третьим лицам</div>
+            </div>
+          </label>
 
-        <button
-          onClick={submitAppeal}
-          disabled={!form.subject || !form.description || sending}
-          className="w-full mt-6 py-4 rounded-2xl font-black text-sm tracking-wider transition-all hover:scale-[1.01] disabled:opacity-30 disabled:cursor-not-allowed"
-          style={{ background: `linear-gradient(135deg, ${selectedOrgan.color}, #3b82f6)`, color: "#fff" }}>
-          {sending ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Регистрируется в системе...
-            </span>
-          ) : `Подать обращение в ${selectedOrgan.name} →`}
-        </button>
+          {/* Дисклеймер */}
+          <div className="p-3 rounded-lg text-[11px] text-white/25 leading-relaxed"
+            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+            Направляя обращение, вы действуете на основании <b className="text-white/40">Конституции РФ ст. 33</b> и <b className="text-white/40">ФЗ №59</b>.
+            Обращение будет зарегистрировано и передано в профильный государственный орган в течение 30 дней.
+          </div>
+
+          {/* Кнопка отправки */}
+          <button
+            onClick={submitAppeal}
+            disabled={sending || !form.subject || !form.description}
+            className="w-full py-4 rounded-2xl font-black text-sm tracking-wider transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: sending ? "rgba(0,255,135,0.1)" : `linear-gradient(135deg, ${selectedOrgan.color}35, ${selectedOrgan.color}15)`,
+              color: selectedOrgan.color,
+              border: `1px solid ${selectedOrgan.color}40`,
+            }}
+          >
+            {sending ? (
+              <span className="flex items-center justify-center gap-2">
+                <Icon name="Loader" size={16} className="animate-spin" />
+                Отправка обращения...
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                <Icon name="Send" size={16} />
+                Подать официальное обращение
+              </span>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
 
-  // ─── Шаг: Успешно зарегистрировано ──────────────────────────────────────
+  // ─── Шаг: Подтверждение ──────────────────────────────────────────────────
   if (step === "sent") return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "#060a12", color: "#fff" }}>
-      <div className="w-full max-w-lg text-center">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#060a12", color: "#fff" }}>
+      <div className="text-center max-w-md">
+        <div className="w-20 h-20 rounded-3xl mx-auto mb-6 flex items-center justify-center"
+          style={{ background: "rgba(0,255,135,0.1)", border: "1px solid rgba(0,255,135,0.3)" }}>
+          <Icon name="CheckCircle" size={40} style={{ color: "#00ff87" }} />
+        </div>
+        <h2 className="text-2xl font-black text-white mb-3">Обращение зарегистрировано</h2>
+        <p className="text-white/40 text-sm mb-6 leading-relaxed">
+          Ваше обращение принято системой ECSU 2.0 и поставлено в очередь на обработку.
+          Срок рассмотрения — до {selectedOrgan?.response_days || 30} дней.
+        </p>
 
-        <div className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6"
-          style={{ background: "linear-gradient(135deg, #00ff87, #3b82f6)" }}>
-          <Icon name="CheckCircle" size={36} className="text-black" />
+        <div className="p-4 rounded-2xl mb-6" style={{ background: "rgba(0,255,135,0.06)", border: "1px solid rgba(0,255,135,0.2)" }}>
+          <div className="text-white/40 text-xs mb-2 uppercase tracking-wider">Номер обращения</div>
+          <div className="text-xl font-black tracking-wider" style={{ color: "#00ff87" }}>{ticketId}</div>
+          <div className="text-white/30 text-xs mt-2">Сохраните номер для отслеживания статуса</div>
         </div>
 
-        <h1 className="text-2xl font-black text-white mb-2">Обращение зарегистрировано</h1>
-        <p className="text-white/40 text-sm mb-6">Орган ECSU 2.0 принял ваше обращение к рассмотрению</p>
-
-        <div className="p-5 rounded-2xl mb-6"
-          style={{ background: "rgba(0,255,135,0.05)", border: "1px solid rgba(0,255,135,0.2)" }}>
-          <div className="text-xs text-white/30 mb-2">Номер вашего обращения</div>
-          <div className="font-mono text-2xl font-black tracking-widest mb-2" style={{ color: "#00ff87" }}>
-            {ticketId}
-          </div>
-          <div className="text-[11px] text-white/35 leading-relaxed">
-            Сохраните этот номер — по нему можно отследить статус на странице органов ECSU.
-          </div>
-        </div>
-
-        <div className="p-4 rounded-xl mb-6 text-left"
-          style={{ background: "rgba(168,85,247,0.05)", border: "1px solid rgba(168,85,247,0.15)" }}>
-          <div className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Что дальше</div>
-          <div className="space-y-1.5 text-[11px] text-white/40 leading-relaxed">
-            {selectedOrgan && <p>📋 Орган: <b className="text-white/60">{selectedOrgan.name}</b></p>}
-            <p>⏱️ Срок рассмотрения: <b className="text-white/60">{selectedOrgan?.response_days || 30} дней</b> (ФЗ №59)</p>
-            <p>📌 При бездействии свыше 30 дней — автоматическая эскалация (КоАП РФ ст. 5.59)</p>
-            <p>🔍 Проверить статус: страница «Органы ECSU» → «Статус обращения» → введите номер</p>
-          </div>
-        </div>
-
-        <div className="flex gap-3">
-          <button onClick={() => { setStep("list"); setTicketId(""); setForm({ organ_code: "", category: "", subject: "", description: "", location: "", evidence_desc: "", contact_email: "", contact_phone: "", is_anonymous: false }); }}
-            className="flex-1 py-3 rounded-xl font-semibold text-sm transition-all hover:scale-[1.01]"
-            style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            Новое обращение
+        <div className="space-y-3">
+          <button onClick={() => { setStep("list"); setForm({ organ_code: "", category: "", subject: "", description: "", location: "", evidence_desc: "", contact_email: "", contact_phone: "", is_anonymous: false }); }}
+            className="w-full py-3 rounded-xl font-bold text-sm transition-all hover:scale-[1.01]"
+            style={{ background: "rgba(0,255,135,0.1)", color: "#00ff87", border: "1px solid rgba(0,255,135,0.2)" }}>
+            Вернуться к органам
           </button>
           <button onClick={() => navigate("/egsu/start")}
-            className="flex-1 py-3 rounded-xl font-semibold text-sm transition-all hover:scale-[1.01]"
-            style={{ background: "rgba(0,255,135,0.1)", color: "#00ff87", border: "1px solid rgba(0,255,135,0.2)" }}>
-            На главную
+            className="w-full py-3 rounded-xl font-bold text-sm transition-all hover:scale-[1.01]"
+            style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            На главную ECSU
           </button>
         </div>
       </div>

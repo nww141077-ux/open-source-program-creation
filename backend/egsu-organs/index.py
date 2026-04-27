@@ -1,20 +1,25 @@
 """
-API органов ECSU — список органов, обращения граждан, лента инцидентов для органов,
-распоряжения владельца, пресс-релизы и публикация в открытые каналы.
+API органов EGSU — органы, обращения, инциденты, распоряжения, пресса, персонал, диалог, внешние контакты.
 
 GET  /                        — список органов
 POST /appeal                  — обращение гражданина
 GET  /appeal?ticket_id=X      — статус обращения
-GET  /incidents               — лента инцидентов для органов (+ предполагаемые)
-GET  /incidents?organ=CODE    — инциденты по органу
-GET  /orders?incident_id=X    — распоряжения владельца по инциденту
+GET  /incidents               — лента инцидентов
+GET  /orders                  — распоряжения владельца
 POST /orders                  — создать распоряжение
 GET  /notifications?organ=X   — уведомления органу
 POST /notifications/read      — отметить прочитанными
-GET  /actions?incident_id=X   — действия реагирования органов
+GET  /actions                 — действия реагирования
 GET  /press                   — пресс-релизы
-POST /press                   — создать пресс-релиз из инцидента
-POST /press/publish           — опубликовать пресс-релиз в открытые каналы
+POST /press                   — создать пресс-релиз
+POST /press/publish           — опубликовать в каналы
+GET  /members?organ=CODE      — персонал органа
+POST /members                 — добавить участника
+DELETE /members               — удалить участника
+GET  /dialog?organ=CODE       — чат органа (гражданская позиция)
+POST /dialog                  — отправить сообщение в чат
+GET  /external-contacts       — внешние контакты органов власти
+GET  /external-contacts?category=X — по категории
 """
 import json
 import os
@@ -337,6 +342,97 @@ def handler(event: dict, context) -> dict:
             'channels': channels,
             'message': f'Опубликовано в каналах: {", ".join(channels) if isinstance(channels, list) else channels}'
         })
+
+    # ── GET /members — персонал органа ──────────────────────────────────────
+    if method == 'GET' and '/members' in p:
+        organ = params.get('organ', '')
+        where = f"WHERE organ_code = {esc(organ)}" if organ else ""
+        cur.execute(f"""
+            SELECT * FROM {S}.egsu_organ_members
+            {where}
+            ORDER BY is_owner DESC, joined_at ASC
+        """)
+        members = rows_to_list(cur)
+        conn.close()
+        return ok({'members': members, 'total': len(members)})
+
+    # ── POST /members — добавить участника ───────────────────────────────────
+    if method == 'POST' and '/members' in p and 'DELETE' not in method:
+        organ_code = (body.get('organ_code') or '').strip()
+        full_name = (body.get('full_name') or '').strip()
+        role = (body.get('role') or 'Участник').strip()
+        position = (body.get('position') or '').strip() or None
+        if not organ_code or not full_name:
+            conn.close()
+            return err('organ_code и full_name обязательны')
+        cur.execute(
+            f"INSERT INTO {S}.egsu_organ_members (organ_code, full_name, role, position) "
+            f"VALUES ({esc(organ_code)},{esc(full_name)},{esc(role)},{esc(position)}) RETURNING id, created_at"
+        )
+        result = cur.fetchone()
+        conn.commit()
+        conn.close()
+        return ok({'id': result[0], 'created_at': str(result[1]), 'message': 'Участник добавлен'}, 201)
+
+    # ── DELETE /members — удалить участника ──────────────────────────────────
+    if method == 'DELETE' and '/members' in p:
+        member_id = body.get('id') or params.get('id')
+        if not member_id:
+            conn.close()
+            return err('id участника обязателен')
+        cur.execute(f"DELETE FROM {S}.egsu_organ_members WHERE id={int(member_id)} AND is_owner=FALSE")
+        conn.commit()
+        conn.close()
+        return ok({'message': 'Участник удалён'})
+
+    # ── GET /dialog — чат органа ─────────────────────────────────────────────
+    if method == 'GET' and '/dialog' in p:
+        organ = params.get('organ', '')
+        limit = min(int(params.get('limit', 100)), 500)
+        where = f"WHERE organ_code = {esc(organ)}" if organ else ""
+        cur.execute(f"""
+            SELECT * FROM {S}.egsu_organ_dialog
+            {where}
+            ORDER BY created_at ASC LIMIT {limit}
+        """)
+        messages = rows_to_list(cur)
+        conn.close()
+        return ok({'messages': messages, 'total': len(messages)})
+
+    # ── POST /dialog — отправить сообщение в чат ─────────────────────────────
+    if method == 'POST' and '/dialog' in p:
+        organ_code = (body.get('organ_code') or '').strip()
+        author_name = (body.get('author_name') or '').strip()
+        message = (body.get('message') or '').strip()
+        author_role = (body.get('author_role') or 'Участник').strip()
+        is_owner = bool(body.get('is_owner', False))
+        msg_type = body.get('msg_type', 'message')
+        if not organ_code or not author_name or not message:
+            conn.close()
+            return err('organ_code, author_name и message обязательны')
+        cur.execute(
+            f"INSERT INTO {S}.egsu_organ_dialog "
+            f"(organ_code, author_name, author_role, is_owner, message, msg_type) "
+            f"VALUES ({esc(organ_code)},{esc(author_name)},{esc(author_role)},"
+            f"{esc_bool(is_owner)},{esc(message)},{esc(msg_type)}) RETURNING id, created_at"
+        )
+        result = cur.fetchone()
+        conn.commit()
+        conn.close()
+        return ok({'id': result[0], 'created_at': str(result[1]), 'message': 'Сообщение отправлено'}, 201)
+
+    # ── GET /external-contacts — внешние контакты ────────────────────────────
+    if method == 'GET' and '/external-contacts' in p:
+        category = params.get('category', '')
+        where = f"WHERE is_active=TRUE AND category={esc(category)}" if category else "WHERE is_active=TRUE"
+        cur.execute(f"""
+            SELECT * FROM {S}.egsu_external_contacts
+            {where}
+            ORDER BY country, agency_name
+        """)
+        contacts = rows_to_list(cur)
+        conn.close()
+        return ok({'contacts': contacts, 'total': len(contacts)})
 
     conn.close()
     return err(f'Маршрут не найден: {method} {path}', 404)
