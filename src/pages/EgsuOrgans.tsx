@@ -130,6 +130,12 @@ export default function EgsuOrgans() {
   const [contactsLoading, setContactsLoading] = useState(false);
   const [contactFilter, setContactFilter] = useState("");
 
+  const [receptionModal, setReceptionModal] = useState(false);
+  const [receptionContact, setReceptionContact] = useState<ExternalContact|null>(null);
+  const [receptionForm, setReceptionForm] = useState({ subject: "", message_text: "" });
+  const [sendingReception, setSendingReception] = useState(false);
+  const [receptionLog, setReceptionLog] = useState<{id:number; agency_name:string; subject:string; created_at:string}[]>([]);
+
   const [form, setForm] = useState<AppealForm>({
     organ_code: "",
     category: "",
@@ -275,6 +281,32 @@ export default function EgsuOrgans() {
     } catch (_e) { /* ignore */ } finally { setSavingMember(false); }
   }
 
+  async function sendToReception() {
+    if (!receptionContact || !receptionForm.message_text || !openOrgan) return;
+    setSendingReception(true);
+    try {
+      const r = await fetch(`${ORGANS_API}/reception-forward`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organ_code: openOrgan.code,
+          external_contact_id: receptionContact.id,
+          agency_name: receptionContact.agency_name,
+          subject: receptionForm.subject,
+          message_text: receptionForm.message_text,
+          url_used: receptionContact.online_form_url || receptionContact.website,
+        })
+      });
+      const d = await r.json();
+      const parsed = typeof d === "string" ? JSON.parse(d) : d;
+      setReceptionModal(false);
+      setReceptionForm({ subject: "", message_text: "" });
+      setReceptionContact(null);
+      loadDialog(openOrgan.code);
+      alert(`✓ ${parsed.message || "Запрос направлен"}`);
+    } catch (_e) { /* ignore */ } finally { setSendingReception(false); }
+  }
+
   async function sendChatMessage() {
     if (!chatMsg.trim() || !openOrgan) return;
     setSendingChat(true);
@@ -310,7 +342,7 @@ export default function EgsuOrgans() {
   useEffect(() => {
     if (openOrgan) {
       if (organTab === "organ-members") loadMembers(openOrgan.code);
-      if (organTab === "organ-chat") loadDialog(openOrgan.code);
+      if (organTab === "organ-chat") { loadDialog(openOrgan.code); loadExternalContacts(); }
       if (organTab === "organ-contacts") loadExternalContacts();
     }
   }, [openOrgan, organTab]);
@@ -982,6 +1014,32 @@ export default function EgsuOrgans() {
                         <div className="text-white/25 text-sm text-center py-8">Начните диалог</div>
                       )}
                     </div>
+                    {/* Кнопка направить запрос в ведомство */}
+                    <div className="mb-3 shrink-0">
+                      <div className="text-white/30 text-xs mb-2 font-semibold uppercase tracking-wide">Направить запрос во внешнее ведомство</div>
+                      <div className="flex flex-wrap gap-2">
+                        {externalContacts.slice(0, 6).map(c => {
+                          const catColor: Record<string,string> = { law_enforcement: "#f59e0b", security: "#a855f7", defense: "#f43f5e", justice: "#3b82f6", international: "#06b6d4", intelligence: "#ec4899", rights: "#10b981", diplomacy: "#00ff87" };
+                          const color = catColor[c.category] || "#ffffff";
+                          return (
+                            <button key={c.id}
+                              onClick={() => { setReceptionContact(c); setReceptionModal(true); }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-105"
+                              style={{ background: `${color}10`, color, border: `1px solid ${color}25` }}>
+                              <Icon name="Send" size={10} />
+                              {c.agency_short || c.agency_name.slice(0, 12)}
+                            </button>
+                          );
+                        })}
+                        {externalContacts.length > 6 && (
+                          <button onClick={() => setOrganTab("organ-contacts")}
+                            className="px-3 py-1.5 rounded-xl text-xs transition-all"
+                            style={{ color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                            +{externalContacts.length - 6} ещё
+                          </button>
+                        )}
+                      </div>
+                    </div>
                     {/* Ввод */}
                     <div className="flex gap-2 shrink-0">
                       <input value={chatMsg} onChange={e => setChatMsg(e.target.value)}
@@ -1072,6 +1130,54 @@ export default function EgsuOrgans() {
                 )}
 
               </div>
+
+              {/* Модальное окно — отправить в интернет-приёмную */}
+              {receptionModal && receptionContact && (
+                <div className="absolute inset-0 z-10 flex items-end justify-center"
+                  style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}>
+                  <div className="w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto"
+                    style={{ background: "#0d1220", border: "1px solid rgba(0,255,135,0.15)" }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <div className="text-white font-bold text-sm">{receptionContact.agency_name}</div>
+                        <div className="text-white/40 text-xs mt-0.5">Направить официальный запрос</div>
+                      </div>
+                      <button onClick={() => setReceptionModal(false)} className="text-white/30 hover:text-white/70">
+                        <Icon name="X" size={18} />
+                      </button>
+                    </div>
+                    {receptionContact.reception_info && (
+                      <div className="mb-3 px-3 py-2 rounded-xl text-xs" style={{ background: "rgba(6,182,212,0.07)", color: "#06b6d4", border: "1px solid rgba(6,182,212,0.15)" }}>
+                        {receptionContact.reception_info}
+                      </div>
+                    )}
+                    <input value={receptionForm.subject} onChange={e => setReceptionForm(f => ({...f, subject: e.target.value}))}
+                      placeholder="Тема обращения"
+                      className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none mb-3"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                    <textarea value={receptionForm.message_text} onChange={e => setReceptionForm(f => ({...f, message_text: e.target.value}))}
+                      placeholder="Текст обращения, запроса или рекомендации от органов EGSU..."
+                      rows={6}
+                      className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none mb-3 resize-none"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                    <div className="flex gap-2">
+                      {receptionContact.online_form_url && (
+                        <a href={receptionContact.online_form_url} target="_blank" rel="noopener noreferrer"
+                          className="flex-1 py-2.5 rounded-xl text-xs font-bold text-center transition-all"
+                          style={{ background: "rgba(6,182,212,0.1)", color: "#06b6d4", border: "1px solid rgba(6,182,212,0.25)" }}>
+                          <Icon name="ExternalLink" size={12} className="inline mr-1" />
+                          Открыть приёмную
+                        </a>
+                      )}
+                      <button onClick={sendToReception} disabled={sendingReception || !receptionForm.message_text}
+                        className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-40"
+                        style={{ background: "rgba(0,255,135,0.12)", color: "#00ff87", border: "1px solid rgba(0,255,135,0.25)" }}>
+                        {sendingReception ? "Отправка..." : "Зарегистрировать запрос"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

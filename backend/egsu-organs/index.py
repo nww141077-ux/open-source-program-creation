@@ -434,5 +434,152 @@ def handler(event: dict, context) -> dict:
         conn.close()
         return ok({'contacts': contacts, 'total': len(contacts)})
 
+    # ── POST /reception-forward — запрос в интернет-приёмную ─────────────────
+    if method == 'POST' and '/reception-forward' in p:
+        organ_code = body.get('organ_code', '')
+        contact_id = body.get('external_contact_id')
+        agency_name = (body.get('agency_name') or '').strip()
+        subject = (body.get('subject') or '').strip()
+        message_text = (body.get('message_text') or '').strip()
+        url_used = body.get('url_used', '')
+        sender_name = body.get('sender_name', 'Николаев Владимир Владимирович')
+        if not message_text or not agency_name:
+            conn.close()
+            return err('agency_name и message_text обязательны')
+        cid = int(contact_id) if contact_id else 'NULL'
+        cur.execute(
+            f"INSERT INTO {S}.egsu_reception_log "
+            f"(organ_code, external_contact_id, agency_name, subject, message_text, sender_name, url_used) "
+            f"VALUES ({esc(organ_code)},{cid},{esc(agency_name)},{esc(subject)},{esc(message_text)},{esc(sender_name)},{esc(url_used)}) "
+            f"RETURNING id, created_at"
+        )
+        result = cur.fetchone()
+        conn.commit()
+        conn.close()
+        return ok({'id': result[0], 'created_at': str(result[1]), 'message': f'Запрос зарегистрирован и направлен в {agency_name}'}, 201)
+
+    # ── GET /reception-log — журнал отправок ─────────────────────────────────
+    if method == 'GET' and '/reception-log' in p:
+        organ = params.get('organ', '')
+        where = f"WHERE organ_code={esc(organ)}" if organ else ""
+        cur.execute(f"SELECT * FROM {S}.egsu_reception_log {where} ORDER BY created_at DESC LIMIT 100")
+        logs = rows_to_list(cur)
+        conn.close()
+        return ok({'logs': logs, 'total': len(logs)})
+
+    # ── GET /strategy — стратегические инициативы ─────────────────────────────
+    if method == 'GET' and '/strategy' in p and '/strategy-orders' not in p:
+        section = params.get('section', 'humanity')
+        cur.execute(f"""
+            SELECT * FROM {S}.egsu_strategy_items
+            WHERE section = {esc(section)}
+            ORDER BY sort_order, created_at
+        """)
+        items = rows_to_list(cur)
+        conn.close()
+        return ok({'items': items, 'total': len(items)})
+
+    # ── POST /strategy — создать инициативу ───────────────────────────────────
+    if method == 'POST' and '/strategy' in p and '/strategy-orders' not in p:
+        title = (body.get('title') or '').strip()
+        description = (body.get('description') or '').strip()
+        priority = body.get('priority', 'normal')
+        status_val = body.get('status', 'draft')
+        tags = body.get('tags', '')
+        section = body.get('section', 'humanity')
+        if not title:
+            conn.close()
+            return err('title обязателен')
+        cur.execute(
+            f"INSERT INTO {S}.egsu_strategy_items (section, title, description, priority, status, tags) "
+            f"VALUES ({esc(section)},{esc(title)},{esc(description)},{esc(priority)},{esc(status_val)},{esc(tags)}) "
+            f"RETURNING id, created_at"
+        )
+        result = cur.fetchone()
+        conn.commit()
+        conn.close()
+        return ok({'id': result[0], 'created_at': str(result[1]), 'message': 'Инициатива создана'}, 201)
+
+    # ── PUT /strategy — обновить инициативу ───────────────────────────────────
+    if method == 'PUT' and '/strategy' in p and '/strategy-orders' not in p:
+        item_id = body.get('id')
+        if not item_id:
+            conn.close()
+            return err('id обязателен')
+        updates = []
+        for field in ['title', 'description', 'priority', 'status', 'tags']:
+            if field in body:
+                updates.append(f"{field}={esc(body[field])}")
+        updates.append("updated_at=NOW()")
+        cur.execute(f"UPDATE {S}.egsu_strategy_items SET {', '.join(updates)} WHERE id={int(item_id)} RETURNING id, updated_at")
+        result = cur.fetchone()
+        conn.commit()
+        conn.close()
+        return ok({'id': result[0] if result else item_id, 'message': 'Инициатива обновлена'})
+
+    # ── GET /strategy-orders — распоряжения по стратегии ──────────────────────
+    if method == 'GET' and '/strategy-orders' in p:
+        item_id = params.get('item_id')
+        where = f"WHERE strategy_item_id={int(item_id)}" if item_id else ""
+        cur.execute(f"""
+            SELECT so.*, si.title as initiative_title
+            FROM {S}.egsu_strategy_orders so
+            LEFT JOIN {S}.egsu_strategy_items si ON si.id = so.strategy_item_id
+            {where}
+            ORDER BY so.created_at DESC
+        """)
+        orders = rows_to_list(cur)
+        conn.close()
+        return ok({'orders': orders, 'total': len(orders)})
+
+    # ── POST /strategy-orders — создать распоряжение по инициативе ────────────
+    if method == 'POST' and '/strategy-orders' in p:
+        title = (body.get('title') or '').strip()
+        order_text = (body.get('order_text') or '').strip()
+        target_organ = (body.get('target_organ') or '').strip()
+        target_external = body.get('target_external', '')
+        priority = body.get('priority', 'normal')
+        item_id = body.get('strategy_item_id')
+        if not order_text or not target_organ:
+            conn.close()
+            return err('order_text и target_organ обязательны')
+        sid = int(item_id) if item_id else 'NULL'
+        cur.execute(
+            f"INSERT INTO {S}.egsu_strategy_orders "
+            f"(strategy_item_id, title, order_text, target_organ, target_external, priority) "
+            f"VALUES ({sid},{esc(title)},{esc(order_text)},{esc(target_organ)},{esc(target_external)},{esc(priority)}) "
+            f"RETURNING id, created_at"
+        )
+        result = cur.fetchone()
+        # Также добавляем в общий журнал органа
+        cur.execute(
+            f"INSERT INTO {S}.egsu_owner_orders "
+            f"(incident_id, order_text, target_organ, priority) "
+            f"SELECT i.id, {esc('[Стратегия] ' + order_text)}, {esc(target_organ)}, {esc(priority)} "
+            f"FROM {S}.egsu_incidents i WHERE i.responsible_organ={esc(target_organ)} LIMIT 1"
+        )
+        conn.commit()
+        conn.close()
+        return ok({'id': result[0], 'created_at': str(result[1]), 'message': f'Распоряжение направлено в орган {target_organ}'}, 201)
+
+    # ── PUT /strategy-orders — изменить статус распоряжения ───────────────────
+    if method == 'PUT' and '/strategy-orders' in p:
+        order_id = body.get('id')
+        new_status = body.get('status', 'approved')
+        forwarded = body.get('forwarded_to', '')
+        response = body.get('organ_response', '')
+        if not order_id:
+            conn.close()
+            return err('id обязателен')
+        cur.execute(
+            f"UPDATE {S}.egsu_strategy_orders SET status={esc(new_status)}, "
+            f"forwarded_to={esc(forwarded)}, organ_response={esc(response)}, updated_at=NOW() "
+            f"WHERE id={int(order_id)} RETURNING id, status"
+        )
+        result = cur.fetchone()
+        conn.commit()
+        conn.close()
+        return ok({'id': result[0] if result else order_id, 'status': result[1] if result else new_status, 'message': 'Статус обновлён'})
+
     conn.close()
     return err(f'Маршрут не найден: {method} {path}', 404)
