@@ -12,15 +12,19 @@ export default function Index() {
       {/* Logo */}
       <div className="flex flex-col items-center gap-4 mb-10">
         <div
-          className="w-20 h-20 rounded-3xl flex items-center justify-center shadow-2xl"
-          style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}
+          className="w-20 h-20 rounded-3xl overflow-hidden shadow-2xl"
+          style={{ border: "2px solid rgba(99,102,241,0.4)" }}
         >
-          <Icon name="BrainCircuit" size={40} className="text-white" />
+          <img
+            src="https://cdn.poehali.dev/projects/61a665c2-cff9-41a1-9a78-364c960d2ecc/files/b6febfaf-40c2-4548-8fdd-40a5dead615d.jpg"
+            alt="EGSU"
+            className="w-full h-full object-cover"
+          />
         </div>
         <div className="text-center">
-          <div className="text-3xl font-bold text-white tracking-tight">ECSU</div>
+          <div className="text-3xl font-bold text-white tracking-tight">EGSU</div>
           <div className="text-sm text-indigo-400/70 mt-1">
-            Единая Центральная Система Управления · 2.0
+            Единая государственная система управления · 2.0
           </div>
         </div>
       </div>
