@@ -1,11 +1,11 @@
 {
   "tests": [
-    {
-      "name": "GET / — список активных органов ECSU",
-      "method": "GET",
-      "path": "/",
-      "expectedStatus": 200,
-      "bodyMatcher": "partial"
-    }
+    {"name": "Список органов", "method": "GET", "path": "/", "expectedStatus": 200, "bodyMatcher": "partial"},
+    {"name": "Лента инцидентов", "method": "GET", "path": "/incidents", "expectedStatus": 200, "bodyMatcher": "partial"},
+    {"name": "Предполагаемые инциденты", "method": "GET", "path": "/incidents?type=suspected", "expectedStatus": 200, "bodyMatcher": "partial"},
+    {"name": "Список распоряжений", "method": "GET", "path": "/orders", "expectedStatus": 200, "bodyMatcher": "partial"},
+    {"name": "Уведомления органу", "method": "GET", "path": "/notifications?organ=OGR-SECURITY", "expectedStatus": 200, "bodyMatcher": "partial"},
+    {"name": "Действия реагирования", "method": "GET", "path": "/actions", "expectedStatus": 200, "bodyMatcher": "partial"},
+    {"name": "Список пресс-релизов", "method": "GET", "path": "/press", "expectedStatus": 200, "bodyMatcher": "partial"}
   ]
 }

@@ -34,6 +34,10 @@ interface Organ {
   sort_order: number;
 }
 
+interface Incident { id: number; incident_code: string; type: string; title: string; description: string; country: string; severity: string; status: string; verification_score: number; responsible_organ: string; ai_confidence: number; created_at: string; actions_count: number; orders_count: number; }
+interface OwnerOrder { id: number; incident_code: string; order_text: string; target_organ: string; priority: string; status: string; created_at: string; incident_title: string; }
+interface PressRelease { id: number; incident_code: string; title: string; content: string; channel: string; status: string; published_at: string; created_at: string; incident_title: string; incident_type: string; severity: string; }
+
 type AppealStep = "list" | "form" | "sent";
 
 interface AppealForm {
@@ -90,6 +94,23 @@ export default function EgsuOrgans() {
   const [trackLoading, setTrackLoading] = useState(false);
   const [showTrack, setShowTrack] = useState(false);
 
+  const [tab, setTab] = useState<"organs"|"incidents"|"orders"|"press">("organs");
+
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [incLoading, setIncLoading] = useState(false);
+  const [incFilter, setIncFilter] = useState<"all"|"suspected"|"verified">("all");
+  const [orders, setOrders] = useState<OwnerOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [pressReleases, setPressReleases] = useState<PressRelease[]>([]);
+  const [pressLoading, setPressLoading] = useState(false);
+  const [pressForm, setPressForm] = useState({ incident_id: "", title: "", content: "", channel: "public" });
+  const [selectedIncident, setSelectedIncident] = useState<Incident|null>(null);
+  const [orderForm, setOrderForm] = useState({ order_text: "", target_organ: "", priority: "normal" });
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [savingPress, setSavingPress] = useState(false);
+  const [publishingPress, setPublishingPress] = useState<number|null>(null);
+  const [pressMsg, setPressMsg] = useState("");
+
   const [form, setForm] = useState<AppealForm>({
     organ_code: "",
     category: "",
@@ -113,6 +134,94 @@ export default function EgsuOrgans() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  async function loadIncidents() {
+    setIncLoading(true);
+    try {
+      const url = incFilter === "all" ? `${ORGANS_API}/incidents` : `${ORGANS_API}/incidents?type=${incFilter}`;
+      const r = await fetch(url);
+      const d = await r.json();
+      const p = typeof d === "string" ? JSON.parse(d) : d;
+      setIncidents(p.incidents || []);
+    } catch (_e) { /* ignore */ } finally { setIncLoading(false); }
+  }
+
+  async function loadOrders() {
+    setOrdersLoading(true);
+    try {
+      const r = await fetch(`${ORGANS_API}/orders`);
+      const d = await r.json();
+      const p = typeof d === "string" ? JSON.parse(d) : d;
+      setOrders(p.orders || []);
+    } catch (_e) { /* ignore */ } finally { setOrdersLoading(false); }
+  }
+
+  async function loadPress() {
+    setPressLoading(true);
+    try {
+      const r = await fetch(`${ORGANS_API}/press`);
+      const d = await r.json();
+      const p = typeof d === "string" ? JSON.parse(d) : d;
+      setPressReleases(p.releases || []);
+    } catch (_e) { /* ignore */ } finally { setPressLoading(false); }
+  }
+
+  async function saveOrder() {
+    if (!orderForm.order_text || !selectedIncident) return;
+    setSavingOrder(true);
+    try {
+      await fetch(`${ORGANS_API}/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ incident_id: selectedIncident.id, order_text: orderForm.order_text, target_organ: orderForm.target_organ, priority: orderForm.priority })
+      });
+      setOrderForm({ order_text: "", target_organ: "", priority: "normal" });
+      setSelectedIncident(null);
+      loadOrders();
+    } catch (_e) { /* ignore */ } finally { setSavingOrder(false); }
+  }
+
+  async function savePress() {
+    if (!pressForm.title || !pressForm.content) return;
+    setSavingPress(true);
+    try {
+      await fetch(`${ORGANS_API}/press`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pressForm)
+      });
+      setPressForm({ incident_id: "", title: "", content: "", channel: "public" });
+      loadPress();
+      setPressMsg("Пресс-релиз создан");
+      setTimeout(() => setPressMsg(""), 3000);
+    } catch (_e) { /* ignore */ } finally { setSavingPress(false); }
+  }
+
+  async function publishPress(id: number, channels: string[]) {
+    setPublishingPress(id);
+    try {
+      await fetch(`${ORGANS_API}/press/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ press_id: id, channels })
+      });
+      loadPress();
+      setPressMsg(`Опубликовано в ${channels.length} каналах`);
+      setTimeout(() => setPressMsg(""), 4000);
+    } catch (_e) { /* ignore */ } finally { setPublishingPress(null); }
+  }
+
+   
+  useEffect(() => {
+    if (tab === "incidents") loadIncidents();
+    if (tab === "orders") loadOrders();
+    if (tab === "press") loadPress();
+  }, [tab]);
+
+   
+  useEffect(() => {
+    if (tab === "incidents") loadIncidents();
+  }, [incFilter]);
 
   function openForm(organ: Organ) {
     setSelectedOrgan(organ);
@@ -218,6 +327,27 @@ export default function EgsuOrgans() {
           </p>
         </div>
 
+        {/* Tab Nav */}
+        <div className="flex gap-2 flex-wrap mb-6 mt-2">
+          {[
+            { id: "organs", label: "Органы", icon: "Building2" },
+            { id: "incidents", label: "Инциденты", icon: "AlertTriangle" },
+            { id: "orders", label: "Мои распоряжения", icon: "ClipboardList" },
+            { id: "press", label: "Пресса", icon: "Newspaper" },
+          ].map(t => (
+            <button key={t.id} onClick={() => setTab(t.id as typeof tab)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-105"
+              style={{
+                background: tab === t.id ? "rgba(0,255,135,0.15)" : "rgba(255,255,255,0.04)",
+                color: tab === t.id ? "#00ff87" : "rgba(255,255,255,0.4)",
+                border: `1px solid ${tab === t.id ? "rgba(0,255,135,0.35)" : "rgba(255,255,255,0.08)"}`,
+              }}>
+              <Icon name={t.icon as "Building2"} size={14} />
+              {t.label}
+            </button>
+          ))}
+        </div>
+
         {/* Трекинг обращения */}
         {showTrack && (
           <div className="mb-6 p-5 rounded-2xl"
@@ -263,104 +393,327 @@ export default function EgsuOrgans() {
           </div>
         )}
 
-        {/* Правовая база */}
-        <div className="mb-6 p-4 rounded-2xl grid grid-cols-2 md:grid-cols-4 gap-3"
-          style={{ background: "rgba(0,255,135,0.03)", border: "1px solid rgba(0,255,135,0.08)" }}>
-          {[
-            { icon: "FileText", label: "ФЗ №59", note: "30 дней на ответ" },
-            { icon: "Scale",    label: "Конст. РФ ст. 33", note: "Право на обращение" },
-            { icon: "Shield",   label: "ФЗ №273", note: "Антикоррупция" },
-            { icon: "Lock",     label: "Анонимность", note: "По запросу заявителя" },
-          ].map(item => (
-            <div key={item.label} className="flex items-center gap-2">
-              <Icon name={item.icon as "Zap"} size={14} style={{ color: "#00ff87" }} />
-              <div>
-                <div className="text-xs font-bold text-white/70">{item.label}</div>
-                <div className="text-[10px] text-white/30">{item.note}</div>
-              </div>
+        {tab === "organs" && (
+          <>
+            {/* Правовая база */}
+            <div className="mb-6 p-4 rounded-2xl grid grid-cols-2 md:grid-cols-4 gap-3"
+              style={{ background: "rgba(0,255,135,0.03)", border: "1px solid rgba(0,255,135,0.08)" }}>
+              {[
+                { icon: "FileText", label: "ФЗ №59", note: "30 дней на ответ" },
+                { icon: "Scale",    label: "Конст. РФ ст. 33", note: "Право на обращение" },
+                { icon: "Shield",   label: "ФЗ №273", note: "Антикоррупция" },
+                { icon: "Lock",     label: "Анонимность", note: "По запросу заявителя" },
+              ].map(item => (
+                <div key={item.label} className="flex items-center gap-2">
+                  <Icon name={item.icon as "Zap"} size={14} style={{ color: "#00ff87" }} />
+                  <div>
+                    <div className="text-xs font-bold text-white/70">{item.label}</div>
+                    <div className="text-[10px] text-white/30">{item.note}</div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Фильтр по категориям */}
-        <div className="flex items-center gap-2 mb-5 flex-wrap">
-          {categories.map(cat => (
-            <button key={cat} onClick={() => setFilterCat(cat)}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
-              style={{
-                background: filterCat === cat ? "rgba(0,255,135,0.12)" : "rgba(255,255,255,0.03)",
-                border: `1px solid ${filterCat === cat ? "rgba(0,255,135,0.3)" : "rgba(255,255,255,0.06)"}`,
-                color: filterCat === cat ? "#00ff87" : "rgba(255,255,255,0.4)",
-              }}>
-              {cat === "all" ? "Все органы" : CATEGORY_LABELS[cat] || cat}
-            </button>
-          ))}
-        </div>
-
-        {/* Список органов */}
-        {loading ? (
-          <div className="text-center py-16 text-white/30 text-sm">Загрузка органов...</div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredOrgans.map(organ => (
-              <div key={organ.id}
-                className="p-5 rounded-2xl transition-all hover:scale-[1.01] group"
-                style={{ background: "rgba(255,255,255,0.02)", border: `1px solid rgba(255,255,255,0.06)` }}>
-
-                {/* Шапка */}
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: `${organ.color}15` }}>
-                    <Icon name={organ.icon as "Zap"} size={20} style={{ color: organ.color }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                      <span className="text-sm font-black text-white/90">{organ.name}</span>
-                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded"
-                        style={{ background: `${organ.color}12`, color: organ.color }}>
-                        {organ.code}
-                      </span>
-                    </div>
-                    <div className="text-[10px] text-white/30">{organ.full_name}</div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <div className="text-[9px] text-white/25">Срок ответа</div>
-                    <div className="text-xs font-black" style={{ color: organ.response_days <= 7 ? "#f43f5e" : organ.response_days <= 15 ? "#f59e0b" : "#00ff87" }}>
-                      {organ.response_days} дн.
-                    </div>
-                  </div>
-                </div>
-
-                {/* Описание */}
-                <p className="text-xs text-white/45 leading-relaxed mb-3">{organ.description}</p>
-
-                {/* Компетенция */}
-                <div className="px-3 py-2 rounded-lg mb-4"
-                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  <div className="text-[9px] text-white/25 uppercase tracking-wider mb-0.5">Компетенция</div>
-                  <div className="text-[11px] text-white/50 font-mono leading-relaxed">{organ.competence}</div>
-                </div>
-
-                {/* Кнопка */}
-                <button onClick={() => openForm(organ)}
-                  className="w-full py-3 rounded-xl text-xs font-black tracking-wider transition-all hover:scale-[1.02] active:scale-95"
-                  style={{ background: `linear-gradient(135deg, ${organ.color}25, ${organ.color}10)`, color: organ.color, border: `1px solid ${organ.color}35` }}>
-                  Подать обращение →
+            {/* Фильтр по категориям */}
+            <div className="flex items-center gap-2 mb-5 flex-wrap">
+              {categories.map(cat => (
+                <button key={cat} onClick={() => setFilterCat(cat)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                  style={{
+                    background: filterCat === cat ? "rgba(0,255,135,0.12)" : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${filterCat === cat ? "rgba(0,255,135,0.3)" : "rgba(255,255,255,0.06)"}`,
+                    color: filterCat === cat ? "#00ff87" : "rgba(255,255,255,0.4)",
+                  }}>
+                  {cat === "all" ? "Все органы" : CATEGORY_LABELS[cat] || cat}
                 </button>
+              ))}
+            </div>
+
+            {/* Список органов */}
+            {loading ? (
+              <div className="text-center py-16 text-white/30 text-sm">Загрузка органов...</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredOrgans.map(organ => (
+                  <div key={organ.id}
+                    className="p-5 rounded-2xl transition-all hover:scale-[1.01] group"
+                    style={{ background: "rgba(255,255,255,0.02)", border: `1px solid rgba(255,255,255,0.06)` }}>
+
+                    {/* Шапка */}
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: `${organ.color}15` }}>
+                        <Icon name={organ.icon as "Zap"} size={20} style={{ color: organ.color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                          <span className="text-sm font-black text-white/90">{organ.name}</span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+                            style={{ background: `${organ.color}12`, color: organ.color }}>
+                            {organ.code}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-white/30">{organ.full_name}</div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-[9px] text-white/25">Срок ответа</div>
+                        <div className="text-xs font-black" style={{ color: organ.response_days <= 7 ? "#f43f5e" : organ.response_days <= 15 ? "#f59e0b" : "#00ff87" }}>
+                          {organ.response_days} дн.
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Описание */}
+                    <p className="text-xs text-white/45 leading-relaxed mb-3">{organ.description}</p>
+
+                    {/* Компетенция */}
+                    <div className="px-3 py-2 rounded-lg mb-4"
+                      style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                      <div className="text-[9px] text-white/25 uppercase tracking-wider mb-0.5">Компетенция</div>
+                      <div className="text-[11px] text-white/50 font-mono leading-relaxed">{organ.competence}</div>
+                    </div>
+
+                    {/* Кнопка */}
+                    <button onClick={() => openForm(organ)}
+                      className="w-full py-3 rounded-xl text-xs font-black tracking-wider transition-all hover:scale-[1.02] active:scale-95"
+                      style={{ background: `linear-gradient(135deg, ${organ.color}25, ${organ.color}10)`, color: organ.color, border: `1px solid ${organ.color}35` }}>
+                      Подать обращение →
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
+
+            {/* Дисклеймер */}
+            <div className="mt-8 p-4 rounded-xl text-[11px] text-white/25 leading-relaxed"
+              style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.04)" }}>
+              Органы ECSU 2.0 являются структурными подразделениями гражданской инициативы «ECSU 2.0» (Николаев В.В.).
+              Система не является государственным органом. Все поступающие обращения регистрируются, анализируются
+              ИИ-системой и перенаправляются в профильные государственные ведомства РФ и международные органы
+              в соответствии с ФЗ №59 и иными нормами действующего законодательства.
+              Для конфиденциальных обращений используйте <button onClick={() => navigate("/egsu/vip")} className="underline text-white/40 hover:text-white/60">ВИП-анонимный канал</button>.
+            </div>
+          </>
+        )}
+
+        {tab === "incidents" && (
+          <div>
+            <div className="flex gap-2 mb-5 flex-wrap">
+              {[["all","Все"],["suspected","Предполагаемые"],["verified","Верифицированные"]].map(([v,l]) => (
+                <button key={v} onClick={() => setIncFilter(v as typeof incFilter)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={{
+                    background: incFilter === v ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.04)",
+                    color: incFilter === v ? "#f59e0b" : "rgba(255,255,255,0.4)",
+                    border: `1px solid ${incFilter === v ? "rgba(245,158,11,0.35)" : "rgba(255,255,255,0.08)"}`,
+                  }}>{l}</button>
+              ))}
+            </div>
+            {incLoading && <div className="text-white/30 text-sm py-8 text-center">Загрузка...</div>}
+            <div className="space-y-3">
+              {incidents.map(inc => {
+                const sevColor = inc.severity === "critical" ? "#f43f5e" : inc.severity === "high" ? "#f59e0b" : inc.severity === "medium" ? "#a855f7" : "#3b82f6";
+                const stBg = inc.status === "verified" ? "rgba(0,255,135,0.1)" : inc.status === "pending_verification" ? "rgba(245,158,11,0.1)" : "rgba(59,130,246,0.1)";
+                const stColor = inc.status === "verified" ? "#00ff87" : inc.status === "pending_verification" ? "#f59e0b" : "#3b82f6";
+                const stLabel = inc.status === "verified" ? "Верифицирован" : inc.status === "pending_verification" ? "На верификации" : "Новый";
+                return (
+                  <div key={inc.id} className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid rgba(255,255,255,0.07)` }}>
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="font-mono text-xs font-bold" style={{ color: "#00ff87" }}>{inc.incident_code}</span>
+                          <span className="px-2 py-0.5 rounded text-xs font-bold" style={{ background: stBg, color: stColor }}>{stLabel}</span>
+                          <span className="px-2 py-0.5 rounded text-xs font-bold" style={{ background: `${sevColor}20`, color: sevColor }}>{inc.severity?.toUpperCase()}</span>
+                        </div>
+                        <div className="font-semibold text-white text-sm">{inc.title}</div>
+                        <div className="text-white/40 text-xs mt-1">{inc.country} · {inc.responsible_organ || "Без органа"}</div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-white/25 text-xs">{new Date(inc.created_at).toLocaleDateString("ru-RU")}</div>
+                        <div className="text-xs mt-1" style={{ color: "#a855f7" }}>AI: {inc.ai_confidence}%</div>
+                      </div>
+                    </div>
+                    {inc.description && <div className="text-white/35 text-xs mb-3 line-clamp-2">{inc.description}</div>}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-white/25">Действий: {inc.actions_count}</span>
+                      <span className="text-xs text-white/25">·</span>
+                      <span className="text-xs text-white/25">Распоряжений: {inc.orders_count}</span>
+                      <button onClick={() => { setSelectedIncident(inc); setTab("orders"); }}
+                        className="ml-auto px-3 py-1 rounded-lg text-xs font-bold transition-all hover:scale-105"
+                        style={{ background: "rgba(168,85,247,0.12)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.2)" }}>
+                        <Icon name="ClipboardList" size={11} className="inline mr-1" />
+                        Выдать распоряжение
+                      </button>
+                      <button onClick={() => { setPressForm(f => ({...f, incident_id: String(inc.id), title: `Официальное заявление по инциденту ${inc.incident_code}`, content: `По инциденту ${inc.incident_code}: ${inc.title}.\n\n${inc.description || ""}\n\nСтрана: ${inc.country}. Орган: ${inc.responsible_organ || "EGSU"}.`})); setTab("press"); }}
+                        className="px-3 py-1 rounded-lg text-xs font-bold transition-all hover:scale-105"
+                        style={{ background: "rgba(6,182,212,0.12)", color: "#06b6d4", border: "1px solid rgba(6,182,212,0.2)" }}>
+                        <Icon name="Send" size={11} className="inline mr-1" />
+                        В прессу
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              {!incLoading && incidents.length === 0 && (
+                <div className="text-center py-12 text-white/25 text-sm">Инциденты не найдены</div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Дисклеймер */}
-        <div className="mt-8 p-4 rounded-xl text-[11px] text-white/25 leading-relaxed"
-          style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.04)" }}>
-          Органы ECSU 2.0 являются структурными подразделениями гражданской инициативы «ECSU 2.0» (Николаев В.В.).
-          Система не является государственным органом. Все поступающие обращения регистрируются, анализируются
-          ИИ-системой и перенаправляются в профильные государственные ведомства РФ и международные органы
-          в соответствии с ФЗ №59 и иными нормами действующего законодательства.
-          Для конфиденциальных обращений используйте <button onClick={() => navigate("/egsu/vip")} className="underline text-white/40 hover:text-white/60">ВИП-анонимный канал</button>.
-        </div>
+        {tab === "orders" && (
+          <div>
+            {selectedIncident && (
+              <div className="mb-6 p-5 rounded-2xl" style={{ background: "rgba(168,85,247,0.07)", border: "2px solid rgba(168,85,247,0.25)" }}>
+                <div className="font-bold text-white mb-3 flex items-center gap-2">
+                  <Icon name="ClipboardList" size={16} style={{ color: "#a855f7" }} />
+                  Новое распоряжение по: <span style={{ color: "#a855f7" }}>{selectedIncident.incident_code}</span>
+                </div>
+                <div className="text-white/50 text-xs mb-3">{selectedIncident.title}</div>
+                <textarea value={orderForm.order_text} onChange={e => setOrderForm(f => ({...f, order_text: e.target.value}))}
+                  placeholder="Текст распоряжения..."
+                  rows={3}
+                  className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none mb-3 resize-none"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(168,85,247,0.2)" }} />
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <input value={orderForm.target_organ} onChange={e => setOrderForm(f => ({...f, target_organ: e.target.value}))}
+                    placeholder="Орган (напр. OGR-SECURITY)"
+                    className="px-3 py-2 rounded-xl text-white text-sm outline-none"
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                  <select value={orderForm.priority} onChange={e => setOrderForm(f => ({...f, priority: e.target.value}))}
+                    className="px-3 py-2 rounded-xl text-white text-sm outline-none"
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                    <option value="normal" style={{ background: "#0d1220" }}>Обычный</option>
+                    <option value="high" style={{ background: "#0d1220" }}>Высокий</option>
+                    <option value="critical" style={{ background: "#0d1220" }}>Критический</option>
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={saveOrder} disabled={savingOrder || !orderForm.order_text}
+                    className="px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-105 disabled:opacity-40"
+                    style={{ background: "rgba(168,85,247,0.15)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.3)" }}>
+                    {savingOrder ? "Сохранение..." : "Выдать распоряжение"}
+                  </button>
+                  <button onClick={() => setSelectedIncident(null)} className="px-4 py-2 rounded-xl text-sm text-white/40 hover:text-white/60 transition-colors">Отмена</button>
+                </div>
+              </div>
+            )}
+            {ordersLoading && <div className="text-white/30 text-sm py-8 text-center">Загрузка...</div>}
+            <div className="space-y-3">
+              {orders.map(o => {
+                const pColor = o.priority === "critical" ? "#f43f5e" : o.priority === "high" ? "#f59e0b" : "#a855f7";
+                return (
+                  <div key={o.id} className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(168,85,247,0.12)" }}>
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="font-mono text-xs font-bold" style={{ color: "#a855f7" }}>{o.incident_code || "—"}</span>
+                      <span className="px-2 py-0.5 rounded text-xs font-bold" style={{ background: `${pColor}20`, color: pColor }}>{o.priority?.toUpperCase()}</span>
+                      <span className="text-xs text-white/25 ml-auto">{new Date(o.created_at).toLocaleDateString("ru-RU")}</span>
+                    </div>
+                    {o.incident_title && <div className="text-white/40 text-xs mb-1.5">{o.incident_title}</div>}
+                    <div className="text-white text-sm">{o.order_text}</div>
+                    {o.target_organ && <div className="text-white/30 text-xs mt-1.5">→ {o.target_organ}</div>}
+                  </div>
+                );
+              })}
+              {!ordersLoading && orders.length === 0 && <div className="text-center py-12 text-white/25 text-sm">Распоряжений пока нет</div>}
+            </div>
+          </div>
+        )}
+
+        {tab === "press" && (
+          <div>
+            {pressMsg && (
+              <div className="mb-4 p-3 rounded-xl text-sm font-bold text-center" style={{ background: "rgba(6,182,212,0.12)", color: "#06b6d4", border: "1px solid rgba(6,182,212,0.25)" }}>{pressMsg}</div>
+            )}
+            {/* Форма создания пресс-релиза */}
+            <div className="mb-6 p-5 rounded-2xl" style={{ background: "rgba(6,182,212,0.06)", border: "2px solid rgba(6,182,212,0.2)" }}>
+              <div className="font-bold text-white mb-4 flex items-center gap-2">
+                <Icon name="Newspaper" size={16} style={{ color: "#06b6d4" }} />
+                Новый пресс-релиз
+              </div>
+              <input value={pressForm.title} onChange={e => setPressForm(f => ({...f, title: e.target.value}))}
+                placeholder="Заголовок пресс-релиза..."
+                className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none mb-3"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(6,182,212,0.2)" }} />
+              <textarea value={pressForm.content} onChange={e => setPressForm(f => ({...f, content: e.target.value}))}
+                placeholder="Текст официального заявления..."
+                rows={4}
+                className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none mb-3 resize-none"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(6,182,212,0.2)" }} />
+              <div className="flex gap-3 mb-3">
+                <input value={pressForm.incident_id} onChange={e => setPressForm(f => ({...f, incident_id: e.target.value}))}
+                  placeholder="ID инцидента (необязательно)"
+                  className="flex-1 px-3 py-2 rounded-xl text-white text-sm outline-none"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                <select value={pressForm.channel} onChange={e => setPressForm(f => ({...f, channel: e.target.value}))}
+                  className="flex-1 px-3 py-2 rounded-xl text-white text-sm outline-none"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                  <option value="public" style={{ background: "#0d1220" }}>Публичный канал</option>
+                  <option value="official" style={{ background: "#0d1220" }}>Официальный сайт</option>
+                  <option value="telegram" style={{ background: "#0d1220" }}>Telegram-канал</option>
+                  <option value="media" style={{ background: "#0d1220" }}>Международные СМИ</option>
+                </select>
+              </div>
+              <button onClick={savePress} disabled={savingPress || !pressForm.title || !pressForm.content}
+                className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 disabled:opacity-40"
+                style={{ background: "rgba(6,182,212,0.15)", color: "#06b6d4", border: "1px solid rgba(6,182,212,0.3)" }}>
+                {savingPress ? "Создание..." : "Создать пресс-релиз"}
+              </button>
+            </div>
+
+            {/* Список пресс-релизов */}
+            {pressLoading && <div className="text-white/30 text-sm py-8 text-center">Загрузка...</div>}
+            <div className="space-y-3">
+              {pressReleases.map(pr => (
+                <div key={pr.id} className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${pr.status === "published" ? "rgba(0,255,135,0.15)" : "rgba(6,182,212,0.12)"}` }}>
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        {pr.incident_code && <span className="font-mono text-xs font-bold" style={{ color: "#06b6d4" }}>{pr.incident_code}</span>}
+                        <span className="px-2 py-0.5 rounded text-xs font-bold" style={{ background: pr.status === "published" ? "rgba(0,255,135,0.12)" : "rgba(245,158,11,0.12)", color: pr.status === "published" ? "#00ff87" : "#f59e0b" }}>
+                          {pr.status === "published" ? "Опубликован" : "Черновик"}
+                        </span>
+                      </div>
+                      <div className="font-semibold text-white text-sm">{pr.title}</div>
+                      {pr.incident_title && <div className="text-white/35 text-xs mt-0.5">{pr.incident_title}</div>}
+                      <div className="text-white/25 text-xs mt-1 line-clamp-2">{pr.content}</div>
+                    </div>
+                    <div className="text-right shrink-0 text-xs text-white/25">
+                      {new Date(pr.created_at).toLocaleDateString("ru-RU")}
+                      {pr.published_at && <div style={{ color: "#00ff87" }}>Опубл.: {new Date(pr.published_at).toLocaleDateString("ru-RU")}</div>}
+                    </div>
+                  </div>
+                  {pr.status !== "published" && (
+                    <div className="flex gap-2 flex-wrap mt-3">
+                      {["Официальный сайт EGSU","Telegram-канал EGSU","Пресс-служба EGSU","Международные СМИ"].map(ch => (
+                        <button key={ch} onClick={() => publishPress(pr.id, [ch])} disabled={publishingPress === pr.id}
+                          className="px-3 py-1 rounded-lg text-xs font-bold transition-all hover:scale-105 disabled:opacity-40"
+                          style={{ background: "rgba(0,255,135,0.08)", color: "#00ff87", border: "1px solid rgba(0,255,135,0.2)" }}>
+                          <Icon name="Send" size={11} className="inline mr-1" />
+                          {ch}
+                        </button>
+                      ))}
+                      <button onClick={() => publishPress(pr.id, ["Официальный сайт EGSU","Telegram-канал EGSU","Пресс-служба EGSU","Международные СМИ"])} disabled={publishingPress === pr.id}
+                        className="px-3 py-1 rounded-lg text-xs font-bold transition-all hover:scale-105 disabled:opacity-40"
+                        style={{ background: "rgba(0,255,135,0.15)", color: "#00ff87", border: "1px solid rgba(0,255,135,0.35)" }}>
+                        <Icon name="Radio" size={11} className="inline mr-1" />
+                        Все каналы
+                      </button>
+                    </div>
+                  )}
+                  {pr.status === "published" && (
+                    <div className="mt-2 text-xs" style={{ color: "#00ff87" }}>
+                      <Icon name="CheckCircle" size={12} className="inline mr-1" />
+                      Опубликовано в: {pr.channel}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {!pressLoading && pressReleases.length === 0 && <div className="text-center py-12 text-white/25 text-sm">Пресс-релизов пока нет</div>}
+            </div>
+          </div>
+        )}
+
       </main>
 
       <footer className="text-center py-4 text-[10px] text-white/15"
