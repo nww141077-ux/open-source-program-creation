@@ -530,6 +530,73 @@ def search_legal_db(user_text: str) -> str:
         return ""
 
 
+# ── Чтение диалогов органов из БД ─────────────────────────────────────────────
+
+def load_organ_dialog(organ_code: str = None, limit: int = 20) -> str:
+    """Загружает последние сообщения из диалогов органов EGSU для контекста ИИ."""
+    try:
+        conn = psycopg2.connect(os.environ["DATABASE_URL"])
+        cur = conn.cursor()
+        if organ_code:
+            cur.execute(
+                f"SELECT organ_code, author_name, author_role, message, msg_type, created_at "
+                f"FROM {S}.egsu_organ_dialog WHERE organ_code = %s "
+                f"ORDER BY created_at DESC LIMIT %s",
+                (organ_code, limit)
+            )
+        else:
+            cur.execute(
+                f"SELECT organ_code, author_name, author_role, message, msg_type, created_at "
+                f"FROM {S}.egsu_organ_dialog "
+                f"ORDER BY created_at DESC LIMIT %s",
+                (limit,)
+            )
+        rows = cur.fetchall()
+        conn.close()
+        if not rows:
+            return ""
+        lines = [f"[ДИАЛОГИ ОРГАНОВ ECSU — ПОСЛЕДНИЕ {len(rows)} СООБЩЕНИЙ]"]
+        for organ_code_r, author_name, author_role, message, msg_type, created_at in reversed(rows):
+            ts = str(created_at)[:16] if created_at else "?"
+            lines.append(f"[{ts}] [{organ_code_r}] {author_name} ({author_role}): {str(message)[:400]}")
+        lines.append("[КОНЕЦ ДИАЛОГОВ ОРГАНОВ]")
+        return "\n".join(lines)
+    except Exception:
+        return ""
+
+
+def load_strategy_context() -> str:
+    """Загружает стратегические инициативы и активные распоряжения."""
+    try:
+        conn = psycopg2.connect(os.environ["DATABASE_URL"])
+        cur = conn.cursor()
+        cur.execute(
+            f"SELECT title, description, priority, status FROM {S}.egsu_strategy_items "
+            f"WHERE status IN ('active', 'draft') ORDER BY sort_order LIMIT 10"
+        )
+        items = cur.fetchall()
+        cur.execute(
+            f"SELECT so.title, so.order_text, so.target_organ, so.priority, so.status "
+            f"FROM {S}.egsu_strategy_orders so "
+            f"WHERE so.status IN ('pending','approved') ORDER BY so.created_at DESC LIMIT 10"
+        )
+        orders = cur.fetchall()
+        conn.close()
+        if not items and not orders:
+            return ""
+        lines = ["[СТРАТЕГИЧЕСКИЕ ИНИЦИАТИВЫ ECSU]"]
+        for title, desc, priority, status in items:
+            lines.append(f"  [{priority.upper()}|{status}] {title}: {str(desc or '')[:200]}")
+        if orders:
+            lines.append("\n[АКТИВНЫЕ РАСПОРЯЖЕНИЯ]")
+            for title, order_text, target_organ, priority, status in orders:
+                lines.append(f"  → {target_organ} | {title}: {str(order_text)[:200]}")
+        lines.append("[КОНЕЦ СТРАТЕГИИ]")
+        return "\n".join(lines)
+    except Exception:
+        return ""
+
+
 # ── Сохранение истории ────────────────────────────────────────────────────────
 
 def save_message(cur, session_id: str, role: str, content: str):
@@ -634,16 +701,29 @@ def handler(event: dict, context) -> dict:
         # Ищем релевантные статьи в правовой БД
         legal_block = search_legal_db(user_message)
 
+        # Диалоги органов EGSU — ИИ видит переписку
+        organ_code_ctx = body.get("organ_code")
+        organ_dialog_block = load_organ_dialog(organ_code_ctx, limit=15)
+
+        # Стратегические инициативы и распоряжения
+        strategy_block = ""
+        if any(w in user_message.lower() for w in ["стратег", "инициатив", "распоряж", "орган", "egsu", "развити"]):
+            strategy_block = load_strategy_context()
+
         # Веб-поиск если нужна актуальная информация из интернета
         web_block = ""
         use_web = body.get("web_search", True)  # по умолчанию включён
         if use_web and should_search_web(user_message):
             web_block = web_search(user_message)
 
-        # Собираем финальное сообщение: ЦПВОА + правовая база + веб + вопрос
+        # Собираем финальное сообщение: ЦПВОА + диалоги органов + стратегия + правовая база + веб + вопрос
         parts = []
         if cpvoa_block:
             parts.append(cpvoa_block)
+        if organ_dialog_block:
+            parts.append(organ_dialog_block)
+        if strategy_block:
+            parts.append(strategy_block)
         if legal_block:
             parts.append(legal_block)
         if web_block:
