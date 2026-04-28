@@ -18,6 +18,7 @@ const MODULES = [
   { path: "/egsu/graphium",      icon: "BookOpen",        label: "Графиум",              color: "#a855f7",  desc: "Личный блокнот и заметки",      key: "graphium" },
   { path: "/egsu/civil-claims",  icon: "Scale",           label: "Гражданские иски",     color: "#00c864",  desc: "Иски и режим поглощения",       key: "civil" },
   { path: "/egsu/fund",          icon: "Landmark",        label: "Фонд ДАЛАН",           color: "#10b981",  desc: "Развитие ECSU · Учёт средств",  key: "fund" },
+  { path: "/egsu/monetize",      icon: "Banknote",        label: "Монетизация",           color: "#00ff87",  desc: "Услуги · Заявки · Доход",       key: "monetize" },
 ];
 
 const CITIZEN_TOOLS = [

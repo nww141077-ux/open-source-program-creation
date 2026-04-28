@@ -1,28 +1,30 @@
 """
-API органов EGSU — органы, обращения, инциденты, распоряжения, пресса, персонал, диалог, внешние контакты.
+API органов EGSU + Монетизация.
 
 GET  /                        — список органов
 POST /appeal                  — обращение гражданина
-GET  /appeal?ticket_id=X      — статус обращения
 GET  /incidents               — лента инцидентов
 GET  /orders                  — распоряжения владельца
 POST /orders                  — создать распоряжение
 GET  /notifications?organ=X   — уведомления органу
-POST /notifications/read      — отметить прочитанными
-GET  /actions                 — действия реагирования
 GET  /press                   — пресс-релизы
-POST /press                   — создать пресс-релиз
-POST /press/publish           — опубликовать в каналы
 GET  /members?organ=CODE      — персонал органа
 POST /members                 — добавить участника
-DELETE /members               — удалить участника
-GET  /dialog?organ=CODE       — чат органа (гражданская позиция)
-POST /dialog                  — отправить сообщение в чат
-GET  /external-contacts       — внешние контакты органов власти
-GET  /external-contacts?category=X — по категории
+GET  /dialog?organ=CODE       — чат органа
+POST /dialog                  — сообщение в чат
+GET  /external-contacts       — внешние контакты
+POST /join                    — заявка на вступление
+GET  /join                    — список заявок
+PUT  /join                    — принять/отклонить
+POST /monetize/order          — заявка на услугу (монетизация)
+GET  /monetize/orders         — список заявок (владелец)
+PUT  /monetize/order          — обновить статус заявки
 """
 import json
 import os
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 import time
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -726,6 +728,124 @@ def handler(event: dict, context) -> dict:
 
         conn.close()
         return ok({'id': rid, 'status': new_status, 'message': f'Заявка {status_text.lower()}, уведомление отправлено заявителю'})
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # МОНЕТИЗАЦИЯ ECSU
+    # ══════════════════════════════════════════════════════════════════════════
+    OWNER_EMAIL = 'nikolaevvladimir77@yandex.ru'
+
+    def send_owner_email(subj: str, html: str):
+        pwd = os.environ.get('YANDEX_SMTP_PASSWORD', '')
+        if not pwd:
+            return
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subj
+        msg['From'] = f'ECSU Sistema <{OWNER_EMAIL}>'
+        msg['To'] = OWNER_EMAIL
+        msg.attach(MIMEText(html, 'html', 'utf-8'))
+        with smtplib.SMTP_SSL('smtp.yandex.ru', 465) as srv:
+            srv.login(OWNER_EMAIL, pwd)
+            srv.send_message(msg)
+
+    def send_client_email(to: str, subj: str, html: str):
+        pwd = os.environ.get('YANDEX_SMTP_PASSWORD', '')
+        if not pwd or not to:
+            return
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subj
+        msg['From'] = f'ECSU Sistema <{OWNER_EMAIL}>'
+        msg['To'] = to
+        msg.attach(MIMEText(html, 'html', 'utf-8'))
+        with smtplib.SMTP_SSL('smtp.yandex.ru', 465) as srv:
+            srv.login(OWNER_EMAIL, pwd)
+            srv.send_message(msg)
+
+    # ── POST /monetize/order — новая заявка на услугу ─────────────────────────
+    if method == 'POST' and '/monetize/order' in p:
+        service_code = (body.get('service_code') or '').strip()
+        service_name = (body.get('service_name') or service_code).strip()
+        client_name  = (body.get('client_name') or '').strip()
+        client_email = (body.get('client_email') or '').strip()
+        client_phone = (body.get('client_phone') or '').strip() or None
+        message      = (body.get('message') or '').strip() or None
+        amount       = body.get('amount')
+        if not service_code or not client_name or not client_email:
+            conn.close()
+            return err('service_code, client_name, client_email обязательны')
+        cur.execute(
+            f"INSERT INTO {S}.ecsu_service_orders "
+            f"(service_code, service_name, client_name, client_email, client_phone, message, amount_rub, status) "
+            f"VALUES ({esc(service_code)},{esc(service_name)},{esc(client_name)},"
+            f"{esc(client_email)},{esc(client_phone)},{esc(message)},{esc(amount)},'new') "
+            f"RETURNING id, created_at"
+        )
+        row = cur.fetchone()
+        order_id = row[0]
+        conn.commit()
+        conn.close()
+        # Email владельцу
+        amount_str = f"{float(amount):,.0f} ₽" if amount else 'не указана'
+        html_owner = f"""<div style="font-family:Arial;max-width:600px">
+<div style="background:#0a0f1e;padding:20px;border-radius:12px;border:2px solid #00ff87">
+<h2 style="color:#00ff87;margin:0 0 16px">💰 ECSU — Новая заявка #{order_id}</h2>
+<div style="background:#1a1f2e;padding:16px;border-radius:8px">
+<p style="color:#00ff87;font-size:18px;font-weight:bold;margin:0 0 10px">{service_name}</p>
+<p style="color:#ccc;margin:4px 0"><b style="color:#fff">Клиент:</b> {client_name}</p>
+<p style="color:#ccc;margin:4px 0"><b style="color:#fff">Email:</b> {client_email}</p>
+{'<p style="color:#ccc;margin:4px 0"><b style="color:#fff">Тел:</b> ' + str(client_phone) + '</p>' if client_phone else ''}
+<p style="color:#ccc;margin:4px 0"><b style="color:#fff">Сумма:</b> <span style="color:#00ff87;font-size:18px">{amount_str}</span></p>
+{'<p style="color:#ccc;margin:4px 0"><b style="color:#fff">Сообщение:</b> ' + str(message) + '</p>' if message else ''}
+</div>
+<p style="color:#a855f7;font-size:13px;margin-top:12px">⚡ Откройте ECSU → Монетизация → Заявки для ответа</p>
+</div></div>"""
+        try:
+            send_owner_email(f'💰 ECSU Заявка #{order_id} — {client_name} · {service_name}', html_owner)
+        except Exception:
+            pass
+        return ok({'id': order_id, 'message': 'Заявка принята. Владелец свяжется с вами в ближайшее время.'}, 201)
+
+    # ── GET /monetize/orders — список заявок ──────────────────────────────────
+    if method == 'GET' and '/monetize/orders' in p:
+        status_f = params.get('status', '')
+        where = f"WHERE status = {esc(status_f)}" if status_f else ""
+        cur.execute(f"SELECT * FROM {S}.ecsu_service_orders {where} ORDER BY created_at DESC LIMIT 200")
+        data = rows_to_list(cur)
+        cur.execute(f"SELECT COUNT(*) FROM {S}.ecsu_service_orders WHERE status='new'")
+        new_count = cur.fetchone()[0]
+        cur.execute(f"SELECT COALESCE(SUM(amount_rub),0) FROM {S}.ecsu_service_orders WHERE status='paid'")
+        total_paid = float(cur.fetchone()[0])
+        conn.close()
+        return ok({'orders': data, 'new_count': new_count, 'total_paid_rub': total_paid})
+
+    # ── PUT /monetize/order — обновить статус ─────────────────────────────────
+    if method == 'PUT' and '/monetize/order' in p:
+        oid    = body.get('id')
+        status = (body.get('status') or '').strip()
+        note   = (body.get('owner_note') or '').strip() or None
+        if not oid or status not in ('new', 'contacted', 'paid', 'cancelled'):
+            conn.close()
+            return err('id и status (new/contacted/paid/cancelled) обязательны')
+        cur.execute(
+            f"UPDATE {S}.ecsu_service_orders SET status={esc(status)}, owner_note={esc(note)}, updated_at=NOW() "
+            f"WHERE id={int(oid)} RETURNING id, client_name, client_email, service_name"
+        )
+        row = cur.fetchone()
+        conn.commit()
+        if row and status == 'paid':
+            _, cname, cemail, sname = row
+            html_cl = f"""<div style="font-family:Arial;max-width:600px">
+<div style="background:#0a0f1e;padding:20px;border-radius:12px;border:1px solid #00ff87">
+<h2 style="color:#00ff87">✅ ECSU — Ваша заявка подтверждена</h2>
+<p style="color:#ccc">Уважаемый(ая) <b style="color:#fff">{cname}</b>,</p>
+<p style="color:#ccc">Заявка на <b style="color:#fff">{sname}</b> подтверждена. Владелец ECSU 2.0 свяжется с вами.</p>
+<p style="color:#888;font-size:11px">ECSU 2.0 · Николаев В.В. · 2026</p>
+</div></div>"""
+            try:
+                send_client_email(cemail, f'✅ ECSU: Заявка на {sname} подтверждена', html_cl)
+            except Exception:
+                pass
+        conn.close()
+        return ok({'id': oid, 'status': status, 'message': 'Статус обновлён'})
 
     conn.close()
     return err(f'Маршрут не найден: {method} {path}', 404)
