@@ -362,12 +362,19 @@ const BIOS_NOTES = [
   { icon: "Scale", color: "#818cf8", title: "Размер модуля", desc: "Общий размер < 15 КБ (модель + код)" },
 ];
 
+interface HemisphereData {
+  left: string;
+  right: string;
+  island_triggered: boolean;
+}
+
 interface ChatMsg {
   role: "user" | "assistant";
   text: string;
   time: string;
   loading?: boolean;
   suggestions?: string[];
+  hemispheres?: HemisphereData;
 }
 
 const getTime = () => {
@@ -386,6 +393,7 @@ export default function EgsuDalan1() {
   const [sendError, setSendError] = useState("");
 
   // ── ЧАТ ──────────────────────────────────────────────────────────────────
+  const [showHemispheres, setShowHemispheres] = useState<number | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMsg[]>([
     {
       role: "assistant",
@@ -422,20 +430,21 @@ export default function EgsuDalan1() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: msg,
-          provider: "dalan1",
-          history: chatHistory.current.slice(-10),
-          session_id: "dalan1_chat",
+          dalan1_mode: true,
+          history: chatHistory.current.slice(-10).map(h => ({ role: h.role, content: h.text })),
+          session_id: "dalan1_owner",
         }),
       });
       const data = await res.json();
-      const reply: string = data.response || data.text || data.answer || "Нет ответа от системы.";
+      const reply: string = data.reply || data.response || data.text || "Нет ответа от системы.";
       const suggestions: string[] = data.suggestions || [];
+      const hemispheres: HemisphereData | undefined = data.hemispheres;
 
       chatHistory.current.push({ role: "assistant", text: reply });
 
       setChatMessages((prev) => [
         ...prev.slice(0, -1),
-        { role: "assistant", text: reply, time: getTime(), suggestions },
+        { role: "assistant", text: reply, time: getTime(), suggestions, hemispheres },
       ]);
     } catch {
       setChatMessages((prev) => [
@@ -1165,6 +1174,25 @@ export default function EgsuDalan1() {
         {activeTab === "chat" && (
           <div className="flex flex-col" style={{ height: "calc(100vh - 220px)", minHeight: 400 }}>
 
+            {/* Статус режима Далан-1 */}
+            <div className="flex items-center justify-between mb-2 px-1">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ background: "#00ff87", boxShadow: "0 0 6px #00ff87" }} />
+                <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>Режим Далан-1 · Два полушария активны</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-4 rounded flex items-center justify-center" style={{ background: "rgba(59,130,246,0.15)" }}>
+                  <Icon name="AlignLeft" size={9} style={{ color: "#3b82f6" }} />
+                </div>
+                <div className="w-4 h-4 rounded flex items-center justify-center" style={{ background: "rgba(168,85,247,0.15)" }}>
+                  <Icon name="AlignRight" size={9} style={{ color: "#a855f7" }} />
+                </div>
+                <div className="w-4 h-4 rounded flex items-center justify-center" style={{ background: "rgba(0,255,135,0.1)" }}>
+                  <Icon name="Merge" size={9} style={{ color: "#00ff87" }} />
+                </div>
+              </div>
+            </div>
+
             {/* Messages */}
             <div className="flex-1 overflow-y-auto space-y-3 pb-2" style={{ scrollbarWidth: "none" }}>
 
@@ -1209,20 +1237,73 @@ export default function EgsuDalan1() {
                       }
                     >
                       {m.loading ? (
-                        <div className="flex items-center gap-2">
-                          <div className="flex gap-1">
-                            {[0,1,2].map((j) => (
-                              <div key={j} className="w-1.5 h-1.5 rounded-full"
-                                style={{ background: "#818cf8", animation: `bounce 1.2s ${j * 0.2}s infinite` }} />
-                            ))}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className="flex gap-1">
+                              {[0,1,2].map((j) => (
+                                <div key={j} className="w-1.5 h-1.5 rounded-full"
+                                  style={{ background: "#818cf8", animation: `bounce 1.2s ${j * 0.2}s infinite` }} />
+                              ))}
+                            </div>
+                            <span className="text-xs" style={{ color: "#818cf8" }}>Далан-1 обрабатывает...</span>
                           </div>
-                          <span className="text-xs" style={{ color: "#818cf8" }}>Далан-1 обрабатывает...</span>
+                          <div className="flex gap-1.5">
+                            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(59,130,246,0.1)", color: "#3b82f6" }}>◑ Левое думает...</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(168,85,247,0.1)", color: "#a855f7" }}>◐ Правое думает...</span>
+                          </div>
                         </div>
                       ) : (
                         <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
                       )}
                     </div>
                     <div className="text-xs px-1" style={{ color: "rgba(255,255,255,0.25)" }}>{m.time}</div>
+
+                    {/* Кнопка полушарий — только для владельца */}
+                    {m.hemispheres && m.role === "assistant" && (
+                      <div className="mt-1">
+                        <button
+                          onClick={() => setShowHemispheres(showHemispheres === i ? null : i)}
+                          className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full transition-all"
+                          style={{ background: "rgba(168,85,247,0.1)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.2)" }}
+                        >
+                          <Icon name="BrainCircuit" size={11} />
+                          {showHemispheres === i ? "Скрыть анализ полушарий" : "Показать работу Далан-1"}
+                        </button>
+                        {showHemispheres === i && (
+                          <div className="mt-2 space-y-2">
+                            {/* Левое полушарие */}
+                            <div className="rounded-xl p-3" style={{ background: "rgba(59,130,246,0.07)", border: "1px solid rgba(59,130,246,0.2)" }}>
+                              <div className="flex items-center gap-2 mb-1.5">
+                                <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: "rgba(59,130,246,0.15)" }}>
+                                  <Icon name="AlignLeft" size={10} style={{ color: "#3b82f6" }} />
+                                </div>
+                                <span className="text-xs font-bold" style={{ color: "#3b82f6" }}>Левое полушарие — Логика</span>
+                              </div>
+                              <div className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.55)", whiteSpace: "pre-wrap" }}>
+                                {m.hemispheres.left}
+                              </div>
+                            </div>
+                            {/* Правое полушарие */}
+                            <div className="rounded-xl p-3" style={{ background: "rgba(168,85,247,0.07)", border: "1px solid rgba(168,85,247,0.2)" }}>
+                              <div className="flex items-center gap-2 mb-1.5">
+                                <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: "rgba(168,85,247,0.15)" }}>
+                                  <Icon name="AlignRight" size={10} style={{ color: "#a855f7" }} />
+                                </div>
+                                <span className="text-xs font-bold" style={{ color: "#a855f7" }}>Правое полушарие — Смыслы</span>
+                              </div>
+                              <div className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.55)", whiteSpace: "pre-wrap" }}>
+                                {m.hemispheres.right}
+                              </div>
+                            </div>
+                            {/* Островная часть */}
+                            <div className="rounded-xl px-3 py-2 flex items-center gap-2" style={{ background: "rgba(0,255,135,0.05)", border: "1px solid rgba(0,255,135,0.15)" }}>
+                              <Icon name="Merge" size={11} style={{ color: "#00ff87" }} />
+                              <span className="text-xs" style={{ color: "#00ff87" }}>Островная часть: синтез выполнен → финальный ответ сформирован</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Suggestions */}
                     {m.suggestions && m.suggestions.length > 0 && (

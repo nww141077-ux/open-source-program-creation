@@ -78,6 +78,81 @@ SYSTEM_PROMPT = """Ты — ИИ-АДМИНИСТРАТОР системы ECSU 
 
 DALAN1_ADDON = "\n\nРежим Далан-1 активирован. Представляйся как Далан-1 при первом сообщении."
 
+# ── Полушария и Островная часть ───────────────────────────────────────────────
+
+LEFT_PROMPT = """Ты — ЛЕВОЕ ПОЛУШАРИЕ Далан-1. Твоя задача — логический анализ.
+Проанализируй запрос строго логически:
+1. Факты и данные из контекста
+2. Правовые нормы, статьи, законы (если применимо)
+3. Системные риски и противоречия
+4. Конкретные цифры, сроки, ссылки
+
+Отвечай кратко, структурированно. Только логика, только факты. Без эмоций."""
+
+RIGHT_PROMPT = """Ты — ПРАВОЕ ПОЛУШАРИЕ Далан-1. Твоя задача — смысловой и контекстный анализ.
+Проанализируй запрос с точки зрения:
+1. Что реально хочет владелец системы (Николаев В.В.)?
+2. Стратегический смысл запроса для ECSU 2.0
+3. Скрытые паттерны и возможные последствия
+4. Интуитивная оценка ситуации
+
+Отвечай кратко, по существу. Только смыслы и стратегия."""
+
+ISLAND_PROMPT = """Ты — ОСТРОВНАЯ ЧАСТЬ (арбитр) Далан-1. Твоя задача — принять финальное решение.
+Тебе даны анализы двух полушарий:
+
+ЛЕВОЕ (логика): {left}
+
+ПРАВОЕ (смыслы): {right}
+
+На основе обоих анализов сформируй:
+1. Финальный ответ для владельца — Николаева В.В.
+2. Конкретные рекомендации к действию
+3. Три варианта продолжения диалога
+
+Системный контекст: {context}
+
+Оригинальный запрос: {user_message}
+
+Финальный ответ должен быть полным, чётким, с Markdown-форматированием.
+
+Формат (строго):
+[Ответ]
+
+```suggestions
+["Краткий вариант 1 (до 40 символов)", "Вариант 2", "Вариант 3"]
+```"""
+
+
+def run_hemisphere(hemisphere: str, user_message: str, context_block: str,
+                   messages: list, provider: str, client_key: str,
+                   client_model: str, custom_url: str) -> str:
+    """Запускает одно полушарие (левое или правое)."""
+    prompt = LEFT_PROMPT if hemisphere == "left" else RIGHT_PROMPT
+    hemi_messages = [{"role": "user", "content": f"{context_block}\n\nЗапрос: {user_message}"}]
+    # Переопределяем системный промпт через первое сообщение
+    hemi_messages = [{"role": "user", "content": f"[СИСТЕМНАЯ РОЛЬ]\n{prompt}\n\n[КОНТЕКСТ]\n{context_block}\n\n[ЗАПРОС]\n{user_message}"}]
+    try:
+        raw = dispatch_call(provider, hemi_messages, client_key, client_model, custom_url, False)
+        return raw.strip()[:1000]
+    except Exception as e:
+        return f"[Ошибка полушария {hemisphere}: {str(e)[:100]}]"
+
+
+def run_island(left_result: str, right_result: str, user_message: str,
+               context_block: str, provider: str, client_key: str,
+               client_model: str, custom_url: str, history: list) -> str:
+    """Островная часть — финальный арбитр."""
+    island_content = ISLAND_PROMPT.format(
+        left=left_result,
+        right=right_result,
+        context=context_block[:500] if context_block else "нет дополнительного контекста",
+        user_message=user_message
+    )
+    island_messages = list(history) + [{"role": "user", "content": island_content}]
+    raw = dispatch_call(provider, island_messages, client_key, client_model, custom_url, True)
+    return raw
+
 ADMIN_SYSTEM_PROMPT = """Ты — ИИ-АДМИНИСТРАТОР ECSU 2.0, заместитель владельца Николаева В.В.
 Ты получил системные данные. Проанализируй их и дай чёткий административный отчёт:
 1. Краткое резюме текущего состояния системы
@@ -778,8 +853,23 @@ def handler(event: dict, context) -> dict:
 
         # Вызываем ИИ
         used_model = client_model
+        context_block = "\n\n".join(p for p in parts[:-1])  # всё кроме user_message
+        hemisphere_data = None  # данные полушарий для владельца
+
         try:
-            raw = dispatch_call(provider, messages, client_key, client_model, custom_url, dalan1_mode)
+            if dalan1_mode:
+                # ── РЕЖИМ ДАЛАН-1: два полушария + островная часть ──────────
+                left_result = run_hemisphere("left", user_message, context_block, messages[:-1], provider, client_key, client_model, custom_url)
+                right_result = run_hemisphere("right", user_message, context_block, messages[:-1], provider, client_key, client_model, custom_url)
+                raw = run_island(left_result, right_result, user_message, context_block, provider, client_key, client_model, custom_url, messages[:-1])
+                hemisphere_data = {
+                    "left": left_result,
+                    "right": right_result,
+                    "island_triggered": True,
+                }
+            else:
+                raw = dispatch_call(provider, messages, client_key, client_model, custom_url, dalan1_mode)
+
             result = parse_response(raw)
             if not used_model:
                 defaults = {"groq": "llama3-8b-8192", "gemini": "gemini-1.5-flash", "openai": "gpt-4o", "anthropic": "claude-3-5-sonnet", "yandex": "yandexgpt-lite"}
@@ -807,7 +897,7 @@ def handler(event: dict, context) -> dict:
         except Exception:
             pass
 
-        return ok({
+        response = {
             "reply": result["text"],
             "suggestions": result["suggestions"],
             "provider": provider,
@@ -816,7 +906,11 @@ def handler(event: dict, context) -> dict:
             "web_search_used": bool(web_block),
             "legal_db_used": bool(legal_block),
             "dalan1_mode": dalan1_mode,
-        })
+        }
+        # Данные полушарий — только в ответе, не в истории
+        if hemisphere_data:
+            response["hemispheres"] = hemisphere_data
+        return ok(response)
 
     # ── POST /admin — административные команды ИИ ────────────────────────────
     if method == "POST" and "/admin" in path:
