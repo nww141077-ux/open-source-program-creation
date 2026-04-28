@@ -27,10 +27,59 @@ const EXPENSE_CATEGORIES = [
 const TAX_MODES = [
   { code: "ndfl", label: "НДФЛ (13%)", default_rate: 13 },
   { code: "usn", label: "УСН (6%)", default_rate: 6 },
+  { code: "self_employed_fl", label: "Самозанятый — физлица (4%)", default_rate: 4 },
+  { code: "self_employed_ul", label: "Самозанятый — юрлица (6%)", default_rate: 6 },
   { code: "custom", label: "Иная ставка", default_rate: 0 },
 ];
 
-type Tab = "overview" | "income" | "withdrawals" | "expenses" | "settings";
+const MOY_NALOG_STEPS = [
+  {
+    n: "1", title: "Скачайте приложение «Мой налог»",
+    desc: "Официальное приложение ФНС России для самозанятых. Доступно в App Store и Google Play.",
+    links: [
+      { label: "App Store (iPhone)", url: "https://apps.apple.com/ru/app/мой-налог/id1437518854", icon: "Smartphone" },
+      { label: "Google Play (Android)", url: "https://play.google.com/store/apps/details?id=com.gnivts.selfemployed", icon: "Smartphone" },
+      { label: "Веб-версия ФНС", url: "https://lknpd.nalog.ru", icon: "Globe" },
+    ],
+    color: "#3b82f6",
+  },
+  {
+    n: "2", title: "Зарегистрируйтесь как самозанятый",
+    desc: "Через приложение по паспорту или через Госуслуги. Регистрация занимает 3–5 минут. ИНН не нужен отдельно — система найдёт автоматически.",
+    links: [
+      { label: "Госуслуги — регистрация самозанятого", url: "https://www.gosuslugi.ru/self-employed", icon: "FileText" },
+    ],
+    color: "#10b981",
+  },
+  {
+    n: "3", title: "Привяжите деятельность ECSU",
+    desc: "При регистрации укажите вид деятельности: «Консультационные услуги», «Разработка программного обеспечения» или «Научно-исследовательская деятельность».",
+    links: [],
+    color: "#a855f7",
+  },
+  {
+    n: "4", title: "Формируйте чеки на поступления",
+    desc: "Каждое поступление в Фонд ДАЛАН оформляйте чеком в «Мой налог». Налог 4% (от физлиц) или 6% (от юрлиц и ИП) — вместо НДФЛ 13%.",
+    links: [],
+    color: "#f59e0b",
+  },
+  {
+    n: "5", title: "Внесите ИНН в систему EGSU",
+    desc: "После регистрации внесите ваш ИНН в настройки фонда для корректного расчёта налогов.",
+    links: [],
+    color: "#06b6d4",
+  },
+];
+
+const ECSU_ACTIVITIES = [
+  { code: "software", label: "Разработка ПО и ИИ-систем", rate_fl: 4, rate_ul: 6 },
+  { code: "consulting", label: "Консультационные услуги", rate_fl: 4, rate_ul: 6 },
+  { code: "research", label: "Научно-исследовательская деятельность", rate_fl: 4, rate_ul: 6 },
+  { code: "analytics", label: "Аналитические услуги", rate_fl: 4, rate_ul: 6 },
+  { code: "education", label: "Образовательные услуги", rate_fl: 4, rate_ul: 6 },
+];
+
+type Tab = "overview" | "income" | "withdrawals" | "expenses" | "tax" | "settings";
 
 interface Summary {
   total_income: number; total_taxes_paid: number; total_net: number;
@@ -202,11 +251,15 @@ export default function EgsuFund() {
     } catch (_e) { console.error(_e); } finally { setSaving(false); }
   }
 
+  const [taxCalcAmount, setTaxCalcAmount] = useState("");
+  const [taxCalcType, setTaxCalcType] = useState<"fl" | "ul">("fl");
+
   const TABS: { id: Tab; label: string; icon: string; badge?: number }[] = [
     { id: "overview", label: "Обзор", icon: "LayoutDashboard" },
     { id: "income", label: "Поступления", icon: "TrendingUp" },
     { id: "withdrawals", label: "Выводы", icon: "CreditCard", badge: summary?.pending_withdrawals },
     { id: "expenses", label: "Расходы", icon: "Receipt", badge: summary?.pending_expenses },
+    { id: "tax", label: "Мой налог", icon: "FileCheck" },
     { id: "settings", label: "Настройки", icon: "Settings" },
   ];
 
@@ -614,6 +667,153 @@ export default function EgsuFund() {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* МОЙ НАЛОГ */}
+          {tab === "tax" && (
+            <div className="space-y-4">
+              {/* Шапка */}
+              <div className="rounded-2xl p-5" style={{ background: "rgba(59,130,246,0.07)", border: "1px solid rgba(59,130,246,0.2)" }}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "rgba(59,130,246,0.15)" }}>
+                    <Icon name="FileCheck" size={20} style={{ color: "#3b82f6" }} />
+                  </div>
+                  <div>
+                    <div className="text-white font-bold text-base">Приложение «Мой налог» — ФНС России</div>
+                    <div className="text-white/40 text-xs">Официальный режим самозанятого · НПД</div>
+                  </div>
+                </div>
+                <p className="text-white/60 text-sm leading-relaxed">
+                  Самозанятость — самый простой способ легально получать доход от деятельности ECSU.
+                  Налог всего <strong className="text-white">4%</strong> (от физлиц) или <strong className="text-white">6%</strong> (от юрлиц/ИП) вместо НДФЛ 13%.
+                  Регистрация онлайн за 5 минут, без ИП и бухгалтера.
+                </p>
+              </div>
+
+              {/* Калькулятор налога */}
+              <div className="rounded-2xl p-4" style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.2)" }}>
+                <div className="text-white/50 text-xs uppercase tracking-widest mb-3">Калькулятор налога самозанятого</div>
+                <div className="flex gap-2 mb-3">
+                  {[{id: "fl" as const, label: "От физлиц (4%)"}, {id: "ul" as const, label: "От юрлиц (6%)"}].map(t => (
+                    <button key={t.id} onClick={() => setTaxCalcType(t.id)}
+                      className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all"
+                      style={{
+                        background: taxCalcType === t.id ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.03)",
+                        border: `1px solid ${taxCalcType === t.id ? "rgba(16,185,129,0.4)" : "rgba(255,255,255,0.08)"}`,
+                        color: taxCalcType === t.id ? "#10b981" : "rgba(255,255,255,0.4)",
+                      }}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <input value={taxCalcAmount} onChange={e => setTaxCalcAmount(e.target.value)}
+                  placeholder="Введите сумму поступления (₽)" type="number"
+                  className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none mb-3"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                {taxCalcAmount && parseFloat(taxCalcAmount) > 0 && (() => {
+                  const amount = parseFloat(taxCalcAmount);
+                  const rate = taxCalcType === "fl" ? 4 : 6;
+                  const tax = amount * rate / 100;
+                  const net = amount - tax;
+                  const owner = net * 0.51;
+                  const dev = net * 0.49;
+                  return (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { label: "Поступление", value: `${fmt(amount)} ₽`, color: "#ffffff" },
+                          { label: `Налог НПД (${rate}%)`, value: `${fmt(tax)} ₽`, color: "#f59e0b" },
+                          { label: "Чистыми", value: `${fmt(net)} ₽`, color: "#10b981" },
+                          { label: "Вам (51%)", value: `${fmt(owner)} ₽`, color: "#00ff87" },
+                        ].map(c => (
+                          <div key={c.label} className="px-3 py-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                            <div className="text-white/40 text-xs">{c.label}</div>
+                            <div className="font-bold text-sm mt-0.5" style={{ color: c.color }}>{c.value}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="px-3 py-2 rounded-xl text-xs" style={{ background: "rgba(59,130,246,0.07)", color: "rgba(255,255,255,0.5)" }}>
+                        На разработку (49%): <strong style={{ color: "#3b82f6" }}>{fmt(dev)} ₽</strong>
+                        &nbsp;·&nbsp; Экономия vs НДФЛ: <strong style={{ color: "#10b981" }}>+{fmt(amount * 0.13 - tax)} ₽</strong>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Пошаговая инструкция */}
+              <div className="space-y-3">
+                <div className="text-white/40 text-xs uppercase tracking-widest">Пошаговая инструкция</div>
+                {MOY_NALOG_STEPS.map(step => (
+                  <div key={step.n} className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0"
+                        style={{ background: `${step.color}20`, color: step.color }}>
+                        {step.n}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white font-semibold text-sm mb-1">{step.title}</div>
+                        <div className="text-white/50 text-xs leading-relaxed mb-2">{step.desc}</div>
+                        {step.links.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {step.links.map(link => (
+                              <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-105"
+                                style={{ background: `${step.color}12`, color: step.color, border: `1px solid ${step.color}25` }}>
+                                <Icon name={link.icon as any} size={11} />
+                                {link.label}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Виды деятельности ECSU */}
+              <div className="rounded-2xl p-4" style={{ background: "rgba(168,85,247,0.06)", border: "1px solid rgba(168,85,247,0.15)" }}>
+                <div className="text-white/50 text-xs uppercase tracking-widest mb-3">Виды деятельности ECSU для самозанятого</div>
+                <div className="space-y-2">
+                  {ECSU_ACTIVITIES.map(act => (
+                    <div key={act.code} className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <span className="text-white/70 text-sm">{act.label}</span>
+                      <div className="flex gap-2 shrink-0">
+                        <span className="px-2 py-0.5 rounded-lg text-xs font-bold" style={{ background: "rgba(16,185,129,0.12)", color: "#10b981" }}>
+                          Физлица {act.rate_fl}%
+                        </span>
+                        <span className="px-2 py-0.5 rounded-lg text-xs font-bold" style={{ background: "rgba(59,130,246,0.12)", color: "#3b82f6" }}>
+                          Юрлица {act.rate_ul}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Быстрые ссылки */}
+              <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="text-white/40 text-xs uppercase tracking-widest mb-3">Официальные ресурсы</div>
+                <div className="grid grid-cols-1 gap-2">
+                  {[
+                    { label: "Личный кабинет самозанятого — ФНС", url: "https://lknpd.nalog.ru", icon: "Building2", color: "#3b82f6" },
+                    { label: "Госуслуги — стать самозанятым", url: "https://www.gosuslugi.ru/self-employed", icon: "FileText", color: "#10b981" },
+                    { label: "ФНС — о налоге на профдоход", url: "https://npd.nalog.ru", icon: "BookOpen", color: "#a855f7" },
+                    { label: "Банк России — о самозанятости", url: "https://www.cbr.ru/self-employed", icon: "Landmark", color: "#f59e0b" },
+                  ].map(link => (
+                    <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:scale-[1.01]"
+                      style={{ background: `${link.color}08`, border: `1px solid ${link.color}20` }}>
+                      <Icon name={link.icon as any} size={16} style={{ color: link.color }} />
+                      <span className="text-white/70 text-sm flex-1">{link.label}</span>
+                      <Icon name="ExternalLink" size={13} style={{ color: "rgba(255,255,255,0.2)" }} />
+                    </a>
+                  ))}
+                </div>
               </div>
             </div>
           )}
