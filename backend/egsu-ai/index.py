@@ -530,6 +530,36 @@ def search_legal_db(user_text: str) -> str:
         return ""
 
 
+# ── Обращения граждан ─────────────────────────────────────────────────────────
+
+def load_citizen_appeals(organ_code: str = None, limit: int = 10) -> str:
+    """Загружает обращения граждан для контекста ИИ."""
+    try:
+        conn = psycopg2.connect(os.environ["DATABASE_URL"])
+        cur = conn.cursor()
+        where = f"WHERE organ_code = '{organ_code}'" if organ_code else "WHERE status IN ('new','processing')"
+        cur.execute(
+            f"SELECT ticket_id, organ_code, category, subject, description, status, created_at "
+            f"FROM {S}.egsu_citizen_appeals {where} "
+            f"ORDER BY created_at DESC LIMIT {limit}"
+        )
+        rows = cur.fetchall()
+        conn.close()
+        if not rows:
+            return ""
+        lines = [f"[ОБРАЩЕНИЯ ГРАЖДАН — {len(rows)} ШТ.]"]
+        for ticket_id, organ_code_r, category, subject, description, status, created_at in rows:
+            ts = str(created_at)[:10] if created_at else "?"
+            status_label = {"new": "Новое", "processing": "В работе", "resolved": "Решено", "rejected": "Отклонено"}.get(status, status)
+            lines.append(f"  [{ts}] #{ticket_id} | {organ_code_r} | {category or '—'} | {status_label}")
+            lines.append(f"    Тема: {subject}")
+            lines.append(f"    Суть: {str(description)[:300]}")
+        lines.append("[КОНЕЦ ОБРАЩЕНИЙ]")
+        return "\n".join(lines)
+    except Exception:
+        return ""
+
+
 # ── Чтение диалогов органов из БД ─────────────────────────────────────────────
 
 def load_organ_dialog(organ_code: str = None, limit: int = 20) -> str:
@@ -705,6 +735,11 @@ def handler(event: dict, context) -> dict:
         organ_code_ctx = body.get("organ_code")
         organ_dialog_block = load_organ_dialog(organ_code_ctx, limit=15)
 
+        # Обращения граждан — ИИ видит входящие заявки
+        appeals_block = ""
+        if any(w in user_message.lower() for w in ["обращени", "заявк", "гражданин", "тикет", "жалоб", "апелл", "appeal"]) or organ_code_ctx:
+            appeals_block = load_citizen_appeals(organ_code_ctx, limit=10)
+
         # Стратегические инициативы и распоряжения
         strategy_block = ""
         if any(w in user_message.lower() for w in ["стратег", "инициатив", "распоряж", "орган", "egsu", "развити"]):
@@ -716,12 +751,14 @@ def handler(event: dict, context) -> dict:
         if use_web and should_search_web(user_message):
             web_block = web_search(user_message)
 
-        # Собираем финальное сообщение: ЦПВОА + диалоги органов + стратегия + правовая база + веб + вопрос
+        # Собираем финальное сообщение: ЦПВОА + диалоги органов + обращения граждан + стратегия + правовая база + веб + вопрос
         parts = []
         if cpvoa_block:
             parts.append(cpvoa_block)
         if organ_dialog_block:
             parts.append(organ_dialog_block)
+        if appeals_block:
+            parts.append(appeals_block)
         if strategy_block:
             parts.append(strategy_block)
         if legal_block:
