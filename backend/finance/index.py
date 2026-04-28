@@ -607,4 +607,156 @@ def handler(event: dict, context) -> dict:
         db.commit()
         return ok({"message": "Запрос зафиксирован. Свяжитесь с администратором.", "token_prefix": token[:4]})
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # ФОНД ДАЛАН — РАЗВИТИЕ ECSU
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def esc(v):
+        if v is None:
+            return "NULL"
+        return "'" + str(v).replace("'", "''") + "'"
+
+    def calc_dist(gross, tax_rate, owner_pct, dev_pct):
+        tax = round(gross * tax_rate / 100, 2)
+        net = round(gross - tax, 2)
+        owner = round(net * owner_pct / 100, 2)
+        dev = round(net - owner, 2)
+        return {"tax": tax, "net": net, "owner": owner, "dev": dev}
+
+    # GET /fund — сводка фонда
+    if method == "GET" and path.rstrip("/") == "/fund":
+        cur.execute(f"SELECT * FROM {S}.egsu_fund_config LIMIT 1")
+        cols = [d[0] for d in cur.description]
+        cfg_row = cur.fetchone()
+        config = dict(zip(cols, cfg_row)) if cfg_row else {}
+        cur.execute(f"SELECT COALESCE(SUM(amount),0) FROM {S}.egsu_fund_income WHERE status='received'")
+        total_income = float(cur.fetchone()[0])
+        cur.execute(f"SELECT COALESCE(SUM(amount),0) FROM {S}.egsu_fund_withdrawals WHERE status='approved'")
+        total_withdrawn = float(cur.fetchone()[0])
+        cur.execute(f"SELECT COALESCE(SUM(amount),0) FROM {S}.egsu_fund_expenses WHERE status='approved'")
+        total_expenses = float(cur.fetchone()[0])
+        cur.execute(f"SELECT COALESCE(SUM(tax_amount),0), COALESCE(SUM(owner_amount),0), COALESCE(SUM(dev_amount),0) FROM {S}.egsu_fund_distributions")
+        row = cur.fetchone()
+        total_taxes, total_owner, total_dev = float(row[0]), float(row[1]), float(row[2])
+        cur.execute(f"SELECT COUNT(*) FROM {S}.egsu_fund_withdrawals WHERE status='pending'")
+        pending_w = int(cur.fetchone()[0])
+        cur.execute(f"SELECT COUNT(*) FROM {S}.egsu_fund_expenses WHERE status='pending'")
+        pending_e = int(cur.fetchone()[0])
+        return ok({
+            "config": config,
+            "summary": {
+                "total_income": total_income, "total_taxes_paid": total_taxes,
+                "total_net": round(total_income - total_taxes, 2),
+                "owner_share_total": total_owner, "dev_share_total": total_dev,
+                "total_withdrawn": total_withdrawn, "total_expenses": total_expenses,
+                "balance_owner": round(total_owner - total_withdrawn, 2),
+                "balance_dev": round(total_dev - total_expenses, 2),
+                "pending_withdrawals": pending_w, "pending_expenses": pending_e,
+            }
+        })
+
+    # PUT /fund — обновить конфиг
+    if method == "PUT" and path.rstrip("/") == "/fund":
+        upd = []
+        for f in ["fund_name","tax_mode","tax_rate_percent","owner_share_percent","dev_share_percent","owner_card_last4","owner_bank","description"]:
+            if f in body:
+                upd.append(f"{f}={esc(body[f])}")
+        if upd:
+            upd.append("updated_at=NOW()")
+            cur.execute(f"UPDATE {S}.egsu_fund_config SET {', '.join(upd)} WHERE id=1")
+            db.commit()
+        return ok({"message": "Настройки фонда обновлены"})
+
+    # GET /fund/income
+    if method == "GET" and "/fund/income" in path:
+        cur.execute(f"""
+            SELECT i.*, d.tax_amount, d.net_amount, d.owner_amount, d.dev_amount
+            FROM {S}.egsu_fund_income i
+            LEFT JOIN {S}.egsu_fund_distributions d ON d.income_id = i.id
+            ORDER BY i.created_at DESC LIMIT 100
+        """)
+        cols = [d[0] for d in cur.description]
+        return ok({"income": [dict(zip(cols, r)) for r in cur.fetchall()]})
+
+    # POST /fund/income
+    if method == "POST" and "/fund/income" in path:
+        src_type = (body.get("source_type") or "").strip()
+        src_name = (body.get("source_name") or "").strip()
+        amount = float(body.get("amount") or 0)
+        if not src_type or not src_name or amount <= 0:
+            return err("source_type, source_name и amount обязательны")
+        cur.execute(f"INSERT INTO {S}.egsu_fund_income (source_type, source_name, amount, description) VALUES ({esc(src_type)},{esc(src_name)},{amount},{esc(body.get('description',''))}) RETURNING id")
+        income_id = cur.fetchone()[0]
+        cur.execute(f"SELECT tax_rate_percent, owner_share_percent, dev_share_percent FROM {S}.egsu_fund_config LIMIT 1")
+        cfg = cur.fetchone()
+        tax_rate, owner_pct, dev_pct = (float(cfg[0]), float(cfg[1]), float(cfg[2])) if cfg else (13.0, 51.0, 49.0)
+        d = calc_dist(amount, tax_rate, owner_pct, dev_pct)
+        cur.execute(f"INSERT INTO {S}.egsu_fund_distributions (income_id, gross_amount, tax_amount, net_amount, owner_amount, dev_amount, tax_rate) VALUES ({income_id},{amount},{d['tax']},{d['net']},{d['owner']},{d['dev']},{tax_rate})")
+        db.commit()
+        return ok({"id": income_id, "message": "Поступление зарегистрировано", "distribution": d}, 201)
+
+    # GET /fund/withdrawals
+    if method == "GET" and "/fund/withdrawals" in path:
+        cur.execute(f"SELECT * FROM {S}.egsu_fund_withdrawals ORDER BY requested_at DESC LIMIT 100")
+        cols = [d[0] for d in cur.description]
+        return ok({"withdrawals": [dict(zip(cols, r)) for r in cur.fetchall()]})
+
+    # POST /fund/withdrawals
+    if method == "POST" and "/fund/withdrawals" in path:
+        amount = float(body.get("amount") or 0)
+        if amount <= 0:
+            return err("amount обязателен")
+        cur.execute(f"INSERT INTO {S}.egsu_fund_withdrawals (withdrawal_type, amount, destination, description, status) VALUES ({esc(body.get('withdrawal_type','owner'))},{amount},{esc(body.get('destination',''))},{esc(body.get('description',''))},'pending') RETURNING id, requested_at")
+        r = cur.fetchone()
+        db.commit()
+        return ok({"id": r[0], "message": "Заявка создана. Ожидает ручного подтверждения.", "requested_at": str(r[1])}, 201)
+
+    # PUT /fund/withdrawals
+    if method == "PUT" and "/fund/withdrawals" in path:
+        wid = body.get("id")
+        if not wid:
+            return err("id обязателен")
+        status_val = body.get("status", "approved")
+        approved_at = "NOW()" if status_val == "approved" else "NULL"
+        cur.execute(f"UPDATE {S}.egsu_fund_withdrawals SET status={esc(status_val)}, notes={esc(body.get('notes',''))}, approved_at={approved_at} WHERE id={int(wid)} RETURNING id, status")
+        r = cur.fetchone()
+        db.commit()
+        return ok({"id": r[0] if r else wid, "status": r[1] if r else status_val})
+
+    # GET /fund/expenses
+    if method == "GET" and "/fund/expenses" in path:
+        cur.execute(f"SELECT * FROM {S}.egsu_fund_expenses ORDER BY created_at DESC LIMIT 100")
+        cols = [d[0] for d in cur.description]
+        return ok({"expenses": [dict(zip(cols, r)) for r in cur.fetchall()]})
+
+    # POST /fund/expenses
+    if method == "POST" and "/fund/expenses" in path:
+        category = (body.get("category") or "").strip()
+        item_name = (body.get("item_name") or "").strip()
+        amount = float(body.get("amount") or 0)
+        if not category or not item_name or amount <= 0:
+            return err("category, item_name и amount обязательны")
+        cur.execute(f"INSERT INTO {S}.egsu_fund_expenses (category, item_name, amount, description, status) VALUES ({esc(category)},{esc(item_name)},{amount},{esc(body.get('description',''))},'pending') RETURNING id, created_at")
+        r = cur.fetchone()
+        db.commit()
+        return ok({"id": r[0], "message": "Расход зарегистрирован. Ожидает подтверждения."}, 201)
+
+    # PUT /fund/expenses
+    if method == "PUT" and "/fund/expenses" in path:
+        eid = body.get("id")
+        if not eid:
+            return err("id обязателен")
+        status_val = body.get("status", "approved")
+        approved_at = "NOW()" if status_val == "approved" else "NULL"
+        cur.execute(f"UPDATE {S}.egsu_fund_expenses SET status={esc(status_val)}, approved_at={approved_at} WHERE id={int(eid)} RETURNING id, status")
+        r = cur.fetchone()
+        db.commit()
+        return ok({"id": r[0] if r else eid, "status": r[1] if r else status_val})
+
+    # GET /fund/categories
+    if method == "GET" and "/fund/categories" in path:
+        cur.execute(f"SELECT * FROM {S}.egsu_fund_expense_categories ORDER BY id")
+        cols = [d[0] for d in cur.description]
+        return ok({"categories": [dict(zip(cols, r)) for r in cur.fetchall()]})
+
     return err("Маршрут не найден", 404)
