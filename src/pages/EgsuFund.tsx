@@ -94,6 +94,7 @@ interface Config {
   tax_mode: string; tax_rate_percent: number;
   owner_share_percent: number; dev_share_percent: number;
   owner_card_last4: string | null; owner_bank: string | null; description: string;
+  inn: string | null; system_status: string | null;
 }
 
 interface Income {
@@ -875,6 +876,16 @@ export default function EgsuFund() {
                       placeholder="Сбербанк / Тинькофф / ВТБ..."
                       className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none"
                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                  </div>
+                  {/* ИНН самозанятого */}
+                  <div className="rounded-xl p-4" style={{ background: "rgba(59,130,246,0.07)", border: "1px solid rgba(59,130,246,0.15)" }}>
+                    <label className="text-white/60 text-xs mb-1 block font-semibold">ИНН самозанятого</label>
+                    <input value={(cfgForm as any).inn || ""} onChange={e => setCfgForm(f => ({ ...(f as any), inn: e.target.value }))}
+                      placeholder="12 цифр вашего ИНН..."
+                      maxLength={12}
+                      className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(59,130,246,0.2)" }} />
+                    <div className="text-white/30 text-xs mt-1.5">После регистрации в «Мой налог» внесите ИНН для корректного расчёта налогов самозанятого</div>
                   </div>
                   <button onClick={saveConfig} disabled={saving}
                     className="w-full py-3 rounded-2xl text-sm font-bold transition-all disabled:opacity-40"

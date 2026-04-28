@@ -430,6 +430,12 @@ export default function EgsuOrgans() {
             <Icon name="Search" size={12} className="inline mr-1" />
             Статус обращения
           </button>
+          <button onClick={() => navigate("/egsu/join")}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-105"
+            style={{ background: "rgba(0,255,135,0.08)", color: "#00ff87", border: "1px solid rgba(0,255,135,0.2)" }}>
+            <Icon name="UserPlus" size={12} className="inline mr-1" />
+            Вступить
+          </button>
           <button onClick={() => navigate("/egsu/vip")}
             className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105"
             style={{ background: "rgba(168,85,247,0.12)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.25)" }}>

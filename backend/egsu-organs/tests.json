@@ -6,6 +6,8 @@
     {"name": "Список распоряжений", "method": "GET", "path": "/orders", "expectedStatus": 200, "bodyMatcher": "partial"},
     {"name": "Уведомления органу", "method": "GET", "path": "/notifications?organ=OGR-SECURITY", "expectedStatus": 200, "bodyMatcher": "partial"},
     {"name": "Действия реагирования", "method": "GET", "path": "/actions", "expectedStatus": 200, "bodyMatcher": "partial"},
-    {"name": "Список пресс-релизов", "method": "GET", "path": "/press", "expectedStatus": 200, "bodyMatcher": "partial"}
+    {"name": "Список пресс-релизов", "method": "GET", "path": "/press", "expectedStatus": 200, "bodyMatcher": "partial"},
+    {"name": "Список заявок на вступление", "method": "GET", "path": "/join", "expectedStatus": 200, "bodyMatcher": "partial"},
+    {"name": "Заявки ожидающие", "method": "GET", "path": "/join?status=pending", "expectedStatus": 200, "bodyMatcher": "partial"}
   ]
 }

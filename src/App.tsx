@@ -42,6 +42,7 @@ import EgsuGraphium from "./pages/EgsuGraphium";
 import EgsuCivilClaims from "./pages/EgsuCivilClaims";
 import EgsuDalan1 from "./pages/EgsuDalan1";
 import EgsuFund from "./pages/EgsuFund";
+import EgsuJoin from "./pages/EgsuJoin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -93,6 +94,7 @@ const App = () => (
           <Route path="/egsu/civil-claims" element={<EgsuCivilClaims />} />
           <Route path="/egsu/dalan1" element={<EgsuDalan1 />} />
           <Route path="/egsu/fund" element={<EgsuFund />} />
+          <Route path="/egsu/join" element={<EgsuJoin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

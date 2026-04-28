@@ -581,5 +581,151 @@ def handler(event: dict, context) -> dict:
         conn.close()
         return ok({'id': result[0] if result else order_id, 'status': result[1] if result else new_status, 'message': 'Статус обновлён'})
 
+    # ── POST /join — подать заявку на вступление ─────────────────────────────
+    if method == 'POST' and '/join' in p:
+        request_type = (body.get('request_type') or 'organ_member').strip()
+        full_name = (body.get('full_name') or '').strip()
+        email = (body.get('email') or '').strip()
+        if not full_name or not email:
+            conn.close()
+            return err('full_name и email обязательны')
+        phone = (body.get('phone') or '').strip() or None
+        country = (body.get('country') or '').strip() or None
+        organization = (body.get('organization') or '').strip() or None
+        position = (body.get('position') or '').strip() or None
+        motivation = (body.get('motivation') or '').strip() or None
+        experience = (body.get('experience') or '').strip() or None
+        organ_code = (body.get('organ_code') or '').strip() or None
+
+        cur.execute(
+            f"INSERT INTO {S}.egsu_join_requests "
+            f"(request_type, organ_code, full_name, email, phone, country, organization, position, motivation, experience) "
+            f"VALUES ({esc(request_type)},{esc(organ_code)},{esc(full_name)},{esc(email)},"
+            f"{esc(phone)},{esc(country)},{esc(organization)},{esc(position)},{esc(motivation)},{esc(experience)}) "
+            f"RETURNING id, created_at"
+        )
+        result = cur.fetchone()
+        req_id = result[0]
+        conn.commit()
+
+        # Отправляем email владельцу
+        import smtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        from datetime import datetime
+        smtp_password = os.environ.get('YANDEX_SMTP_PASSWORD', '')
+        owner_email = 'nikolaevvladimir77@yandex.ru'
+        now = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
+        req_type_labels = {'organ_member': 'Вступление в орган ECSU', 'country': 'Вступление страны/организации', 'observer': 'Статус наблюдателя'}
+        type_label = req_type_labels.get(request_type, request_type)
+        organ_label = f'<p><b>Орган:</b> {organ_code}</p>' if organ_code else ''
+        org_label = f'<p><b>Организация:</b> {organization}</p>' if organization else ''
+        country_label = f'<p><b>Страна:</b> {country}</p>' if country else ''
+        motivation_block = f'<p><b>Мотивация:</b><br>{motivation}</p>' if motivation else ''
+        experience_block = f'<p><b>Опыт:</b><br>{experience}</p>' if experience else ''
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px">
+        <div style="background:#0a0f1e;padding:20px;border-radius:12px;border:1px solid #a855f7">
+        <h2 style="color:#a855f7;margin:0 0 16px">🔔 ECSU 2.0 — Новая заявка на вступление</h2>
+        <div style="background:#1a1f2e;padding:16px;border-radius:8px;margin-bottom:16px">
+        <p style="color:#00ff87;font-size:18px;margin:0 0 8px"><b>#{req_id} · {type_label}</b></p>
+        <p style="color:#ccc;margin:4px 0"><b style="color:#fff">Имя:</b> {full_name}</p>
+        <p style="color:#ccc;margin:4px 0"><b style="color:#fff">Email:</b> {email}</p>
+        {f'<p style="color:#ccc;margin:4px 0"><b style="color:#fff">Телефон:</b> {phone}</p>' if phone else ''}
+        {country_label}
+        {org_label}
+        {f'<p style="color:#ccc;margin:4px 0"><b style="color:#fff">Должность:</b> {position}</p>' if position else ''}
+        {organ_label}
+        </div>
+        {f'<div style="background:#1a1f2e;padding:12px;border-radius:8px;margin-bottom:12px">{motivation_block}</div>' if motivation else ''}
+        {f'<div style="background:#1a1f2e;padding:12px;border-radius:8px;margin-bottom:12px">{experience_block}</div>' if experience else ''}
+        <p style="color:#888;font-size:12px;margin-top:20px">Время подачи: {now} · ECSU 2.0 Sistema</p>
+        <p style="color:#a855f7;font-size:13px">⚡ Перейдите в систему ECSU → раздел «Заявки» чтобы принять или отклонить</p>
+        </div></div>"""
+        if smtp_password:
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = f'🔔 ECSU: Заявка #{req_id} — {full_name} · {type_label}'
+            msg['From'] = f'ECSU Sistema <{owner_email}>'
+            msg['To'] = owner_email
+            msg.attach(MIMEText(html, 'html', 'utf-8'))
+            with smtplib.SMTP_SSL('smtp.yandex.ru', 465) as srv:
+                srv.login(owner_email, smtp_password)
+                srv.send_message(msg)
+
+        conn.close()
+        return ok({'id': req_id, 'message': 'Заявка принята. Вы получите ответ на указанный email.'}, 201)
+
+    # ── GET /join — список заявок (для владельца) ─────────────────────────────
+    if method == 'GET' and '/join' in p:
+        status_filter = params.get('status', '')
+        where = f"WHERE status = {esc(status_filter)}" if status_filter else ""
+        cur.execute(f"SELECT * FROM {S}.egsu_join_requests {where} ORDER BY created_at DESC LIMIT 200")
+        requests = rows_to_list(cur)
+        cur.execute(f"SELECT COUNT(*) FROM {S}.egsu_join_requests WHERE status='pending'")
+        pending = cur.fetchone()[0]
+        conn.close()
+        return ok({'requests': requests, 'total': len(requests), 'pending': pending})
+
+    # ── PUT /join — принять/отклонить заявку ─────────────────────────────────
+    if method == 'PUT' and '/join' in p:
+        req_id = body.get('id')
+        new_status = (body.get('status') or '').strip()  # approved | rejected
+        owner_note = (body.get('owner_note') or '').strip() or None
+        if not req_id or new_status not in ('approved', 'rejected'):
+            conn.close()
+            return err('id и status (approved/rejected) обязательны')
+        cur.execute(
+            f"UPDATE {S}.egsu_join_requests SET status={esc(new_status)}, "
+            f"owner_note={esc(owner_note)}, reviewed_at=NOW() "
+            f"WHERE id={int(req_id)} RETURNING id, full_name, email, request_type, organ_code"
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return err('Заявка не найдена', 404)
+        rid, full_name, email, rtype, organ_code = row
+        # Если одобрено — автоматически добавляем в орган
+        if new_status == 'approved' and rtype == 'organ_member' and organ_code:
+            cur.execute(
+                f"INSERT INTO {S}.egsu_organ_members (organ_code, full_name, role, position, status) "
+                f"VALUES ({esc(organ_code)},{esc(full_name)},'Участник', 'Принят по заявке','active') "
+                f"ON CONFLICT DO NOTHING"
+            )
+        conn.commit()
+
+        # Уведомление заявителю о решении
+        import smtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        smtp_password = os.environ.get('YANDEX_SMTP_PASSWORD', '')
+        owner_email = 'nikolaevvladimir77@yandex.ru'
+        status_icon = '✅' if new_status == 'approved' else '❌'
+        status_text = 'ОДОБРЕНА' if new_status == 'approved' else 'ОТКЛОНЕНА'
+        status_color = '#00ff87' if new_status == 'approved' else '#f43f5e'
+        note_block = f'<p><b>Примечание от владельца:</b> {owner_note}</p>' if owner_note else ''
+        next_steps = '<p>Ожидайте инструкций по подключению к системе ECSU 2.0.</p>' if new_status == 'approved' else '<p>Вы можете повторно подать заявку после устранения причин отказа.</p>'
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px">
+        <div style="background:#0a0f1e;padding:20px;border-radius:12px;border:1px solid {status_color}">
+        <h2 style="color:{status_color};margin:0 0 16px">{status_icon} ECSU 2.0 — Ваша заявка {status_text}</h2>
+        <p style="color:#ccc">Уважаемый(ая) <b style="color:#fff">{full_name}</b>,</p>
+        <p style="color:#ccc">Ваша заявка на вступление в систему ECSU 2.0 была рассмотрена.</p>
+        {note_block}
+        {next_steps}
+        <p style="color:#888;font-size:12px;margin-top:20px">ECSU 2.0 · Единая Система · © 2026</p>
+        </div></div>"""
+        if smtp_password and email:
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = f'{status_icon} ECSU: Ваша заявка #{rid} — {status_text}'
+            msg['From'] = f'ECSU Sistema <{owner_email}>'
+            msg['To'] = email
+            msg.attach(MIMEText(html, 'html', 'utf-8'))
+            with smtplib.SMTP_SSL('smtp.yandex.ru', 465) as srv:
+                srv.login(owner_email, smtp_password)
+                srv.send_message(msg)
+
+        conn.close()
+        return ok({'id': rid, 'status': new_status, 'message': f'Заявка {status_text.lower()}, уведомление отправлено заявителю'})
+
     conn.close()
     return err(f'Маршрут не найден: {method} {path}', 404)
