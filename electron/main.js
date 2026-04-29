@@ -12,8 +12,8 @@ function createWindow() {
     height: 800,
     minWidth: 900,
     minHeight: 600,
-    frame: false,          // Без системной рамки — своя titlebar из ОС
-    titleBarStyle: 'hidden',
+    frame: true,
+    titleBarStyle: 'default',
     backgroundColor: '#060a12',
     webPreferences: {
       nodeIntegration: false,
@@ -25,6 +25,12 @@ function createWindow() {
   });
 
   mainWindow.loadURL(ECSU_URL);
+  mainWindow.webContents.openDevTools({ mode: 'detach' });
+
+  mainWindow.webContents.on('did-fail-load', (e, code, desc) => {
+    console.error('Ошибка загрузки:', code, desc);
+    mainWindow.loadURL('data:text/html,<h1 style="color:white;background:#060a12;padding:20px">Ошибка: ' + desc + ' (' + code + ')</h1>');
+  });
 
   // Открывать внешние ссылки в браузере
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
