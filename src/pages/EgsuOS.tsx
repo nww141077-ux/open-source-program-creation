@@ -1356,6 +1356,89 @@ npm start`,
         </div>
       </div>
 
+      {/* Кнопки скачивания файлов */}
+      <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <div className="flex items-center gap-2 mb-1">
+          <Icon name="Download" size={14} style={{ color: "#00ff87" }} />
+          <span className="text-xs font-semibold text-white">Скачать файлы для установки</span>
+        </div>
+        {[
+          {
+            label: "main.js",
+            icon: "FileCode",
+            color: "#a855f7",
+            desc: "Точка входа Electron-приложения",
+            filename: "main.js",
+            content: `const { app, BrowserWindow } = require('electron');
+const path = require('path');
+
+app.whenReady().then(() => {
+  const win = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    title: 'ECSU OS',
+    webPreferences: { nodeIntegration: false }
+  });
+  win.loadFile('index.html');
+  win.setMenuBarVisibility(false);
+});
+
+app.on('window-all-closed', () => app.quit());`,
+          },
+          {
+            label: "package.json",
+            icon: "FileJson",
+            color: "#06b6d4",
+            desc: "Конфигурация проекта Node.js",
+            filename: "package.json",
+            content: `{
+  "name": "ecsu-os",
+  "version": "2.0.0",
+  "description": "ECSU OS · Николаев В.В.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  }
+}`,
+          },
+          {
+            label: "start-ecsu.bat",
+            icon: "Terminal",
+            color: "#f59e0b",
+            desc: "Ярлык запуска для Windows",
+            filename: "start-ecsu.bat",
+            content: `@echo off
+cd /d C:\\ECSU-OS
+npm start`,
+          },
+        ].map((file) => (
+          <div key={file.filename} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${file.color}18`, border: `1px solid ${file.color}30` }}>
+              <Icon name={file.icon as any} size={15} style={{ color: file.color }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-mono font-semibold text-white">{file.label}</div>
+              <div className="text-xs truncate" style={{ color: "rgba(255,255,255,0.35)" }}>{file.desc}</div>
+            </div>
+            <button
+              onClick={() => {
+                const blob = new Blob([file.content], { type: "text/plain" });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = file.filename;
+                a.click();
+                URL.revokeObjectURL(a.href);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:scale-105 shrink-0"
+              style={{ background: `${file.color}15`, color: file.color, border: `1px solid ${file.color}30` }}
+            >
+              <Icon name="Download" size={11} />
+              Скачать
+            </button>
+          </div>
+        ))}
+      </div>
+
       {/* Шаги */}
       {steps.map((step, idx) => (
         <div key={idx} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${done[idx] ? "rgba(0,255,135,0.25)" : "rgba(255,255,255,0.07)"}`, background: done[idx] ? "rgba(0,255,135,0.04)" : "rgba(255,255,255,0.02)" }}>
