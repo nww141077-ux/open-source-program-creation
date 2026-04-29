@@ -1,4 +1,5 @@
 {
+  "ecsu-vm": "https://functions.poehali.dev/f9a4efa1-55cb-4b31-88fe-26f86159aa83",
   "dalan-email": "https://functions.poehali.dev/60627924-ce4d-4f89-a2dd-5addbe419732",
   "civil-claims": "https://functions.poehali.dev/e5c4bdb8-7609-4caf-85b4-6c8e2c676c7a",
   "graphium": "https://functions.poehali.dev/bb585f44-133a-4c40-b917-d5573c2b5eb4",
@@ -13,7 +14,6 @@
   "admin-auth": "https://functions.poehali.dev/aa81ecbc-fe9a-4921-a022-4a9ddd8dcb0e",
   "ark-admin": "https://functions.poehali.dev/9878d5a9-0ad5-432c-9dd0-3ab00d97c421",
   "export-manager": "https://functions.poehali.dev/570f8cf2-4aa5-4054-a1e4-1aac6d4f345b",
-  "sms-monitor": "https://functions.poehali.dev/65523c0c-db23-4d8b-9c7e-6bae200b3318",
   "gateway": "https://functions.poehali.dev/417cb87f-8717-4563-a698-6e3f5bb17500",
   "scheduler": "https://functions.poehali.dev/129bc872-862f-4f58-8992-a6f164ca410d",
   "incident-scanner": "https://functions.poehali.dev/b3ae5ea9-0780-4337-b7b0-e19f144a63fb",

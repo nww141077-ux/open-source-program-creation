@@ -56,6 +56,7 @@ const DESKTOP_APPS = [
   { id: "aichat",    title: "AI Ассистент",        icon: "BrainCircuit",  color: "#a855f7", component: "aichat" },
   { id: "voice",     title: "Голосовой ввод",      icon: "Mic",           color: "#f43f5e", component: "voice" },
   { id: "loader",    title: "Загрузчик ECSU",      icon: "Code",          color: "#00ff87", component: "loader" },
+  { id: "yura-vm",   title: "Юра · Виртуальная ВМ", icon: "Bot",           color: "#00ff87", component: "yura-vm" },
 ];
 
 const ECSU_APPS = [
@@ -776,6 +777,7 @@ export default function EgsuOS() {
               {win.component === "calc" && <CalcApp />}
               {win.component === "aichat" && <AiChatApp />}
               {win.component === "voice" && <VoiceApp />}
+              {win.component === "yura-vm" && <YuraVM />}
             </div>
           </div>
         );
@@ -1009,6 +1011,159 @@ function VoiceApp() {
         {log.slice(-5).map((l, i) => (
           <div key={i} className="text-xs px-2" style={{ color: "rgba(255,255,255,0.3)" }}>{l}</div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── ЮРА · ВИРТУАЛЬНАЯ МАШИНА ────────────────────────────────────────────────
+const VM_URL = "https://functions.poehali.dev/f9a4efa1-55cb-4b31-88fe-26f86159aa83";
+
+function YuraVM() {
+  const [msgs, setMsgs] = useState<{ role: string; content: string }[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [booted, setBooted] = useState(false);
+  const [bootLog, setBootLog] = useState<string[]>([]);
+  const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, bootLog]);
+
+  useEffect(() => {
+    const lines = [
+      "ECSU VM v1.0 — инициализация...",
+      "Загрузка ядра Юра-1...",
+      "Подключение к poehali.dev...",
+      "Установка AI-модуля (Pollinations/OpenAI)...",
+      "Настройка контекста ECSU OS...",
+      "✓ Виртуальная машина готова. Юра онлайн.",
+    ];
+    let i = 0;
+    const t = setInterval(() => {
+      if (i < lines.length) { setBootLog(l => [...l, lines[i]]); i++; }
+      else { clearInterval(t); setTimeout(() => setBooted(true), 500); }
+    }, 400);
+    return () => clearInterval(t);
+  }, []);
+
+  async function send() {
+    if (!input.trim() || loading) return;
+    const userMsg = { role: "user", content: input };
+    const newMsgs = [...msgs, userMsg];
+    setMsgs(newMsgs);
+    setInput("");
+    setLoading(true);
+    try {
+      const res = await fetch(VM_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: newMsgs }),
+      });
+      const data = JSON.parse(await res.text());
+      const parsed = typeof data === "string" ? JSON.parse(data) : data;
+      setMsgs(m => [...m, { role: "assistant", content: parsed.reply || "..." }]);
+    } catch {
+      setMsgs(m => [...m, { role: "assistant", content: "Ошибка соединения с ВМ. Попробуй ещё раз." }]);
+    }
+    setLoading(false);
+  }
+
+  if (!booted) {
+    return (
+      <div className="h-full flex flex-col justify-center p-6 font-mono" style={{ background: "#020408" }}>
+        <div className="text-xs mb-4" style={{ color: "#00ff87" }}>ECSU OS — Виртуальная машина</div>
+        {bootLog.map((l, i) => (
+          <div key={i} className="text-xs mb-1 animate-fade-up" style={{ color: i === bootLog.length - 1 ? "#00ff87" : "rgba(255,255,255,0.4)" }}>
+            {i === bootLog.length - 1 ? "▶ " : "  "}{l}
+          </div>
+        ))}
+        <div className="mt-3 flex gap-1">
+          {[0,1,2].map(i => (
+            <div key={i} className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#00ff87", animationDelay: `${i * 0.2}s` }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col" style={{ background: "#020408" }}>
+      {/* Шапка ВМ */}
+      <div className="flex items-center gap-3 px-4 py-2 shrink-0" style={{ borderBottom: "1px solid rgba(0,255,135,0.1)", background: "rgba(0,255,135,0.03)" }}>
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, #00ff87, #3b82f6)" }}>
+          <Icon name="Bot" size={14} className="text-black" />
+        </div>
+        <div>
+          <div className="text-xs font-bold" style={{ color: "#00ff87" }}>Юра · ECSU Virtual Machine</div>
+          <div className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>poehali.dev · AI-среда · бесплатный режим</div>
+        </div>
+        <div className="ml-auto flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+          <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>online</span>
+        </div>
+      </div>
+
+      {/* Сообщения */}
+      <div className="flex-1 overflow-auto p-4 space-y-3">
+        {msgs.length === 0 && (
+          <div className="text-center py-8">
+            <div className="text-2xl mb-2">🚀</div>
+            <div className="text-sm font-medium mb-1" style={{ color: "rgba(255,255,255,0.6)" }}>Привет! Я Юра.</div>
+            <div className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>Твой личный разработчик прямо внутри ECSU OS.</div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {["Как добавить новое окно?", "Объясни архитектуру ECSU", "Помоги с кодом React", "Что такое Далан-1?"].map(q => (
+                <button key={q} onClick={() => setInput(q)}
+                  className="px-3 py-2 rounded-xl text-xs text-left transition-all hover:scale-105"
+                  style={{ background: "rgba(0,255,135,0.05)", color: "rgba(0,255,135,0.7)", border: "1px solid rgba(0,255,135,0.1)" }}>
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {msgs.map((m, i) => (
+          <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+            {m.role === "assistant" && (
+              <div className="w-6 h-6 rounded-lg mr-2 shrink-0 flex items-center justify-center mt-0.5" style={{ background: "linear-gradient(135deg,#00ff87,#3b82f6)" }}>
+                <Icon name="Bot" size={11} className="text-black" />
+              </div>
+            )}
+            <div className="max-w-sm px-3 py-2 rounded-2xl text-xs whitespace-pre-wrap"
+              style={{
+                background: m.role === "user" ? "rgba(0,255,135,0.1)" : "rgba(255,255,255,0.04)",
+                color: m.role === "user" ? "#00ff87" : "rgba(255,255,255,0.85)",
+                border: `1px solid ${m.role === "user" ? "rgba(0,255,135,0.2)" : "rgba(255,255,255,0.06)"}`,
+              }}>
+              {m.content}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="w-6 h-6 rounded-lg mr-2 shrink-0 flex items-center justify-center" style={{ background: "linear-gradient(135deg,#00ff87,#3b82f6)" }}>
+              <Icon name="Bot" size={11} className="text-black" />
+            </div>
+            <div className="px-3 py-2 rounded-2xl flex gap-1 items-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              {[0,1,2].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "#00ff87", animationDelay: `${i*0.15}s` }} />)}
+            </div>
+          </div>
+        )}
+        <div ref={endRef} />
+      </div>
+
+      {/* Ввод */}
+      <div className="flex gap-2 p-3 shrink-0" style={{ borderTop: "1px solid rgba(0,255,135,0.08)" }}>
+        <input value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
+          placeholder="Спроси Юру..."
+          disabled={loading}
+          className="flex-1 px-3 py-2 rounded-xl text-xs outline-none"
+          style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.85)", border: "1px solid rgba(0,255,135,0.1)" }} />
+        <button onClick={send} disabled={loading || !input.trim()}
+          className="px-3 py-2 rounded-xl text-xs transition-all hover:scale-105 disabled:opacity-40"
+          style={{ background: "rgba(0,255,135,0.15)", color: "#00ff87" }}>
+          <Icon name="Send" size={13} />
+        </button>
       </div>
     </div>
   );
