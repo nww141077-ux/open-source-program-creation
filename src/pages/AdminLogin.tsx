@@ -103,7 +103,7 @@ export default function AdminLogin() {
           </button>
 
           <p className="text-center text-xs text-slate-600 mt-4">
-            Стандартные данные: admin / admin123
+            ECSU 2.0 · Доступ только для владельца
           </p>
         </form>
       </div>
