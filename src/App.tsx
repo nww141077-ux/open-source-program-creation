@@ -44,6 +44,7 @@ import EgsuDalan1 from "./pages/EgsuDalan1";
 import EgsuFund from "./pages/EgsuFund";
 import EgsuJoin from "./pages/EgsuJoin";
 import EgsuMonetize from "./pages/EgsuMonetize";
+import EgsuOS from "./pages/EgsuOS";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -97,6 +98,7 @@ const App = () => (
           <Route path="/egsu/fund" element={<EgsuFund />} />
           <Route path="/egsu/join" element={<EgsuJoin />} />
           <Route path="/egsu/monetize" element={<EgsuMonetize />} />
+          <Route path="/egsu/os" element={<EgsuOS />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
