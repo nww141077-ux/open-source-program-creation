@@ -411,6 +411,26 @@ export default function EgsuOS() {
           <div className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
             {time.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
           </div>
+          {/* Кнопки управления окном Electron */}
+          {typeof (window as any).ecsuOS !== "undefined" && (
+            <div className="flex items-center gap-1 ml-2">
+              <button onClick={() => (window as any).ecsuOS.minimize()}
+                className="w-6 h-6 rounded-md flex items-center justify-center transition-all hover:scale-110"
+                style={{ background: "rgba(255,193,7,0.15)", color: "#ffc107" }} title="Свернуть">
+                <Icon name="Minus" size={10} />
+              </button>
+              <button onClick={() => (window as any).ecsuOS.maximize()}
+                className="w-6 h-6 rounded-md flex items-center justify-center transition-all hover:scale-110"
+                style={{ background: "rgba(0,255,135,0.15)", color: "#00ff87" }} title="Полный экран">
+                <Icon name="Maximize2" size={10} />
+              </button>
+              <button onClick={() => (window as any).ecsuOS.close()}
+                className="w-6 h-6 rounded-md flex items-center justify-center transition-all hover:scale-110"
+                style={{ background: "rgba(244,63,94,0.15)", color: "#f43f5e" }} title="Закрыть">
+                <Icon name="X" size={10} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

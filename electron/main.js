@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session } = require('electron');
+const { app, BrowserWindow, session, ipcMain } = require('electron');
 
 const TARGET_URL = 'https://open-source-program-creation--preview.poehali.dev/egsu/os';
 
@@ -9,10 +9,13 @@ function createWindow() {
     title: 'ECSU OS v2.0',
     backgroundColor: '#020408',
     show: false,
+    frame: false,
+    fullscreen: true,
     webPreferences: {
       webSecurity: false,
-      contextIsolation: false,
+      contextIsolation: true,
       nodeIntegration: false,
+      preload: __dirname + '/preload.js',
     },
   });
 
@@ -30,6 +33,17 @@ function createWindow() {
   win.webContents.on('unresponsive', () => {
     win.reload();
   });
+
+  ipcMain.on('win-minimize', () => win.minimize());
+  ipcMain.on('win-maximize', () => {
+    if (win.isMaximized() || win.isFullScreen()) {
+      win.setFullScreen(false);
+      win.unmaximize();
+    } else {
+      win.setFullScreen(true);
+    }
+  });
+  ipcMain.on('win-close', () => win.close());
 }
 
 app.whenReady().then(() => {
