@@ -10,7 +10,7 @@ function createWindow() {
     },
   });
 
-  win.loadURL('https://open-source-program-creation.poehali.dev/egsu/os');
+  win.loadURL('https://open-source-program-creation--preview.poehali.dev/egsu/os');
 }
 
 app.whenReady().then(createWindow);
