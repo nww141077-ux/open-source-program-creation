@@ -1,6 +1,8 @@
 const { app, BrowserWindow, session, ipcMain } = require('electron');
 
-const TARGET_URL = 'https://open-source-program-creation--preview.poehali.dev/egsu/os';
+// Основной URL — опубликованная версия. Preview — запасной при разработке.
+const TARGET_URL = 'https://open-source-program-creation.poehali.dev/egsu/os';
+const FALLBACK_URL = 'https://open-source-program-creation--preview.poehali.dev/egsu/os';
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -27,7 +29,12 @@ function createWindow() {
 
   win.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
     console.log('Загрузка не удалась:', errorCode, errorDescription);
-    setTimeout(() => win.loadURL(TARGET_URL), 3000);
+    // Пробуем preview если основной недоступен
+    if (win.webContents.getURL() !== FALLBACK_URL) {
+      setTimeout(() => win.loadURL(FALLBACK_URL), 2000);
+    } else {
+      setTimeout(() => win.loadURL(TARGET_URL), 5000);
+    }
   });
 
   win.webContents.on('unresponsive', () => {

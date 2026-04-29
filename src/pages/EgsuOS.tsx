@@ -1019,13 +1019,24 @@ function VoiceApp() {
 // ─── ЮРА · ВИРТУАЛЬНАЯ МАШИНА ────────────────────────────────────────────────
 const VM_URL = "https://functions.poehali.dev/f9a4efa1-55cb-4b31-88fe-26f86159aa83";
 
+const CHAT_STORAGE_KEY = "ecsu-vm-chat-history";
+
 function YuraVM() {
-  const [msgs, setMsgs] = useState<{ role: string; content: string }[]>([]);
+  const [msgs, setMsgs] = useState<{ role: string; content: string }[]>(() => {
+    try {
+      const saved = localStorage.getItem(CHAT_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch (_) { return []; }
+  });
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [booted, setBooted] = useState(false);
   const [bootLog, setBootLog] = useState<string[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(msgs)); } catch (_) { /* ignore */ }
+  }, [msgs]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, bootLog]);
 
@@ -1097,9 +1108,19 @@ function YuraVM() {
           <div className="text-xs font-bold" style={{ color: "#00ff87" }}>Юра · ECSU Virtual Machine</div>
           <div className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>poehali.dev · AI-среда · бесплатный режим</div>
         </div>
-        <div className="ml-auto flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-          <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>online</span>
+        <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>online · {msgs.length} сообщ.</span>
+          </div>
+          {msgs.length > 0 && (
+            <button onClick={() => { setMsgs([]); localStorage.removeItem(CHAT_STORAGE_KEY); }}
+              className="px-2 py-1 rounded-lg text-xs transition-all hover:scale-105"
+              style={{ background: "rgba(244,63,94,0.1)", color: "#f43f5e" }}
+              title="Очистить историю">
+              <Icon name="Trash2" size={11} />
+            </button>
+          )}
         </div>
       </div>
 
