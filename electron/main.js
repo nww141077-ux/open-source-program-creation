@@ -90,7 +90,13 @@ function createWindow() {
   win.loadURL(TARGET_URL);
 
   win.webContents.on('did-finish-load', () => {
-    win.show();
+    // Если автозапуск — стартуем свёрнуто в трей
+    const isAutostart = process.argv.includes('--autostart');
+    if (!isAutostart) {
+      win.show();
+      win.setFullScreen(true);
+    }
+    // При автозапуске просто живём в трее — окно откроется по клику
   });
 
   win.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
