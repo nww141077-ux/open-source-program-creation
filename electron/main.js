@@ -15,7 +15,6 @@ function createWindow() {
     frame: false,          // Без системной рамки — своя titlebar из ОС
     titleBarStyle: 'hidden',
     backgroundColor: '#060a12',
-    icon: path.join(__dirname, 'icon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -41,7 +40,10 @@ function createWindow() {
 
 function createTray() {
   // Иконка в системном трее
-  tray = new Tray(path.join(__dirname, 'icon.png'));
+  // Создаём простую иконку 16x16 без файла
+  const { nativeImage } = require('electron');
+  const img = nativeImage.createEmpty();
+  tray = new Tray(img);
   const menu = Menu.buildFromTemplate([
     { label: 'ECSU OS v2.0 · Nikolaev V.V.', enabled: false },
     { type: 'separator' },
