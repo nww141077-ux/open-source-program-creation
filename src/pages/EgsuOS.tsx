@@ -57,6 +57,7 @@ const DESKTOP_APPS = [
   { id: "voice",     title: "Голосовой ввод",      icon: "Mic",           color: "#f43f5e", component: "voice" },
   { id: "loader",    title: "Загрузчик ECSU",      icon: "Code",          color: "#00ff87", component: "loader" },
   { id: "yura-vm",   title: "Юра · Виртуальная ВМ", icon: "Bot",           color: "#00ff87", component: "yura-vm" },
+  { id: "install-pc", title: "Установка на ПК",    icon: "MonitorDown",   color: "#00ff87", component: "install-pc" },
 ];
 
 const ECSU_APPS = [
@@ -778,6 +779,7 @@ export default function EgsuOS() {
               {win.component === "aichat" && <AiChatApp />}
               {win.component === "voice" && <VoiceApp />}
               {win.component === "yura-vm" && <YuraVM />}
+              {win.component === "install-pc" && <InstallPCApp />}
             </div>
           </div>
         );
@@ -1186,6 +1188,215 @@ function YuraVM() {
           <Icon name="Send" size={13} />
         </button>
       </div>
+    </div>
+  );
+}
+
+// ─── УСТАНОВКА НА ПК ─────────────────────────────────────────────────────────
+function InstallPCApp() {
+  const [done, setDone] = useState<Record<number, boolean>>({});
+
+  const steps = [
+    {
+      num: "01",
+      title: "Системные требования",
+      icon: "Monitor",
+      color: "#3b82f6",
+      items: [
+        "ОС: Windows 10/11 (64-бит) или Linux Ubuntu 20.04+",
+        "ОЗУ: минимум 4 ГБ (рекомендуется 8 ГБ)",
+        "Место на диске: 500 МБ свободного пространства",
+        "Интернет: нужен для первого запуска и синхронизации",
+        "Процессор: любой современный x64 (Intel / AMD)",
+      ],
+      code: null,
+    },
+    {
+      num: "02",
+      title: "Скачать билд проекта",
+      icon: "Download",
+      color: "#00ff87",
+      items: [
+        "Откройте poehali.dev → ваш проект ECSU",
+        "Нажмите кнопку «Скачать» в правом верхнем меню",
+        "Выберите «Скачать билд» (HTML + JS + CSS)",
+        "Файл загрузится в папку «Загрузки» как ZIP-архив",
+      ],
+      code: null,
+    },
+    {
+      num: "03",
+      title: "Установить Node.js и Electron",
+      icon: "Package",
+      color: "#f59e0b",
+      items: [
+        "Скачайте Node.js LTS с сайта nodejs.org",
+        "Установите Node.js (Next → Next → Install)",
+        "Откройте командную строку (Win+R → cmd → Enter)",
+        "Выполните команду установки Electron:",
+      ],
+      code: "npm install -g electron",
+    },
+    {
+      num: "04",
+      title: "Распаковать и подготовить",
+      icon: "FolderOpen",
+      color: "#a855f7",
+      items: [
+        "Распакуйте скачанный ZIP в любую папку (напр. C:\\ECSU-OS)",
+        "В распакованной папке создайте файл main.js",
+        "Вставьте в main.js следующий код:",
+      ],
+      code: `const { app, BrowserWindow } = require('electron');
+const path = require('path');
+
+app.whenReady().then(() => {
+  const win = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    title: 'ECSU OS',
+    webPreferences: { nodeIntegration: false }
+  });
+  win.loadFile('index.html');
+  win.setMenuBarVisibility(false);
+});
+
+app.on('window-all-closed', () => app.quit());`,
+    },
+    {
+      num: "05",
+      title: "Создать package.json",
+      icon: "FileJson",
+      color: "#06b6d4",
+      items: [
+        "В той же папке создайте файл package.json",
+        "Вставьте следующее содержимое:",
+      ],
+      code: `{
+  "name": "ecsu-os",
+  "version": "2.0.0",
+  "description": "ECSU OS · Николаев В.В.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  }
+}`,
+    },
+    {
+      num: "06",
+      title: "Установить зависимости",
+      icon: "Terminal",
+      color: "#10b981",
+      items: [
+        "В командной строке перейдите в папку с проектом:",
+        "Затем установите зависимости:",
+      ],
+      code: `cd C:\\ECSU-OS
+npm install electron --save-dev`,
+    },
+    {
+      num: "07",
+      title: "Первый запуск",
+      icon: "Play",
+      color: "#00ff87",
+      items: [
+        "Запустите ECSU OS командой:",
+        "Откроется окно приложения с рабочим столом ECSU",
+        "При первом запуске система синхронизируется с сервером",
+        "Войдите под учётными данными Владимира (nvv)",
+      ],
+      code: "npm start",
+    },
+    {
+      num: "08",
+      title: "Создать ярлык на рабочем столе",
+      icon: "Layers",
+      color: "#ec4899",
+      items: [
+        "Для удобного запуска создайте bat-файл start-ecsu.bat в папке:",
+        "Содержимое файла:",
+        "Затем создайте ярлык этого файла на рабочем столе Windows",
+      ],
+      code: `@echo off
+cd /d C:\\ECSU-OS
+npm start`,
+    },
+    {
+      num: "09",
+      title: "Обновление системы",
+      icon: "RefreshCw",
+      color: "#f43f5e",
+      items: [
+        "При выходе новой версии на poehali.dev — скачайте новый билд",
+        "Замените содержимое папки C:\\ECSU-OS новыми файлами",
+        "Файлы main.js и package.json НЕ удалять — они ваши",
+        "После замены запустите npm start — система обновлена",
+      ],
+      code: null,
+    },
+  ];
+
+  const doneCount = Object.values(done).filter(Boolean).length;
+  const pct = Math.round((doneCount / steps.length) * 100);
+
+  return (
+    <div className="h-full overflow-auto p-4 space-y-4" style={{ background: "#020408" }}>
+      {/* Заголовок */}
+      <div className="rounded-xl p-4" style={{ background: "rgba(0,255,135,0.05)", border: "1px solid rgba(0,255,135,0.15)" }}>
+        <div className="flex items-center gap-3 mb-1">
+          <Icon name="MonitorDown" size={20} style={{ color: "#00ff87" }} />
+          <span className="text-sm font-bold text-white">Установка ECSU OS на ПК</span>
+          <span className="ml-auto text-xs font-mono" style={{ color: "#00ff87" }}>{pct}%</span>
+        </div>
+        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: "linear-gradient(90deg,#00ff87,#3b82f6)" }} />
+        </div>
+        <div className="mt-2 text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+          Отмечайте шаги по мере выполнения · {doneCount} из {steps.length} выполнено
+        </div>
+      </div>
+
+      {/* Шаги */}
+      {steps.map((step, idx) => (
+        <div key={idx} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${done[idx] ? "rgba(0,255,135,0.25)" : "rgba(255,255,255,0.07)"}`, background: done[idx] ? "rgba(0,255,135,0.04)" : "rgba(255,255,255,0.02)" }}>
+          {/* Шапка шага */}
+          <div className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none" onClick={() => setDone(d => ({ ...d, [idx]: !d[idx] }))}>
+            <span className="text-xs font-mono w-6 shrink-0" style={{ color: done[idx] ? "#00ff87" : "rgba(255,255,255,0.25)" }}>{step.num}</span>
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${step.color}18`, border: `1px solid ${step.color}30` }}>
+              <Icon name={done[idx] ? "CheckCircle" : step.icon as any} size={14} style={{ color: done[idx] ? "#00ff87" : step.color }} />
+            </div>
+            <span className="text-sm font-medium flex-1" style={{ color: done[idx] ? "#00ff87" : "rgba(255,255,255,0.85)" }}>{step.title}</span>
+            <div className="w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all"
+              style={{ borderColor: done[idx] ? "#00ff87" : "rgba(255,255,255,0.2)", background: done[idx] ? "#00ff87" : "transparent" }}>
+              {done[idx] && <Icon name="Check" size={11} className="text-black" />}
+            </div>
+          </div>
+
+          {/* Контент */}
+          <div className="px-4 pb-4 space-y-2">
+            {step.items.map((item, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <Icon name="ChevronRight" size={12} className="mt-0.5 shrink-0" style={{ color: step.color }} />
+                <span className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>{item}</span>
+              </div>
+            ))}
+            {step.code && (
+              <div className="mt-3 rounded-lg p-3 font-mono text-xs overflow-x-auto whitespace-pre" style={{ background: "rgba(0,0,0,0.4)", color: "#00ff87", border: "1px solid rgba(0,255,135,0.1)" }}>
+                {step.code}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+
+      {/* Финал */}
+      {pct === 100 && (
+        <div className="rounded-xl p-4 text-center" style={{ background: "rgba(0,255,135,0.08)", border: "1px solid rgba(0,255,135,0.3)" }}>
+          <Icon name="CheckCircle" size={28} style={{ color: "#00ff87", margin: "0 auto 8px" }} />
+          <div className="text-sm font-bold text-white mb-1">ECSU OS успешно установлена на ПК</div>
+          <div className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>Все шаги выполнены · Владелец: Николаев В.В.</div>
+        </div>
+      )}
     </div>
   );
 }
