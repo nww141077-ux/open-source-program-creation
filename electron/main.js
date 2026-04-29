@@ -19,7 +19,8 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: true,
+      webSecurity: false,
+      allowRunningInsecureContent: true,
     },
     title: 'ECSU OS v2.0 · Nikolaev V.V.',
   });
