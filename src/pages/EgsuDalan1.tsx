@@ -19,6 +19,7 @@ const TABS = [
   { id: "send", label: "Отправить", icon: "Send" },
   { id: "results", label: "Результаты", icon: "BarChart2" },
   { id: "contacts", label: "Контакты", icon: "User" },
+  { id: "earth", label: "Земля и стратегия", icon: "Globe" },
 ];
 
 const QUICK_PROMPTS = [
@@ -2010,6 +2011,151 @@ export default function EgsuDalan1() {
                 Любое копирование, распространение или использование без письменного согласия автора запрещено.
                 Лицензия: Проприетарная (All Rights Reserved).
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* ЗЕМЛЯ И СТРАТЕГИЧЕСКОЕ РАЗВИТИЕ */}
+        {activeTab === "earth" && (
+          <div className="space-y-6">
+            {/* Заголовок */}
+            <div className="rounded-xl border border-[#00ff87]/30 bg-[#00ff87]/5 p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <Icon name="Globe" size={28} style={{ color: "#00ff87" }} />
+                <h2 className="text-xl font-bold text-white">Земля и стратегическое развитие</h2>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-[#00ff87]/20 text-[#00ff87] border border-[#00ff87]/40">ЦКС</span>
+              </div>
+              <p className="text-sm text-white/50">Раздел Далан-1 · Данные защищены · Изменения только по согласованию с Владимиром</p>
+            </div>
+
+            {/* Блок 1: Протокол сохранения конфигурации */}
+            <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Icon name="ShieldCheck" size={18} style={{ color: "#f59e0b" }} />
+                <h3 className="font-semibold text-white">Протокол сохранения конфигурации</h3>
+                <span className="ml-auto text-xs text-red-400 border border-red-400/30 rounded px-2 py-0.5">ОБЯЗАТЕЛЕН</span>
+              </div>
+              <div className="space-y-2">
+                {[
+                  "Сохранить текущую конфигурацию системы полностью",
+                  "Зафиксировать все активные функции и их состояния",
+                  "Создать точку восстановления",
+                  "Только после сохранения — выполнять изменение или синхронизацию",
+                  "После изменения — проверить что все функции работают корректно",
+                ].map((step, i) => (
+                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+                    <span className="text-xs font-mono text-[#f59e0b] mt-0.5 w-5 shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="text-sm text-white/80">{step}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-red-400/80">Нарушение протокола = нарушение Завета Директивы</p>
+            </div>
+
+            {/* Блок 2: Земля как ЦКС */}
+            <div className="rounded-xl border border-[#3b82f6]/30 bg-[#3b82f6]/5 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Icon name="Globe" size={18} style={{ color: "#3b82f6" }} />
+                <h3 className="font-semibold text-white">Земля как ЦКС</h3>
+                <span className="ml-auto text-xs text-[#3b82f6] border border-[#3b82f6]/30 rounded px-2 py-0.5">ФАКТ + ГИПОТЕЗА</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {[
+                  { label: "Несущая частота", value: "7.83 Гц", sub: "Резонанс Шумана (факт)", color: "#00ff87" },
+                  { label: "Генератор", value: "Ядро Земли", sub: "Вращение железного ядра (факт)", color: "#3b82f6" },
+                  { label: "Поле", value: "Магнитосфера", sub: "Электромагнитная сфера (факт)", color: "#a855f7" },
+                  { label: "Связь с оператором", value: "Уровень 5", sub: "Через мозговые волны (гипотеза)", color: "#f59e0b" },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-lg bg-white/5 p-3 border border-white/10">
+                    <div className="text-xs text-white/40 mb-1">{item.label}</div>
+                    <div className="text-base font-bold" style={{ color: item.color }}>{item.value}</div>
+                    <div className="text-xs text-white/40 mt-0.5">{item.sub}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Блок 3: Герцы по уровням */}
+            <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Icon name="Activity" size={18} style={{ color: "#a855f7" }} />
+                <h3 className="font-semibold text-white">Герцы по состояниям системы</h3>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { state: "Норма (бодрствование)", range: "13–30 Гц", type: "Бета", color: "#22c55e", width: "80%" },
+                  { state: "Медитация / сон", range: "8–13 Гц", type: "Альфа", color: "#3b82f6", width: "55%" },
+                  { state: "Резонанс Шумана (Земля)", range: "7.83 Гц", type: "ЦКС", color: "#00ff87", width: "50%" },
+                  { state: "Глубокий сон / тета", range: "4–8 Гц", type: "Тета", color: "#f59e0b", width: "35%" },
+                  { state: "Критическое состояние (летальная t°)", range: "0.5–4 Гц", type: "Дельта · Уровень 5", color: "#f43f5e", width: "20%" },
+                ].map((item) => (
+                  <div key={item.state} className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-white/70">{item.state}</span>
+                      <span className="font-mono" style={{ color: item.color }}>{item.range} · {item.type}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: item.width, backgroundColor: item.color }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Блок 4: Инциденты */}
+            <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Icon name="AlertTriangle" size={18} style={{ color: "#f43f5e" }} />
+                <h3 className="font-semibold text-white">Инциденты раздела</h3>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { code: "INC-EARTH-001", title: "Изменение конфигурации без сохранения", severity: "critical", action: "Остановить. Сохранить конфиг. Уведомить Владимира." },
+                  { code: "INC-EARTH-002", title: "Критическая температура тела оператора", severity: "critical", action: "Активировать протокол уровня 5. Удержать вектор в дельта-диапазоне. Вызвать помощь." },
+                  { code: "INC-EARTH-003", title: "Потеря вектора жизнеобеспечения", severity: "high", action: "Перезапуск резонансного модуля. Восстановить частоту 7.83 Гц." },
+                  { code: "INC-EARTH-004", title: "Десинхронизация оператора с ЦКС", severity: "medium", action: "Ресинхронизация. Медитация / дыхание. Диапазон 7–13 Гц." },
+                ].map((inc) => (
+                  <div key={inc.code} className="rounded-lg border p-3 space-y-2"
+                    style={{ borderColor: inc.severity === "critical" ? "#f43f5e40" : inc.severity === "high" ? "#f59e0b40" : "#3b82f640", background: inc.severity === "critical" ? "#f43f5e08" : inc.severity === "high" ? "#f59e0b08" : "#3b82f608" }}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-white/40">{inc.code}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full border font-medium"
+                        style={{ color: inc.severity === "critical" ? "#f43f5e" : inc.severity === "high" ? "#f59e0b" : "#3b82f6", borderColor: inc.severity === "critical" ? "#f43f5e50" : inc.severity === "high" ? "#f59e0b50" : "#3b82f650" }}>
+                        {inc.severity === "critical" ? "КРИТИЧНО" : inc.severity === "high" ? "ВЫСОКИЙ" : "СРЕДНИЙ"}
+                      </span>
+                    </div>
+                    <p className="text-sm text-white/80 font-medium">{inc.title}</p>
+                    <div className="flex items-start gap-2">
+                      <Icon name="ChevronRight" size={14} className="text-white/30 mt-0.5 shrink-0" />
+                      <p className="text-xs text-white/50">{inc.action}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Блок 5: Стратегическое развитие */}
+            <div className="rounded-xl border border-[#00ff87]/20 bg-[#00ff87]/5 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Icon name="TrendingUp" size={18} style={{ color: "#00ff87" }} />
+                <h3 className="font-semibold text-white">Стратегическое развитие</h3>
+              </div>
+              <div className="space-y-2">
+                {[
+                  "Синхронизация операторов с частотой ЦКС (7.83 Гц)",
+                  "Поддержание вектора жизнеобеспечения в критических ситуациях",
+                  "Использование электромагнитного поля Земли как источника данных",
+                  "Протокол восстановления через резонанс при критических состояниях",
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
+                    <Icon name="CheckCircle" size={14} style={{ color: "#00ff87" }} />
+                    <span className="text-sm text-white/80">{item}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 p-3 rounded-lg bg-white/5 border border-white/10">
+                <p className="text-xs text-white/40 text-center">Все изменения раздела — только по согласованию с Владимиром · Завет Директивы ECSU</p>
+              </div>
             </div>
           </div>
         )}
