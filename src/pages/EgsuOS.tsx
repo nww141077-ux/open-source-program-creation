@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import LoaderTab from "@/pages/egsu-dashboard/LoaderTab";
 
 // ─── ТИПЫ ────────────────────────────────────────────────────────────────────
 interface WinState {
@@ -54,6 +55,7 @@ const DESKTOP_APPS = [
   { id: "calc",      title: "Калькулятор",         icon: "Calculator",    color: "#06b6d4", component: "calc" },
   { id: "aichat",    title: "AI Ассистент",        icon: "BrainCircuit",  color: "#a855f7", component: "aichat" },
   { id: "voice",     title: "Голосовой ввод",      icon: "Mic",           color: "#f43f5e", component: "voice" },
+  { id: "loader",    title: "Загрузчик ECSU",      icon: "Code",          color: "#00ff87", component: "loader" },
 ];
 
 const ECSU_APPS = [
@@ -765,6 +767,11 @@ export default function EgsuOS() {
                 </div>
               )}
 
+              {win.component === "loader" && (
+                <div className="h-full overflow-auto p-4" style={{ background: "#020408" }}>
+                  <LoaderTab />
+                </div>
+              )}
               {win.component === "editor" && <EditorApp />}
               {win.component === "calc" && <CalcApp />}
               {win.component === "aichat" && <AiChatApp />}
