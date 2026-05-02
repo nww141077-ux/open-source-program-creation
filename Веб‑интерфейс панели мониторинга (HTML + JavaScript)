@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Далан‑1 — Глобальная система мониторинга</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .map-container { grid-column: 1 / -1; height: 400px; background: #e0e0e0; border-radius: 8px; }
+        .incident-list { grid-column: 1 / -1; }
+        .incident-item { padding: 10px; margin: 5px 0; border-left: 4px solid; }
+        .priority-1 { border-color: #28a745; } /* Низкий приоритет */
+        .priority-3 { border-color: #ffc107; } /* Средний приоритет */
+        .priority-5 { border-color: #dc3545; } /* Высокий приоритет */
+    </style>
+</head>
+<body>
+    <h1>Далан‑1: Глобальная система мониторинга инцидентов</h1>
+
+    <div class="dashboard">
+        <div class="card">
+            <h3>Всего инцидентов</h3>
+            <div id="total-incidents">0</div>
+        </div>
+        <div class="card">
+            <h3>Активные конфликты</h3>
+            <div id="active-conflicts">0</div>
+        </div>
+        <div class="card">
+            <h3>Критичные инциденты</h3>
+            <div id="high-criticality">0</div>
+        </div>
+
+        <div class="map-container" id="global-map">
+            <!-- Здесь будет интерактивная карта мира -->
+            <p>Интерактивная глобальная карта инцидентов (интеграция с Leaflet/Mapbox)</p>
+        </div>
+
+        <div class="incident-list" id="incident-feed">
+            <h3>Последние инциденты</h3>
+            <!-- Список инцидентов будет загружаться через JS -->
+        </div>
+    </div>
+
+    <script>
+        // Загрузка данных панели мониторинга
+        async function loadDashboard() {
+            const response = await fetch('/api/v1/dalan1/global-dashboard');
+            const data = await response.json();
+
+            document.getElementById('total-incidents').textContent = data.total_incidents;
+            document.getElementById('active-conflicts').textContent = data.active_conflicts;
+            document.getElementById('high-criticality').textContent = data.criticality_distribution.high;
+
+            // Обновление ленты инцидентов
+            loadIncidentFeed();
+        }
+
+        async function loadIncidentFeed() {
+            const response = await fetch('/api/v1/dalan1/incidents');
+            const incidents = await response.json();
+            const feed = document.getElementById('incident-feed');
+
+            feed.innerHTML = '<h3>Последние инциденты</h3>';
+            incidents.slice(0, 10).forEach(incident => {
+                const item = document.createElement('div');
+                item.className = `incident-item priority-${incident.priority}`;
+                item.innerHTML = `
+                    <strong>[${incident.source_agent}] ${incident.category}</strong><br>
+                    Критичность: ${(incident.criticality * 100).toFixed(1)}%<br>
+            Координаты: [${incident.coordinates[0].toFixed(4)}, ${incident.coordinates[1].toFixed(4)}]<br>
+            Время: ${new Date(incident.timestamp).toLocaleString()}
+                `;
+                feed.appendChild(item);
+            });
+        }
+
+        // Автообновление каждые 30 секунд
+        setInterval(loadDashboard, 30000);
+        loadDashboard();
+    </script>
+</body>
+</html>

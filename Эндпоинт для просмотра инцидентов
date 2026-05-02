@@ -1,0 +1,18 @@
+@app.get("/api/v1/incidents", response_model=List[IncidentResponse])
+async def get_incidents():
+    """Получение списка всех инцидентов"""
+    session = Session()
+    incidents = session.query(Incident).order_by(Incident.created_at.desc()).limit(50).all()
+    session.close()
+
+    result = []
+    for inc in incidents:
+        result.append(IncidentResponse(
+            incident_id=inc.id,
+            category=inc.category,
+            criticality=inc.criticality,
+            coordinates=[inc.latitude, inc.longitude],
+            priority=inc.priority,
+            status=inc.status
+        ))
+    return result

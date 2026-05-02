@@ -1,0 +1,44 @@
+from fastapi import WebSocket
+from fastapi.responses import HTMLResponse
+
+# Хранилище WebSocket‑соединений
+websocket_connections: List[WebSocket] = []
+
+@app.websocket("/ws/notifications")
+async def websocket_notifications(websocket: WebSocket):
+    await websocket.accept()
+    websocket_connections.append(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Обработка входящих сообщений (если нужно)
+    except Exception as e:
+        websocket_connections.remove(websocket)
+
+async def broadcast_notification(message: str):
+    """Рассылка уведомлений всем подключённым клиентам"""
+    for connection in websocket_connections:
+        await connection.send_text(message)
+
+# Эндпоинт для ручного уведомления (для тестирования)
+@app.get
+@app.get("/api/v1/dalan1/notifications/test")
+async def send_test_notification():
+    """Отправка тестового уведомления всем подключённым клиентам"""
+    message = f"ТЕСТ: Система Далан‑1 активна. Время: {datetime.utcnow().isoformat()}"
+    await broadcast_notification(message)
+    return {"status": "notification_sent", "message": message}
+
+async def broadcast_notification(message: str):
+    """Рассылка уведомлений всем подключённым клиентам"""
+    disconnected = []
+    for connection in websocket_connections:
+        try:
+            await connection.send_text(message)
+        except Exception:
+            disconnected.append(connection)
+
+    # Удаляем разорванные соединения
+    for conn in disconnected:
+        if conn in websocket_connections:
+            websocket_connections.remove(conn)

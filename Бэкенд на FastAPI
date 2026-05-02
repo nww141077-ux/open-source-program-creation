@@ -1,0 +1,121 @@
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import List, Optional
+import torch
+from datetime import datetime
+
+# Инициализация модели
+model = Dalan1Model()
+model.eval()
+tokenizer = AutoTokenizer.from_pretrained('cointegrated/rubert-tiny2')
+
+app = FastAPI(title="Dalan-1 Incident Management System")
+
+class IncidentRequest(BaseModel):
+    description: str
+    source: str  # "social_media", "news", "sensor", "report"
+    timestamp: Optional[datetime] = None
+    location_hint: Optional[str] = None
+
+class IncidentResponse(BaseModel):
+    incident_id: str
+    category: str
+    criticality: float
+    coordinates: List[float]  # [широта, долгота]
+    priority: int  # 1–5
+    status: str
+
+@app.post("/api/v1/incident", response_model=IncidentResponse)
+async def process_incident(request: IncidentRequest):
+    try:
+        # Токенизация текста
+        inputs = tokenizer(
+            request.description,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=512
+        )
+
+        # Инференс модели
+        with torch.no_grad():
+            result = model(
+                inputs['input_ids'],
+                inputs['attention_mask']
+            )
+
+        # Конвертация результатов
+        category_id = result['decision'].argmax().item()
+        categories = ["Природные", "Техногенные", "Социальные", "Медицинские", "Прочие"]
+        priority = int(torch.sigmoid(result['criticality']).mean() * 5) + 1
+
+        response = IncidentResponse(
+            incident_id=f"INC-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            category=categories[category_id],
+            criticality=result['criticality'].mean().item(),
+            coordinates=result['geolocation'][0].tolist(),
+            priority=priority,
+            status="Обрабатывается"
+        )
+
+        # Отправка в штаб реагирования (заглушка)
+        await send_to_command_center(response)
+
+        return response
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def send_to_command_center(incident: IncidentResponse):
+    """Отправка инцидента в штаб реагирования"""
+    # Здесь может быть интеграция с:
+    # - Telegram-бот
+    # - Email
+    # - SMS
+    # - Корпоративная система
+    print(f"Инцидент {incident.incident_id} отправлен в штаб. Категория: {incident.category}")
+@app.post("/api/v1/incident", response_model=IncidentResponse)
+async def process_incident(request: IncidentRequest):
+    try:
+        # Токенизация текста
+        inputs = tokenizer(
+            request.description,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=512
+        )
+
+        # Инференс модели
+        with torch.no_grad():
+            result = model(
+                inputs['input_ids'],
+                inputs['attention_mask']
+            )
+
+        # Конвертация результатов
+        category_id = result['decision'].argmax().item()
+        categories = ["Природные", "Техногенные", "Социальные", "Медицинские", "Прочие"]
+        priority = int(torch.sigmoid(result['criticality']).mean() * 5) + 1
+
+
+        response_data = {
+            'incident_id': f"INC-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            'category': categories[category_id],
+            'criticality': result['criticality'].mean().item(),
+            'coordinates': result['geolocation'][0].tolist(),
+            'priority': priority,
+            'status': "Обрабатывается"
+        }
+
+        # Сохранение в БД
+        await save_incident_to_db(response_data, request)
+
+        # Отправка в штаб
+        await send_to_command_center(IncidentResponse(**response_data))
+
+        return IncidentResponse(**response_data)
+
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

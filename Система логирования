@@ -1,0 +1,31 @@
+import logging
+from logging.handlers import RotatingFileHandler
+
+# Настройка логирования
+logger = logging.getLogger("Dalan1")
+logger.setLevel(logging.INFO)
+
+# Ротирующий файл логов (максимум 10 МБ, 5 файлов)
+handler = RotatingFileHandler(
+    'dalan1.log',
+    maxBytes=10*1024*1024,  # 10 МБ
+    backupCount=5
+)
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+class LoggingMiddleware:
+    """Middleware для логирования всех запросов"""
+    async def __call__(self, scope, receive, send):
+        if scope['type'] == 'http':
+            request = Request(scope, receive=receive)
+            logger.info(f"Запрос: {request.method} {request.url.path}")
+            response = await self.app(scope, receive, send)
+            return response
+        else:
+            await self.app(scope, receive, send)
+
+app.middleware('http')(LoggingMiddleware)
