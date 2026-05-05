@@ -292,5 +292,42 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         log_level="info"
-    )
+    )import time
+
+def handler(event, context=None):
+    # event — это то, что мы присылаем из Барнаула
+    # Если event не словарь (бывает в разных облаках), пробуем его понять
+    data = event if isinstance(event, dict) else {}
+    action = data.get('action', 'status')
+    
+    start_time = time.perf_counter()
+
+    # --- ЛОГИКА ДИСПЕТЧЕРА ---
+    
+    if action == 'status':
+        return {
+            "status": "ONLINE",
+            "system": "CORTEX-PRIME",
+            "node": "Poehali_Cloud",
+            "location": "Global",
+            "msg": "Маяк активен, жду команды Архитектора"
+        }
+
+    elif action == 'call_home':
+        # Команда для переключения на локальный "Муссон" на диске D
+        return {
+            "instruction": "REDIRECT_TO_LOCAL",
+            "local_ip": "127.0.0.1:5005",
+            "info": "Переходим на бортовое управление (110 ГБ)"
+        }
+
+    elif action == 'dalan_predict':
+        # Здесь будет экспресс-анализ, если не хотим грузить локальный ПК
+        return {
+            "result": "Cloud_Analysis_Complete",
+            "compute_time": f"{(time.perf_counter() - start_time):.4f}s"
+        }
+
+    return {"error": "Unknown command", "received": action}
+
        
