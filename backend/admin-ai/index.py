@@ -1,5 +1,5 @@
 """
-ИИ-ассистент администратора системы ECSU DALAN.
+ИИ-ассистент администратора системы ECSU DALAN v2.
 Понимает команды на русском языке и управляет настройками, модулями, резервными копиями и конфигурацией Dalan.
 """
 import json
@@ -10,10 +10,7 @@ import urllib.error
 from datetime import datetime
 
 SCHEMA = "t_p38294978_open_source_program_"
-OPENROUTER_KEY = (
-    os.environ.get("SKORV1313B05D0D24B5DB6B1287F58D2F01DC2C61F76FF3EE2BB5696FD948B9E374F22")
-    or os.environ.get("OPENROUTER_API_KEY", "")
-)
+OPENROUTER_KEY = (os.environ.get("OPENROUTER_API_KEY") or "").strip()
 
 def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
@@ -96,7 +93,7 @@ def execute_action(action: dict) -> str:
         cur.close()
         conn.close()
 
-def call_ai(messages: list, system_state: dict) -> dict:
+def call_ai(messages: list, system_state: dict) -> str:
     system_prompt = f"""Ты — автономный ИИ-ассистент администратора системы ECSU DALAN.
 Ты управляешь системой через JSON-команды. Отвечай ТОЛЬКО на русском языке.
 
@@ -130,6 +127,7 @@ def call_ai(messages: list, system_state: dict) -> dict:
             "Authorization": f"Bearer {OPENROUTER_KEY}",
             "Content-Type": "application/json",
             "HTTP-Referer": "https://poehali.dev",
+            "X-Title": "ECSU DALAN Admin",
         },
         method="POST"
     )
