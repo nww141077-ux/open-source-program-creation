@@ -5,12 +5,14 @@ import DalanTab from "@/components/admin/DalanTab";
 import BackupTab from "@/components/admin/BackupTab";
 import GatewayTab from "@/components/admin/GatewayTab";
 import AiAssistantTab from "@/components/admin/AiAssistantTab";
+import StoreTab from "@/components/admin/StoreTab";
 import Icon from "@/components/ui/icon";
 
-type Tab = "ai" | "settings" | "modules" | "dalan" | "backup" | "gateway";
+type Tab = "ai" | "settings" | "modules" | "dalan" | "backup" | "gateway" | "store";
 
 const tabs: { id: Tab; label: string; icon: string; highlight?: boolean }[] = [
   { id: "ai", label: "ИИ-Ассистент", icon: "Bot", highlight: true },
+  { id: "store", label: "Магазин", icon: "Store" },
   { id: "settings", label: "Интерфейс", icon: "Settings" },
   { id: "modules", label: "Модули", icon: "LayoutGrid" },
   { id: "dalan", label: "Dalan", icon: "Brain" },
@@ -79,6 +81,7 @@ const AdminPanel = ({ onLogout }: Props) => {
           {activeTab === "dalan" && <DalanTab />}
           {activeTab === "gateway" && <GatewayTab />}
           {activeTab === "backup" && <BackupTab />}
+          {activeTab === "store" && <StoreTab />}
         </div>
       </div>
     </div>
