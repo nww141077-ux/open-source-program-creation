@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 import Icon from "@/components/ui/icon";
+
+const CONFIG_URL = "https://functions.poehali.dev/744a3183-098e-4b3a-8b5b-c27893d57779";
 
 interface StoreModule {
   id: string;
@@ -15,118 +18,24 @@ interface StoreModule {
 
 const CATEGORIES = ["Все", "Безопасность", "Аналитика", "Интеграции", "Сеть", "Утилиты"];
 
-const STORE_MODULES: StoreModule[] = [
-  {
-    id: "firewall-pro",
-    name: "Firewall Pro",
-    description: "Расширенный межсетевой экран с фильтрацией трафика по правилам и геолокации",
-    category: "Безопасность",
-    version: "2.4.1",
-    size: "1.2 MB",
-    icon: "Shield",
-    installed: false,
-    popular: true,
-  },
-  {
-    id: "intrusion-detect",
-    name: "IDS Monitor",
-    description: "Система обнаружения вторжений в реальном времени с уведомлениями",
-    category: "Безопасность",
-    version: "1.8.0",
-    size: "890 KB",
-    icon: "Eye",
-    installed: true,
-  },
-  {
-    id: "analytics-core",
-    name: "Analytics Core",
-    description: "Сбор и визуализация метрик системы: CPU, RAM, сеть, диск",
-    category: "Аналитика",
-    version: "3.1.2",
-    size: "2.1 MB",
-    icon: "BarChart3",
-    installed: true,
-    popular: true,
-  },
-  {
-    id: "log-analyzer",
-    name: "Log Analyzer",
-    description: "Парсинг и анализ системных логов с поиском аномалий",
-    category: "Аналитика",
-    version: "1.5.3",
-    size: "650 KB",
-    icon: "FileSearch",
-    installed: false,
-  },
-  {
-    id: "telegram-notify",
-    name: "Telegram Alerts",
-    description: "Отправка уведомлений о событиях системы в Telegram-бот",
-    category: "Интеграции",
-    version: "1.2.0",
-    size: "320 KB",
-    icon: "Send",
-    installed: false,
-    popular: true,
-  },
-  {
-    id: "webhook-bridge",
-    name: "Webhook Bridge",
-    description: "Проброс событий ECSU во внешние системы через HTTP Webhook",
-    category: "Интеграции",
-    version: "2.0.1",
-    size: "410 KB",
-    icon: "Webhook",
-    installed: false,
-  },
-  {
-    id: "vpn-gateway",
-    name: "VPN Gateway",
-    description: "Туннелирование трафика через защищённый VPN-шлюз",
-    category: "Сеть",
-    version: "1.9.0",
-    size: "3.4 MB",
-    icon: "Network",
-    installed: false,
-  },
-  {
-    id: "dns-filter",
-    name: "DNS Filter",
-    description: "Фильтрация DNS-запросов и блокировка вредоносных доменов",
-    category: "Сеть",
-    version: "1.1.4",
-    size: "780 KB",
-    icon: "Globe",
-    installed: true,
-  },
-  {
-    id: "backup-scheduler",
-    name: "Backup Scheduler",
-    description: "Автоматическое резервное копирование конфигураций по расписанию",
-    category: "Утилиты",
-    version: "2.2.0",
-    size: "540 KB",
-    icon: "CalendarClock",
-    installed: false,
-  },
-  {
-    id: "crypto-vault",
-    name: "Crypto Vault",
-    description: "Шифрование чувствительных данных и управление ключами",
-    category: "Безопасность",
-    version: "1.0.5",
-    size: "1.8 MB",
-    icon: "KeyRound",
-    installed: false,
-  },
-];
+
 
 const StoreTab = () => {
-  const [modules, setModules] = useState<StoreModule[]>(STORE_MODULES);
+  const [modules, setModules] = useState<StoreModule[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("Все");
   const [search, setSearch] = useState("");
   const [installing, setInstalling] = useState<string | null>(null);
   const [progress, setProgress] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    fetch(`${CONFIG_URL}?action=store`)
+      .then((r) => r.json())
+      .then((data) => {
+        setModules(data);
+        setLoading(false);
+      });
+  }, []);
 
   const filtered = modules.filter((m) => {
     const matchCat = activeCategory === "Все" || m.category === activeCategory;
@@ -137,23 +46,25 @@ const StoreTab = () => {
   });
 
   const handleInstall = async (mod: StoreModule) => {
-    if (mod.installed) {
-      setModules((prev) =>
-        prev.map((m) => (m.id === mod.id ? { ...m, installed: false } : m))
-      );
-      return;
+    const newInstalled = !mod.installed;
+
+    if (newInstalled) {
+      setInstalling(mod.id);
+      setProgress((p) => ({ ...p, [mod.id]: 0 }));
+      for (let i = 0; i <= 100; i += 10) {
+        await new Promise((r) => setTimeout(r, 120));
+        setProgress((p) => ({ ...p, [mod.id]: i }));
+      }
     }
 
-    setInstalling(mod.id);
-    setProgress((p) => ({ ...p, [mod.id]: 0 }));
-
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise((r) => setTimeout(r, 120));
-      setProgress((p) => ({ ...p, [mod.id]: i }));
-    }
+    await fetch(`${CONFIG_URL}?action=store_install`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: mod.id, installed: newInstalled }),
+    });
 
     setModules((prev) =>
-      prev.map((m) => (m.id === mod.id ? { ...m, installed: true } : m))
+      prev.map((m) => (m.id === mod.id ? { ...m, installed: newInstalled } : m))
     );
     setInstalling(null);
     setProgress((p) => {
@@ -164,6 +75,8 @@ const StoreTab = () => {
   };
 
   const installedCount = modules.filter((m) => m.installed).length;
+
+  if (loading) return <div className="text-gray-500 animate-pulse">Загрузка магазина...</div>;
 
   return (
     <div>
