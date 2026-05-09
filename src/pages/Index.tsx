@@ -15,8 +15,8 @@ const Index = () => {
   const [error, setError] = useState("");
 
   const handleLogin = () => {
-    const user = USERS[login.toLowerCase()];
-    if (user && user.password === password) {
+    const user = USERS[login.trim().toLowerCase()];
+    if (user && user.password === password.trim()) {
       setRole(user.role);
       setUserName(user.name);
       setError("");
