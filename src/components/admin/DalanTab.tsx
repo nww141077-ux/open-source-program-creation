@@ -25,8 +25,16 @@ interface StrategyItem {
   description: string;
 }
 
+// Авторская методика Николаева В.В.
+function calculateShift(inputValue: number) {
+  const COEFFICIENT = 11 / 10; // 1.1 — постоянная сдвига
+  const result = inputValue * COEFFICIENT;
+  return { nominal: inputValue, actual: result, delta: result - inputValue };
+}
+
 const INITIAL_STRATEGY: StrategyItem[] = [
-  { id: 1, title: "Оптимизация ресурсов ЕЦСУ", status: "active", priority: "high", progress: 72, description: "Перераспределение бюджетных потоков согласно логике 10=11" },
+  { id: 0, title: "Сдвиг Николаева (авторская методика)", status: "active", priority: "high", progress: 100, description: "Коэффициент оптимизации 1.1 — авторская разработка Николаева В.В. Применяется как базовый множитель в движке DALAN." },
+  { id: 1, title: "Оптимизация ресурсов ЕЦСУ", status: "active", priority: "high", progress: 72, description: "Перераспределение потоков с применением коэффициента Николаева ×1.1" },
   { id: 2, title: "Расширение контрактной базы", status: "active", priority: "high", progress: 45, description: "Контракт № 5052834788 — выполнение плана" },
   { id: 3, title: "Интеграция нейросети Dalan", status: "active", priority: "medium", progress: 88, description: "Автоматизация аналитических процессов" },
   { id: 4, title: "Стратегический резерв SYNERGON", status: "pending", priority: "medium", progress: 0, description: "Формирование резервного фонда" },
@@ -74,6 +82,15 @@ const DalanTab = () => {
     setSaving(null);
     setSaved(key);
     setTimeout(() => setSaved(null), 2000);
+  };
+
+  const [shiftInput, setShiftInput] = useState("");
+  const [shiftResult, setShiftResult] = useState<{ nominal: number; actual: number; delta: number } | null>(null);
+
+  const runShift = () => {
+    const val = parseFloat(shiftInput);
+    if (isNaN(val)) return;
+    setShiftResult(calculateShift(val));
   };
 
   const runOracle = () => {
@@ -183,7 +200,51 @@ const DalanTab = () => {
             </button>
           </div>
 
-          {/* Log */}
+              {/* Сдвиг Николаева */}
+          <div className="bg-[#0a0a0f] border border-[#FFD700]/20 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Icon name="FlaskConical" size={15} className="text-[#FFD700]" />
+              <span className="text-[#FFD700] font-bold tracking-widest text-sm">СДВИГ НИКОЛАЕВА · ЯДРО DALAN</span>
+            </div>
+            <p className="text-gray-600 text-xs mb-4">Авторская методика Николаева В.В. · Коэффициент ×1.1 · Зарегистрировано в ЕЦСУ</p>
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <div className="text-gray-400 text-xs mb-1">Входное значение (номинал)</div>
+                <input
+                  type="number"
+                  value={shiftInput}
+                  onChange={(e) => setShiftInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && runShift()}
+                  placeholder="Введите число..."
+                  className="w-full bg-black border border-[#FFD700]/30 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#FFD700]"
+                />
+              </div>
+              <button
+                onClick={runShift}
+                className="bg-[#FFD700] hover:bg-[#e6c200] text-black px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+              >
+                Применить ×1.1
+              </button>
+            </div>
+            {shiftResult && (
+              <div className="mt-3 grid grid-cols-3 gap-3">
+                <div className="bg-black/40 rounded-lg p-3 text-center">
+                  <div className="text-gray-500 text-xs mb-1">Номинал</div>
+                  <div className="text-white font-mono font-bold">{shiftResult.nominal}</div>
+                </div>
+                <div className="bg-black/40 rounded-lg p-3 text-center">
+                  <div className="text-gray-500 text-xs mb-1">Результат</div>
+                  <div className="text-[#00FF41] font-mono font-bold">{shiftResult.actual.toFixed(2)}</div>
+                </div>
+                <div className="bg-black/40 rounded-lg p-3 text-center">
+                  <div className="text-gray-500 text-xs mb-1">Прирост</div>
+                  <div className="text-[#FFD700] font-mono font-bold">+{shiftResult.delta.toFixed(2)}</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+      {/* Log */}
           <div className="bg-[#0a0a0f] border border-[#e94560]/10 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-3">
               <Icon name="ScrollText" size={15} className="text-[#FFD700]" />
