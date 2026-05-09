@@ -11,26 +11,30 @@ import AdminPanel from "@/components/AdminPanel";
 
 type Section = "overview" | "incidents" | "analytics" | "finance" | "organs" | "security" | "dalan" | "admin";
 
-const navItems: { id: Section; label: string; icon: string; color?: string }[] = [
+const allNavItems: { id: Section; label: string; icon: string; color?: string; adminOnly?: boolean }[] = [
   { id: "overview", label: "Обзор", icon: "LayoutDashboard" },
   { id: "incidents", label: "Инциденты", icon: "AlertTriangle" },
   { id: "analytics", label: "ИИ-аналитика", icon: "BarChart3" },
-  { id: "finance", label: "Финансы", icon: "DollarSign" },
+  { id: "finance", label: "Финансы", icon: "DollarSign", adminOnly: true },
   { id: "organs", label: "Органы ECSU", icon: "Network" },
-  { id: "security", label: "Безопасность", icon: "Shield" },
-  { id: "dalan", label: "Dalan ИИ", icon: "Brain", color: "#e94560" },
-  { id: "admin", label: "Администратор", icon: "Settings2", color: "#FFD700" },
+  { id: "security", label: "Безопасность", icon: "Shield", adminOnly: true },
+  { id: "dalan", label: "Dalan ИИ", icon: "Brain", color: "#e94560", adminOnly: true },
+  { id: "admin", label: "Администратор", icon: "Settings2", color: "#FFD700", adminOnly: true },
 ];
 
 const topNav = ["Поиск", "ЦПВОА", "Уведомления", "Аналитика", "Поглощение", "Финансы", "Владелец", "Правовая база", "API"];
 
 interface Props {
   onLogout: () => void;
+  role: "admin" | "user";
+  userName: string;
 }
 
-const EcsuSystem = ({ onLogout }: Props) => {
+const EcsuSystem = ({ onLogout, role, userName }: Props) => {
   const [active, setActive] = useState<Section>("overview");
   const [showAdmin, setShowAdmin] = useState(false);
+
+  const navItems = allNavItems.filter((item) => !item.adminOnly || role === "admin");
 
   if (showAdmin) {
     return <AdminPanel onLogout={() => setShowAdmin(false)} />;
@@ -59,10 +63,18 @@ const EcsuSystem = ({ onLogout }: Props) => {
             </button>
           ))}
         </div>
-        <div className="ml-auto flex items-center gap-2 shrink-0">
+        <div className="ml-auto flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-1.5">
+            <div className="w-6 h-6 bg-blue-700 rounded-full flex items-center justify-center">
+              <Icon name="User" size={12} className="text-white" />
+            </div>
+            <div>
+              <div className="text-white text-xs font-medium leading-tight">{userName}</div>
+              <div className="text-gray-500 text-[10px]">{role === "admin" ? "Администратор" : "Пользователь"}</div>
+            </div>
+          </div>
           <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-          <span className="text-green-400 text-xs">Онлайн</span>
-          <button onClick={onLogout} className="text-gray-500 hover:text-red-400 transition-colors ml-2">
+          <button onClick={onLogout} className="text-gray-500 hover:text-red-400 transition-colors">
             <Icon name="LogOut" size={15} />
           </button>
         </div>
@@ -80,12 +92,25 @@ const EcsuSystem = ({ onLogout }: Props) => {
                   ? "bg-blue-600/20 text-blue-400 border-r-2 border-blue-400"
                   : "text-gray-400 hover:text-white hover:bg-white/5"
               }`}
-              style={item.color && active !== item.id ? { color: item.color + "99" } : item.color && active === item.id ? { color: item.color } : {}}
+              style={
+                item.color && active !== item.id
+                  ? { color: item.color + "99" }
+                  : item.color && active === item.id
+                  ? { color: item.color }
+                  : {}
+              }
             >
               <Icon name={item.icon} size={16} />
               <span>{item.label}</span>
             </button>
           ))}
+
+          {role === "user" && (
+            <div className="mx-3 mt-auto mb-2 bg-blue-900/20 border border-blue-900/30 rounded-lg px-3 py-2">
+              <div className="text-blue-400 text-xs font-medium">Режим просмотра</div>
+              <div className="text-gray-600 text-[10px] mt-0.5">Расширенный доступ — у администратора</div>
+            </div>
+          )}
         </div>
 
         {/* Content */}
