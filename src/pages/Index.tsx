@@ -1,5 +1,5 @@
 import { useState } from "react";
-import AdminPanel from "@/components/AdminPanel";
+import EcsuSystem from "@/pages/EcsuSystem";
 
 const ADMIN_PASSWORD = "admin123";
 
@@ -19,34 +19,56 @@ const Index = () => {
 
   if (!authenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0d0d1a]">
-        <div className="bg-[#1a1a2e] border border-[#e94560]/30 rounded-xl p-8 w-full max-w-sm shadow-2xl">
+      <div className="min-h-screen flex items-center justify-center bg-[#080c1a]">
+        <div className="bg-[#0d1225] border border-blue-900/40 rounded-xl p-8 w-full max-w-sm shadow-2xl">
           <div className="text-center mb-6">
-            <div className="text-[#e94560] text-3xl font-bold tracking-widest">ECSU</div>
-            <div className="text-white text-lg font-semibold mt-1">DALAN — Панель управления</div>
-            <div className="text-gray-500 text-sm mt-1">Введите пароль администратора</div>
+            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <div className="text-white text-2xl font-bold">ЕЦСУ 2.0</div>
+            <div className="text-blue-400 text-sm mt-1">Единая Центральная Система Управления</div>
+            <div className="text-gray-500 text-xs mt-2">DALAN · Авторизация</div>
           </div>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-            placeholder="Пароль"
-            className="w-full bg-[#0d0d1a] border border-[#e94560]/30 text-white rounded-lg px-4 py-3 mb-3 focus:outline-none focus:border-[#e94560] placeholder-gray-600"
-          />
-          {error && <div className="text-red-400 text-sm mb-3">{error}</div>}
+          <div className="mb-3">
+            <div className="text-gray-500 text-xs mb-1">Логин</div>
+            <input
+              type="text"
+              defaultValue="Admin"
+              readOnly
+              className="w-full bg-[#060d1f] border border-blue-900/30 text-gray-400 rounded-lg px-4 py-3 text-sm"
+            />
+          </div>
+          <div className="mb-3">
+            <div className="text-gray-500 text-xs mb-1">Пароль</div>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+              placeholder="Введите пароль..."
+              className="w-full bg-[#060d1f] border border-blue-900/30 text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 placeholder-gray-700"
+            />
+          </div>
+          {error && (
+            <div className="bg-[#e94560]/10 border border-[#e94560]/30 text-[#e94560] text-sm px-3 py-2 rounded-lg mb-3 flex items-center gap-2">
+              <span>⚠</span> {error}
+            </div>
+          )}
           <button
             onClick={handleLogin}
-            className="w-full bg-[#e94560] hover:bg-[#c73550] text-white font-semibold py-3 rounded-lg transition-colors"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors mt-1"
           >
             Войти
           </button>
+          <div className="text-center text-gray-700 text-xs mt-4">SYNERGON GLOBAL · УБО: Николаев В.В.</div>
         </div>
       </div>
     );
   }
 
-  return <AdminPanel onLogout={() => setAuthenticated(false)} />;
+  return <EcsuSystem onLogout={() => setAuthenticated(false)} />;
 };
 
 export default Index;
