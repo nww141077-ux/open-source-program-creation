@@ -24,7 +24,7 @@ interface SyncStatus {
 }
 
 const EcsuDalan = () => {
-  const [tab, setTab] = useState<"oracle" | "shift" | "status" | "sync">("oracle");
+  const [tab, setTab] = useState<"oracle" | "shift" | "status" | "sync" | "engine">("oracle");
   const [task, setTask] = useState("");
   const [log, setLog] = useState<OracleEntry[]>([]);
   const [running, setRunning] = useState(false);
@@ -38,6 +38,40 @@ const EcsuDalan = () => {
   const autoSyncRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [autoSync, setAutoSync] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
+
+  // Ultra-Light Engine
+  const [leftSpeed, setLeftSpeed] = useState(0);
+  const [rightSpeed, setRightSpeed] = useState(0);
+  const [lastCmd, setLastCmd] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const sendMotorCommand = (motor: string, speed: number) => {
+    const cmd = `${motor}:${speed}`;
+    setLastCmd(cmd);
+    const gwUrl = syncStatus?.gateway_url;
+    if (gwUrl && syncStatus?.pc_online) {
+      fetch(`${gwUrl.replace(/\/$/, "")}/api/motor`, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: cmd,
+      }).catch(() => {});
+    }
+  };
+
+  const handleSlider = (motor: "left" | "right", value: number) => {
+    if (motor === "left") setLeftSpeed(value);
+    else setRightSpeed(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => sendMotorCommand(motor, value), 250);
+  };
+
+  const stopEngine = () => {
+    setLeftSpeed(0);
+    setRightSpeed(0);
+    sendMotorCommand("all", 0);
+  };
+
+  const engineRunning = leftSpeed > 0 || rightSpeed > 0;
 
   const loadStatus = () => {
     fetch(`${DALAN_SYNC_URL}?action=status`)
@@ -128,6 +162,7 @@ const EcsuDalan = () => {
           { id: "shift", label: "Сдвиг Николаева", icon: "FlaskConical" },
           { id: "status", label: "Статус системы", icon: "Activity" },
           { id: "sync", label: "Директива синхронизации", icon: "RefreshCw", color: "#00c896" },
+          { id: "engine", label: "Ultra-Light Engine", icon: "Cpu", color: "#a78bfa" },
         ].map((t) => (
           <button
             key={t.id}
@@ -367,6 +402,126 @@ const EcsuDalan = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {tab === "engine" && (
+        <div className="space-y-4">
+          <div className="bg-[#060d1f] border border-[#a78bfa]/30 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Icon name="Cpu" size={15} className="text-[#a78bfa]" />
+              <span className="text-[#a78bfa] font-bold text-sm tracking-wider">DALAN ULTRA-LIGHT ENGINE</span>
+              <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-bold ${
+                engineRunning ? "bg-[#e94560]/15 text-[#e94560]" : "bg-green-500/15 text-green-400"
+              }`}>
+                {engineRunning ? "● РАБОТАЕТ" : "● ГОТОВ"}
+              </span>
+            </div>
+            <p className="text-gray-600 text-xs mb-5">
+              Энергоэффективный движок управления моторами · debounce 250мс · автоотправка на шлюз ПК
+            </p>
+
+            {/* Левый мотор */}
+            <div className="mb-5">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-gray-300 text-sm font-medium flex items-center gap-2">
+                  <Icon name="ArrowLeft" size={14} className="text-[#a78bfa]" />
+                  Левый мотор
+                </label>
+                <span className="text-[#a78bfa] font-mono font-bold text-sm">{leftSpeed}%</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={leftSpeed}
+                onChange={e => handleSlider("left", Number(e.target.value))}
+                className="w-full h-2 rounded-full appearance-none cursor-pointer"
+                style={{
+                  background: `linear-gradient(to right, #a78bfa ${leftSpeed}%, #1e2a3a ${leftSpeed}%)`
+                }}
+              />
+              <div className="flex justify-between text-gray-700 text-xs mt-1">
+                <span>0%</span><span>50%</span><span>100%</span>
+              </div>
+            </div>
+
+            {/* Правый мотор */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-gray-300 text-sm font-medium flex items-center gap-2">
+                  <Icon name="ArrowRight" size={14} className="text-[#a78bfa]" />
+                  Правый мотор
+                </label>
+                <span className="text-[#a78bfa] font-mono font-bold text-sm">{rightSpeed}%</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={rightSpeed}
+                onChange={e => handleSlider("right", Number(e.target.value))}
+                className="w-full h-2 rounded-full appearance-none cursor-pointer"
+                style={{
+                  background: `linear-gradient(to right, #a78bfa ${rightSpeed}%, #1e2a3a ${rightSpeed}%)`
+                }}
+              />
+              <div className="flex justify-between text-gray-700 text-xs mt-1">
+                <span>0%</span><span>50%</span><span>100%</span>
+              </div>
+            </div>
+
+            {/* Стоп */}
+            <button
+              onClick={stopEngine}
+              className="w-full bg-gradient-to-r from-[#e94560] to-[#c0392b] hover:opacity-90 text-white font-bold py-3 rounded-lg transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#e94560]/30 flex items-center justify-center gap-2"
+            >
+              <Icon name="OctagonX" size={16} />
+              ОСТАНОВИТЬ ВСЕ МОТОРЫ
+            </button>
+          </div>
+
+          {/* Статус */}
+          <div className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-4 space-y-3">
+            <div className="text-white font-bold text-sm flex items-center gap-2">
+              <Icon name="Activity" size={14} className="text-[#a78bfa]" />
+              Статус системы
+            </div>
+
+            <div className={`px-4 py-3 rounded-lg text-center font-bold text-sm border ${
+              engineRunning
+                ? "bg-[#e94560]/10 border-[#e94560]/30 text-[#e94560]"
+                : "bg-green-500/10 border-green-500/30 text-green-400"
+            }`}>
+              {engineRunning ? "Работает" : "Готов"}
+            </div>
+
+            <div className="flex items-center justify-between bg-black/30 rounded-lg px-4 py-2.5">
+              <span className="text-gray-500 text-xs">Последняя команда</span>
+              <span className="text-[#a78bfa] font-mono text-sm font-bold">
+                {lastCmd ?? "—"}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between bg-black/30 rounded-lg px-4 py-2.5">
+              <span className="text-gray-500 text-xs">Шлюз ПК</span>
+              <span className={`text-xs font-medium ${syncStatus?.pc_online ? "text-green-400" : "text-gray-600"}`}>
+                {syncStatus?.pc_online ? `Онлайн · ${syncStatus.gateway_url}` : "Не подключён"}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              {[
+                { label: "Левый мотор", value: `${leftSpeed}%`, color: leftSpeed > 0 ? "#a78bfa" : "#4b5563" },
+                { label: "Правый мотор", value: `${rightSpeed}%`, color: rightSpeed > 0 ? "#a78bfa" : "#4b5563" },
+              ].map(s => (
+                <div key={s.label} className="bg-black/30 rounded-lg px-3 py-2 text-center">
+                  <div className="text-gray-600 text-xs mb-0.5">{s.label}</div>
+                  <div className="font-mono font-bold text-lg" style={{ color: s.color }}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
