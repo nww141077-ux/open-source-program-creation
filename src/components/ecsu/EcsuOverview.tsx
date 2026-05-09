@@ -1,40 +1,148 @@
 import Icon from "@/components/ui/icon";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const incidents = [
-  { region: "Северо-Западный", x: 28, y: 35, level: "high" },
-  { region: "Центральный", x: 52, y: 42, level: "critical" },
-  { region: "Южный", x: 45, y: 68, level: "medium" },
-  { region: "Приволжский", x: 62, y: 38, level: "high" },
-  { region: "Уральский", x: 72, y: 32, level: "low" },
-  { region: "Сибирский", x: 82, y: 40, level: "medium" },
-  { region: "Дальневосточный", x: 88, y: 55, level: "low" },
-  { region: "Северо-Кавказский", x: 38, y: 72, level: "critical" },
-];
+const INCIDENTS_URL = "https://functions.poehali.dev/df1d9dd9-c455-479d-807f-b25e000928ff";
 
 const dotColor = { critical: "#e94560", high: "#f59e0b", medium: "#a78bfa", low: "#94a3b8" };
 const dotSize = { critical: 14, high: 12, medium: 10, low: 8 };
 
-const stats = [
-  { label: "Всего инцидентов", value: "1 247", delta: "+12%", icon: "AlertTriangle", color: "#e94560" },
-  { label: "Решено", value: "893", delta: "+8%", icon: "CheckCircle", color: "#00c896" },
-  { label: "Активных", value: "241", delta: "-3%", icon: "Activity", color: "#f59e0b" },
-  { label: "Стран-участниц", value: "47", delta: "+2", icon: "Globe", color: "#60a5fa" },
-];
+const COUNTRY_COORDS: Record<string, { x: number; y: number }> = {
+  "Russia": { x: 68, y: 28 }, "Russian Federation": { x: 68, y: 28 },
+  "China": { x: 75, y: 38 }, "United States": { x: 20, y: 38 }, "USA": { x: 20, y: 38 },
+  "India": { x: 68, y: 48 }, "Brazil": { x: 35, y: 62 }, "Global": { x: 50, y: 50 },
+  "Japan": { x: 82, y: 36 }, "Germany": { x: 50, y: 30 }, "France": { x: 48, y: 32 },
+  "United Kingdom": { x: 46, y: 28 }, "Ukraine": { x: 55, y: 30 }, "Iran": { x: 60, y: 40 },
+  "Syria": { x: 57, y: 40 }, "Pakistan": { x: 65, y: 42 }, "Turkey": { x: 56, y: 35 },
+  "North Korea": { x: 80, y: 34 }, "South Korea": { x: 81, y: 36 },
+  "Australia": { x: 80, y: 68 }, "Canada": { x: 22, y: 25 }, "Mexico": { x: 18, y: 45 },
+  "Indonesia": { x: 78, y: 56 }, "Philippines": { x: 82, y: 50 }, "Thailand": { x: 76, y: 48 },
+  "Spain": { x: 46, y: 36 }, "Italy": { x: 51, y: 35 }, "Poland": { x: 52, y: 29 },
+  "Bangladesh": { x: 70, y: 46 }, "Peru": { x: 28, y: 60 }, "Kyrgyzstan": { x: 67, y: 36 },
+  "Nigeria": { x: 50, y: 52 }, "Egypt": { x: 56, y: 43 }, "South Africa": { x: 55, y: 72 },
+  "Papua New Guinea": { x: 84, y: 58 }, "Argentina": { x: 32, y: 72 },
+};
+
+function getCoords(country: string) {
+  if (COUNTRY_COORDS[country]) return COUNTRY_COORDS[country];
+  const upper = country.toUpperCase();
+  if (upper.includes("INDONESIA") || upper.includes("SUMATRA")) return { x: 78, y: 56 };
+  if (upper.includes("CHINA") || upper.includes("SICHUAN")) return { x: 76, y: 37 };
+  if (upper.includes("JAPAN") || upper.includes("KURIL")) return { x: 83, y: 33 };
+  if (upper.includes("RUSSIA") || upper.includes("KAMCHATKA")) return { x: 78, y: 27 };
+  if (upper.includes("INDIA") || upper.includes("NICOBAR")) return { x: 70, y: 50 };
+  if (upper.includes("PHILIPPINES") || upper.includes("MINDANAO")) return { x: 82, y: 50 };
+  if (upper.includes("NEW ZEALAND") || upper.includes("KERMADEC")) return { x: 87, y: 70 };
+  if (upper.includes("ALASKA") || upper.includes("ALEUTIAN")) return { x: 12, y: 25 };
+  if (upper.includes("CHILE") || upper.includes("PERU")) return { x: 27, y: 62 };
+  if (upper.includes("MEXICO") || upper.includes("OAXACA")) return { x: 18, y: 46 };
+  if (upper.includes("AFRICA")) return { x: 52, y: 58 };
+  if (upper.includes("ATLANTIC")) return { x: 42, y: 45 };
+  if (upper.includes("PACIFIC")) return { x: 15, y: 52 };
+  if (upper.includes("INDIAN")) return { x: 66, y: 58 };
+  return { x: 40 + Math.random() * 30, y: 35 + Math.random() * 25 };
+}
+
+interface Stats {
+  total: number;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  resolved: number;
+  active: number;
+  countries: number;
+}
+
+interface MapDot {
+  country: string;
+  severity: string;
+  x: number;
+  y: number;
+  count: number;
+}
+
+interface RecentInc {
+  title: string;
+  country: string;
+  severity: string;
+  created_at: string;
+}
 
 const EcsuOverview = () => {
   const [mapMode, setMapMode] = useState<"flat" | "globe" | "heat">("flat");
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [mapDots, setMapDots] = useState<MapDot[]>([]);
+  const [recent, setRecent] = useState<RecentInc[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${INCIDENTS_URL}?action=stats`)
+      .then(r => r.json())
+      .then(setStats)
+      .catch(() => {});
+
+    fetch(`${INCIDENTS_URL}?action=list&limit=200`)
+      .then(r => r.json())
+      .then(data => {
+        const incs = data.incidents || [];
+        const byCountry: Record<string, { severity: string; count: number }> = {};
+        incs.forEach((inc: RecentInc & { severity: string }) => {
+          const key = inc.country;
+          if (!byCountry[key]) {
+            byCountry[key] = { severity: inc.severity, count: 0 };
+          }
+          byCountry[key].count++;
+          const order = ["critical","high","medium","low"];
+          if (order.indexOf(inc.severity) < order.indexOf(byCountry[key].severity)) {
+            byCountry[key].severity = inc.severity;
+          }
+        });
+        const dots: MapDot[] = Object.entries(byCountry).map(([country, info]) => ({
+          country,
+          severity: info.severity,
+          count: info.count,
+          ...getCoords(country),
+        }));
+        setMapDots(dots);
+        setRecent(incs.slice(0, 5).map((inc: RecentInc & { severity: string }) => ({
+          title: inc.title,
+          country: inc.country,
+          severity: inc.severity,
+          created_at: inc.created_at,
+        })));
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const statsCards = stats ? [
+    { label: "Всего инцидентов", value: stats.total.toString(), delta: `+${stats.critical} крит.`, icon: "AlertTriangle", color: "#e94560" },
+    { label: "Решено", value: stats.resolved.toString(), delta: `${Math.round(stats.resolved/stats.total*100)}%`, icon: "CheckCircle", color: "#00c896" },
+    { label: "Активных", value: stats.active.toString(), delta: `${stats.high} высоких`, icon: "Activity", color: "#f59e0b" },
+    { label: "Стран охвачено", value: stats.countries.toString(), delta: "международные", icon: "Globe", color: "#60a5fa" },
+  ] : [
+    { label: "Всего инцидентов", value: "...", delta: "", icon: "AlertTriangle", color: "#e94560" },
+    { label: "Решено", value: "...", delta: "", icon: "CheckCircle", color: "#00c896" },
+    { label: "Активных", value: "...", delta: "", icon: "Activity", color: "#f59e0b" },
+    { label: "Стран охвачено", value: "...", delta: "", icon: "Globe", color: "#60a5fa" },
+  ];
 
   return (
     <div className="p-6">
-      <div className="mb-4">
-        <h2 className="text-xl font-bold text-white">ОБЗОР СИСТЕМЫ</h2>
-        <p className="text-gray-500 text-sm">Апрель 2026 · Все регионы</p>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-xl font-bold text-white">ОБЗОР СИСТЕМЫ</h2>
+          <p className="text-gray-500 text-sm">Международные данные · Реальная база ЕЦСУ</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+          <span className="text-green-400 text-xs">LIVE</span>
+        </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-6">
-        {stats.map((s) => (
+        {statsCards.map((s) => (
           <div key={s.label} className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-4">
             <div className="flex items-center justify-between mb-2">
               <Icon name={s.icon} size={18} style={{ color: s.color }} />
@@ -52,7 +160,9 @@ const EcsuOverview = () => {
           <div className="flex items-center gap-2">
             <Icon name="Map" size={16} className="text-blue-400" />
             <span className="text-white font-bold text-sm">КАРТА ИНЦИДЕНТОВ</span>
-            <span className="bg-blue-900/40 text-blue-400 text-xs px-2 py-0.5 rounded-full">8 объектов</span>
+            <span className="bg-blue-900/40 text-blue-400 text-xs px-2 py-0.5 rounded-full">
+              {loading ? "..." : `${mapDots.length} стран`}
+            </span>
           </div>
           <div className="flex gap-1">
             {(["flat", "globe", "heat"] as const).map((m) => (
@@ -70,12 +180,11 @@ const EcsuOverview = () => {
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#e94560] inline-block" />Крит.</span>
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#f59e0b] inline-block" />Выс.</span>
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#a78bfa] inline-block" />Ср.</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#94a3b8] inline-block" />Низ.</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#94a3b8] inline-block" />Мин.</span>
             </div>
           </div>
         </div>
 
-        {/* Map canvas */}
         <div className="relative bg-[#060d1f] rounded-xl overflow-hidden" style={{ height: 320 }}>
 
           {/* Flat mode */}
@@ -89,36 +198,29 @@ const EcsuOverview = () => {
                   <line key={`v${i}`} x1={`${i * 10}%`} y1="0" x2={`${i * 10}%`} y2="100%" stroke="#60a5fa" strokeWidth="0.5" />
                 ))}
               </svg>
-              <svg className="absolute inset-0 w-full h-full opacity-20">
-                <ellipse cx="30%" cy="38%" rx="10%" ry="8%" fill="#1e3a5f" />
-                <ellipse cx="52%" cy="44%" rx="12%" ry="9%" fill="#1e3a5f" />
-                <ellipse cx="45%" cy="68%" rx="9%" ry="7%" fill="#1e3a5f" />
-                <ellipse cx="63%" cy="40%" rx="11%" ry="8%" fill="#1e3a5f" />
-                <ellipse cx="73%" cy="34%" rx="10%" ry="7%" fill="#1e3a5f" />
-                <ellipse cx="83%" cy="42%" rx="9%" ry="8%" fill="#1e3a5f" />
-                <ellipse cx="89%" cy="56%" rx="8%" ry="9%" fill="#1e3a5f" />
-                <ellipse cx="38%" cy="72%" rx="8%" ry="6%" fill="#1e3a5f" />
-              </svg>
-              {incidents.map((inc, i) => (
-                <div
-                  key={i}
-                  className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
-                  style={{ left: `${inc.x}%`, top: `${inc.y}%` }}
-                >
-                  <div
-                    className="rounded-full animate-pulse"
-                    style={{
-                      width: dotSize[inc.level as keyof typeof dotSize],
-                      height: dotSize[inc.level as keyof typeof dotSize],
-                      background: dotColor[inc.level as keyof typeof dotColor],
-                      boxShadow: `0 0 8px ${dotColor[inc.level as keyof typeof dotColor]}`,
-                    }}
-                  />
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#0d1225] border border-blue-900/50 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    {inc.region}
-                  </div>
-                </div>
-              ))}
+              {loading ? (
+                <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-sm animate-pulse">Загрузка карты...</div>
+              ) : (
+                mapDots.map((dot, i) => {
+                  const color = dotColor[dot.severity as keyof typeof dotColor] || "#94a3b8";
+                  const size = dotSize[dot.severity as keyof typeof dotSize] || 8;
+                  return (
+                    <div
+                      key={i}
+                      className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+                      style={{ left: `${dot.x}%`, top: `${dot.y}%` }}
+                    >
+                      <div
+                        className="rounded-full animate-pulse"
+                        style={{ width: size, height: size, background: color, boxShadow: `0 0 8px ${color}` }}
+                      />
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#0d1225] border border-blue-900/50 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                        {dot.country} · {dot.count} инц.
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </>
           )}
 
@@ -132,22 +234,23 @@ const EcsuOverview = () => {
                   <ellipse cx="120" cy="120" rx="60" ry="100" fill="none" stroke="#1e3a5f" strokeWidth="0.8" opacity="0.5" />
                   <line x1="20" y1="120" x2="220" y2="120" stroke="#1e3a5f" strokeWidth="0.8" opacity="0.5" />
                   <line x1="120" y1="20" x2="120" y2="220" stroke="#1e3a5f" strokeWidth="0.8" opacity="0.5" />
-                  {incidents.map((inc, i) => {
-                    const angle = (inc.x / 100) * Math.PI * 1.6 - 0.8;
-                    const lat = (inc.y / 100) * Math.PI - Math.PI / 2;
+                  {mapDots.map((dot, i) => {
+                    const angle = (dot.x / 100) * Math.PI * 1.6 - 0.8;
+                    const lat = (dot.y / 100) * Math.PI - Math.PI / 2;
                     const cx = 120 + Math.cos(lat) * Math.sin(angle) * 95;
                     const cy = 120 - Math.sin(lat) * 95;
-                    const color = dotColor[inc.level as keyof typeof dotColor];
+                    const color = dotColor[dot.severity as keyof typeof dotColor] || "#94a3b8";
+                    const r = (dotSize[dot.severity as keyof typeof dotSize] || 8) / 2;
                     return (
                       <g key={i}>
-                        <circle cx={cx} cy={cy} r={dotSize[inc.level as keyof typeof dotSize] / 2} fill={color} opacity="0.9" />
-                        <circle cx={cx} cy={cy} r={dotSize[inc.level as keyof typeof dotSize]} fill={color} opacity="0.2" />
+                        <circle cx={cx} cy={cy} r={r} fill={color} opacity="0.9" />
+                        <circle cx={cx} cy={cy} r={r * 2} fill={color} opacity="0.15" />
                       </g>
                     );
                   })}
                   <circle cx="120" cy="120" r="100" fill="none" stroke="#60a5fa" strokeWidth="1" opacity="0.3" />
                 </svg>
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 text-blue-400 text-xs font-mono opacity-60">3D ГЛОБУС · ECSU</div>
+                <div className="absolute top-1 left-1/2 -translate-x-1/2 text-blue-400 text-xs font-mono opacity-60">3D ГЛОБУС · ECSU</div>
               </div>
             </div>
           )}
@@ -156,69 +259,58 @@ const EcsuOverview = () => {
           {mapMode === "heat" && (
             <>
               <svg className="absolute inset-0 w-full h-full">
-                {incidents.map((inc, i) => {
-                  const color = dotColor[inc.level as keyof typeof dotColor];
-                  const r = inc.level === "critical" ? 80 : inc.level === "high" ? 65 : inc.level === "medium" ? 50 : 35;
-                  return (
+                <defs>
+                  {mapDots.map((dot, i) => (
                     <radialGradient key={`g${i}`} id={`hg${i}`} cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stopColor={color} stopOpacity="0.5" />
-                      <stop offset="100%" stopColor={color} stopOpacity="0" />
+                      <stop offset="0%" stopColor={dotColor[dot.severity as keyof typeof dotColor] || "#94a3b8"} stopOpacity="0.55" />
+                      <stop offset="100%" stopColor={dotColor[dot.severity as keyof typeof dotColor] || "#94a3b8"} stopOpacity="0" />
                     </radialGradient>
+                  ))}
+                </defs>
+                {mapDots.map((dot, i) => {
+                  const r = dot.severity === "critical" ? 8 : dot.severity === "high" ? 6 : dot.severity === "medium" ? 5 : 3;
+                  return (
+                    <ellipse key={`e${i}`} cx={`${dot.x}%`} cy={`${dot.y}%`} rx={`${r}%`} ry={`${r * 0.6}%`} fill={`url(#hg${i})`} />
                   );
-                }).concat(
-                  incidents.map((inc, i) => (
-                    <ellipse
-                      key={`e${i}`}
-                      cx={`${inc.x}%`}
-                      cy={`${inc.y}%`}
-                      rx={`${(incidents[i].level === "critical" ? 80 : incidents[i].level === "high" ? 65 : 50) / 10}%`}
-                      ry={`${(incidents[i].level === "critical" ? 80 : incidents[i].level === "high" ? 65 : 50) / 6}%`}
-                      fill={`url(#hg${i})`}
-                    />
-                  )) as unknown as React.ReactElement[]
-                )}
+                })}
               </svg>
-              <div className="absolute top-3 left-3 text-blue-400 text-xs font-mono opacity-60">ТЕПЛОВАЯ КАРТА · ИНТЕНСИВНОСТЬ УГРОЗ</div>
-              {incidents.map((inc, i) => (
-                <div
-                  key={i}
-                  className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
-                  style={{ left: `${inc.x}%`, top: `${inc.y}%` }}
-                >
-                  <div className="w-2 h-2 rounded-full" style={{ background: dotColor[inc.level as keyof typeof dotColor] }} />
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#0d1225] border border-blue-900/50 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    {inc.region}
+              <div className="absolute top-3 left-3 text-blue-400 text-xs font-mono opacity-60">ТЕПЛОВАЯ КАРТА · УГРОЗЫ</div>
+              {mapDots.map((dot, i) => (
+                <div key={i} className="absolute transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
+                  style={{ left: `${dot.x}%`, top: `${dot.y}%` }}>
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: dotColor[dot.severity as keyof typeof dotColor] || "#94a3b8" }} />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#0d1225] border border-blue-900/50 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                    {dot.country} · {dot.count}
                   </div>
                 </div>
               ))}
             </>
           )}
 
-          {/* Watermark */}
           <div className="absolute bottom-3 right-3 text-blue-900/50 text-xs font-mono">ECSU 2.0 · DALAN</div>
         </div>
       </div>
 
-      {/* Recent activity */}
+      {/* Recent */}
       <div className="mt-4 bg-[#0d1225] border border-blue-900/30 rounded-xl p-4">
         <div className="text-white font-bold text-sm mb-3 flex items-center gap-2">
           <Icon name="Activity" size={15} className="text-blue-400" />
           Последние события
         </div>
         <div className="space-y-2">
-          {[
-            { time: "14:23", text: "Инцидент #1247 — Центральный регион · Критический", color: "#e94560" },
-            { time: "13:55", text: "Инцидент #1246 решён — Приволжский регион", color: "#00c896" },
-            { time: "13:12", text: "DALAN: оптимизация потока данных +10% (Сдвиг Николаева)", color: "#FFD700" },
-            { time: "12:44", text: "Инцидент #1245 — Северо-Кавказский · Критический", color: "#e94560" },
-            { time: "11:30", text: "Подключена новая страна-участница (#47)", color: "#60a5fa" },
-          ].map((e, i) => (
-            <div key={i} className="flex items-center gap-3 text-xs">
-              <span className="text-gray-600 w-10 shrink-0">{e.time}</span>
-              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: e.color }} />
-              <span className="text-gray-300">{e.text}</span>
-            </div>
-          ))}
+          {loading ? (
+            <div className="text-gray-600 text-xs animate-pulse">Загрузка...</div>
+          ) : recent.map((e, i) => {
+            const color = dotColor[e.severity as keyof typeof dotColor] || "#94a3b8";
+            return (
+              <div key={i} className="flex items-center gap-3 text-xs">
+                <span className="text-gray-600 w-20 shrink-0">{e.created_at?.slice(0, 10)}</span>
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
+                <span className="text-gray-300 truncate">{e.title}</span>
+                <span className="text-gray-600 shrink-0 ml-auto">{e.country}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
