@@ -7,9 +7,18 @@ const USERS: Record<string, { password: string; role: "admin" | "user"; name: st
   analyst: { password: "dalan001", role: "user", name: "Аналитик" },
 };
 
+const loadSession = () => {
+  try {
+    const s = localStorage.getItem("ecsu_auth");
+    if (s) return JSON.parse(s);
+  } catch (e) { /* ignore */ }
+  return null;
+};
+
 const Index = () => {
-  const [role, setRole] = useState<"admin" | "user" | null>(null);
-  const [userName, setUserName] = useState("");
+  const saved = loadSession();
+  const [role, setRole] = useState<"admin" | "user" | null>(saved?.role ?? null);
+  const [userName, setUserName] = useState(saved?.userName ?? "");
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,8 +29,9 @@ const Index = () => {
       setRole(user.role);
       setUserName(user.name);
       setError("");
+      try { localStorage.setItem("ecsu_auth", JSON.stringify({ role: user.role, userName: user.name })); } catch (e) { /* ignore */ }
     } else {
-      setError("Неверный логин");
+      setError("Неверный логин или пароль");
     }
   };
 
@@ -30,7 +40,10 @@ const Index = () => {
       <EcsuSystem
         role={role}
         userName={userName}
-        onLogout={() => { setRole(null); setLogin(""); setPassword(""); }}
+        onLogout={() => {
+          setRole(null); setLogin(""); setPassword("");
+          try { localStorage.removeItem("ecsu_auth"); } catch (e) { /* ignore */ }
+        }}
       />
     );
   }
