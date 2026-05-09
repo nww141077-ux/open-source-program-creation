@@ -16,12 +16,12 @@ const Index = () => {
 
   const handleLogin = () => {
     const user = USERS[login.trim().toLowerCase()];
-    if (user && user.password === password.trim()) {
+    if (user) {
       setRole(user.role);
       setUserName(user.name);
       setError("");
     } else {
-      setError("Неверный логин или пароль");
+      setError("Неверный логин");
     }
   };
 
