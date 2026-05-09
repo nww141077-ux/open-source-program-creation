@@ -405,125 +405,106 @@ const EcsuDalan = () => {
         </div>
       )}
 
-      {tab === "engine" && (
-        <div className="space-y-4">
-          <div className="bg-[#060d1f] border border-[#a78bfa]/30 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <Icon name="Cpu" size={15} className="text-[#a78bfa]" />
-              <span className="text-[#a78bfa] font-bold text-sm tracking-wider">DALAN ULTRA-LIGHT ENGINE</span>
-              <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-bold ${
-                engineRunning ? "bg-[#e94560]/15 text-[#e94560]" : "bg-green-500/15 text-green-400"
-              }`}>
-                {engineRunning ? "● РАБОТАЕТ" : "● ГОТОВ"}
-              </span>
-            </div>
-            <p className="text-gray-600 text-xs mb-5">
-              Энергоэффективный движок управления моторами · debounce 250мс · автоотправка на шлюз ПК
-            </p>
-
-            {/* Левый мотор */}
-            <div className="mb-5">
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-gray-300 text-sm font-medium flex items-center gap-2">
-                  <Icon name="ArrowLeft" size={14} className="text-[#a78bfa]" />
-                  Левый мотор
-                </label>
-                <span className="text-[#a78bfa] font-mono font-bold text-sm">{leftSpeed}%</span>
+      {tab === "engine" && (() => {
+        const totalNominal = (leftSpeed + rightSpeed) / 2;
+        const actualPower = totalNominal * 1.1;
+        const shift = actualPower - totalNominal;
+        return (
+          <div className="space-y-4">
+            {/* Заголовок UBO */}
+            <div className="bg-black border border-[#FFD700] rounded-xl p-5 shadow-[0_0_20px_rgba(0,255,65,0.1)]">
+              <div className="text-center mb-4">
+                <div className="text-[#FFD700] font-bold text-base tracking-[3px] font-mono">DALAN ENGINE v1.2</div>
+                <div className="text-[#00FF41] text-xs font-mono mt-0.5 opacity-60">UBO EDITION · SYNERGON GLOBAL</div>
               </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={leftSpeed}
-                onChange={e => handleSlider("left", Number(e.target.value))}
-                className="w-full h-2 rounded-full appearance-none cursor-pointer"
-                style={{
-                  background: `linear-gradient(to right, #a78bfa ${leftSpeed}%, #1e2a3a ${leftSpeed}%)`
-                }}
-              />
-              <div className="flex justify-between text-gray-700 text-xs mt-1">
-                <span>0%</span><span>50%</span><span>100%</span>
-              </div>
-            </div>
 
-            {/* Правый мотор */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-gray-300 text-sm font-medium flex items-center gap-2">
-                  <Icon name="ArrowRight" size={14} className="text-[#a78bfa]" />
-                  Правый мотор
-                </label>
-                <span className="text-[#a78bfa] font-mono font-bold text-sm">{rightSpeed}%</span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={rightSpeed}
-                onChange={e => handleSlider("right", Number(e.target.value))}
-                className="w-full h-2 rounded-full appearance-none cursor-pointer"
-                style={{
-                  background: `linear-gradient(to right, #a78bfa ${rightSpeed}%, #1e2a3a ${rightSpeed}%)`
-                }}
-              />
-              <div className="flex justify-between text-gray-700 text-xs mt-1">
-                <span>0%</span><span>50%</span><span>100%</span>
-              </div>
-            </div>
-
-            {/* Стоп */}
-            <button
-              onClick={stopEngine}
-              className="w-full bg-gradient-to-r from-[#e94560] to-[#c0392b] hover:opacity-90 text-white font-bold py-3 rounded-lg transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#e94560]/30 flex items-center justify-center gap-2"
-            >
-              <Icon name="OctagonX" size={16} />
-              ОСТАНОВИТЬ ВСЕ МОТОРЫ
-            </button>
-          </div>
-
-          {/* Статус */}
-          <div className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-4 space-y-3">
-            <div className="text-white font-bold text-sm flex items-center gap-2">
-              <Icon name="Activity" size={14} className="text-[#a78bfa]" />
-              Статус системы
-            </div>
-
-            <div className={`px-4 py-3 rounded-lg text-center font-bold text-sm border ${
-              engineRunning
-                ? "bg-[#e94560]/10 border-[#e94560]/30 text-[#e94560]"
-                : "bg-green-500/10 border-green-500/30 text-green-400"
-            }`}>
-              {engineRunning ? "Работает" : "Готов"}
-            </div>
-
-            <div className="flex items-center justify-between bg-black/30 rounded-lg px-4 py-2.5">
-              <span className="text-gray-500 text-xs">Последняя команда</span>
-              <span className="text-[#a78bfa] font-mono text-sm font-bold">
-                {lastCmd ?? "—"}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between bg-black/30 rounded-lg px-4 py-2.5">
-              <span className="text-gray-500 text-xs">Шлюз ПК</span>
-              <span className={`text-xs font-medium ${syncStatus?.pc_online ? "text-green-400" : "text-gray-600"}`}>
-                {syncStatus?.pc_online ? `Онлайн · ${syncStatus.gateway_url}` : "Не подключён"}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              {[
-                { label: "Левый мотор", value: `${leftSpeed}%`, color: leftSpeed > 0 ? "#a78bfa" : "#4b5563" },
-                { label: "Правый мотор", value: `${rightSpeed}%`, color: rightSpeed > 0 ? "#a78bfa" : "#4b5563" },
-              ].map(s => (
-                <div key={s.label} className="bg-black/30 rounded-lg px-3 py-2 text-center">
-                  <div className="text-gray-600 text-xs mb-0.5">{s.label}</div>
-                  <div className="font-mono font-bold text-lg" style={{ color: s.color }}>{s.value}</div>
+              {/* Вектор L */}
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[#888] text-xs font-mono font-bold">ВЕКТОР L (ЛЕВЫЙ)</span>
+                  <span className="text-[#FFD700] font-mono font-bold text-sm">{leftSpeed}%</span>
                 </div>
-              ))}
+                <input
+                  type="range" min={0} max={100} value={leftSpeed}
+                  onChange={e => handleSlider("left", Number(e.target.value))}
+                  className="w-full cursor-pointer accent-[#00FF41]"
+                  style={{ accentColor: "#00FF41" }}
+                />
+              </div>
+
+              {/* Вектор R */}
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[#888] text-xs font-mono font-bold">ВЕКТОР R (ПРАВЫЙ)</span>
+                  <span className="text-[#FFD700] font-mono font-bold text-sm">{rightSpeed}%</span>
+                </div>
+                <input
+                  type="range" min={0} max={100} value={rightSpeed}
+                  onChange={e => handleSlider("right", Number(e.target.value))}
+                  className="w-full cursor-pointer"
+                  style={{ accentColor: "#00FF41" }}
+                />
+              </div>
+
+              <div className="text-center text-[#444] text-[10px] font-mono mb-4">
+                КОЭФФИЦИЕНТ СДВИГА: 10=11 ACTIVE
+              </div>
+
+              <button
+                onClick={stopEngine}
+                className="w-full py-3 bg-transparent border border-[#FF3131] text-[#FF3131] font-bold font-mono text-sm transition-all hover:bg-[#FF3131] hover:text-black"
+              >
+                АВАРИЙНАЯ ОСТАНОВКА
+              </button>
+            </div>
+
+            {/* Панель статуса */}
+            <div className="bg-black border border-[#333] rounded-xl p-4 space-y-3 font-mono">
+              <div
+                className={`px-4 py-3 text-center font-bold text-sm border ${
+                  engineRunning
+                    ? "border-[#FFD700] text-[#FFD700] animate-pulse"
+                    : "border-[#00FF41] text-[#00FF41]"
+                }`}
+              >
+                {engineRunning ? "ДВИЖОК В РАБОТЕ (10=11)" : "СИСТЕМА ГОТОВА"}
+              </div>
+
+              <div className="flex items-center justify-between bg-[#0a0a0a] px-3 py-2 rounded">
+                <span className="text-[#555] text-xs">ПОТОК ДАННЫХ</span>
+                <span className="text-[#00FF41] text-xs">
+                  {lastCmd ? `L:${leftSpeed} | R:${rightSpeed} | SHIFT:${shift.toFixed(2)}` : "IDLE"}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between bg-[#0a0a0a] px-3 py-2 rounded">
+                <span className="text-[#555] text-xs">ФАКТИЧЕСКАЯ МОЩНОСТЬ (10=11)</span>
+                <span className="text-[#FFD700] font-bold">{actualPower.toFixed(2)} UNITS</span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                {[
+                  { label: "НОМИНАЛ", value: totalNominal.toFixed(1), color: "#888" },
+                  { label: "ФАКТ ×1.1", value: actualPower.toFixed(2), color: "#00FF41" },
+                  { label: "ПРИРОСТ", value: `+${shift.toFixed(2)}`, color: "#FFD700" },
+                ].map(s => (
+                  <div key={s.label} className="bg-[#0a0a0a] rounded px-2 py-2 text-center">
+                    <div className="text-[#444] text-[9px] mb-0.5">{s.label}</div>
+                    <div className="font-bold text-sm" style={{ color: s.color }}>{s.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between bg-[#0a0a0a] px-3 py-2 rounded">
+                <span className="text-[#555] text-xs">ШЛЮЗ ПК</span>
+                <span className={`text-xs ${syncStatus?.pc_online ? "text-[#00FF41]" : "text-[#444]"}`}>
+                  {syncStatus?.pc_online ? `ONLINE · ${syncStatus.gateway_url}` : "OFFLINE"}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
