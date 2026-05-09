@@ -54,7 +54,7 @@ const Index = () => {
           <input
             type="text"
             value={login}
-            onChange={(e) => setLogin(e.target.value)}
+            onChange={(e) => { setLogin(e.target.value); setError(""); }}
             placeholder="Введите логин..."
             className="w-full bg-[#060d1f] border border-blue-900/30 text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 placeholder-gray-700"
           />
@@ -65,7 +65,7 @@ const Index = () => {
           <input
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => { setPassword(e.target.value); setError(""); }}
             onKeyDown={(e) => e.key === "Enter" && handleLogin()}
             placeholder="Введите пароль..."
             className="w-full bg-[#060d1f] border border-blue-900/30 text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 placeholder-gray-700"
