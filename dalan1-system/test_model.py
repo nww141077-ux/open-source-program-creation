@@ -54,3 +54,6 @@ for i, signal in enumerate(test_signals):
         _, predicted = torch.max(output, 1)
     
     print(f"Предсказанный класс: {predicted.item()}")
+    def test_new_feature():
+    # ваш тестовый код
+    assert result == expected
