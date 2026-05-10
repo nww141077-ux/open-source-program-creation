@@ -80,3 +80,8 @@ def train_neural_network():
     print("4. Обучение завершено. Сохранение модели...")
     classifier.save_model()
     print("5. Модель успешно сохранена!")
+    def new_training_step(model, data, target):
+    # ваш код
+    pass
+
+# Вставьте после существующих функций обучения
