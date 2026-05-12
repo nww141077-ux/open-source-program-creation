@@ -1,5 +1,5 @@
 """
-DALAN AI — универсальный ИИ-модуль ЕЦСУ 2.0
+DALAN AI — универсальный ИИ-модуль ЕЦСУ 2.0 (обновлён 2026-05-12)
 Поддерживает: OpenRouter (Llama, Mixtral, Gemma...), Groq (Llama3, Mixtral), Google Gemini, YandexGPT
 """
 import os
