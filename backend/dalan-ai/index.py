@@ -121,8 +121,8 @@ def handler(event: dict, context) -> dict:
         return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "Invalid JSON"})}
 
     messages = body.get("messages", [])
-    provider = body.get("provider", "groq")
-    model_key = body.get("model", "llama-3.3-70b")
+    provider = body.get("provider", "openrouter")
+    model_key = body.get("model", "llama-3.1-8b")
 
     if not messages:
         return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "No messages"})}
@@ -131,10 +131,10 @@ def handler(event: dict, context) -> dict:
     fallback_chain = [
         (provider, model_key),
     ]
-    if provider != "groq":
-        fallback_chain.append(("groq", "llama-3.3-70b"))
     if provider != "openrouter":
         fallback_chain.append(("openrouter", "llama-3.1-8b"))
+    if provider != "openrouter":
+        fallback_chain.append(("openrouter", "deepseek-r1"))
 
     last_error = "Unknown error"
     for try_provider, try_model_key in fallback_chain:
