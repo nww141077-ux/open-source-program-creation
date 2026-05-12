@@ -4,10 +4,16 @@ interface DalanShiftProps {
   shiftInput: string;
   setShiftInput: (v: string) => void;
   shiftResult: { nominal: number; actual: number; delta: number } | null;
+  setShiftResult: (v: { nominal: number; actual: number; delta: number } | null) => void;
   onRun: () => void;
 }
 
-const DalanShift = ({ shiftInput, setShiftInput, shiftResult, onRun }: DalanShiftProps) => {
+const DalanShift = ({ shiftInput, setShiftInput, shiftResult, setShiftResult, onRun }: DalanShiftProps) => {
+  const handleChange = (v: string) => {
+    setShiftInput(v);
+    if (!v.trim()) setShiftResult(null);
+  };
+
   return (
     <div className="bg-[#060d1f] border border-[#FFD700]/20 rounded-xl p-5">
       <div className="flex items-center gap-2 mb-1">
@@ -21,7 +27,7 @@ const DalanShift = ({ shiftInput, setShiftInput, shiftResult, onRun }: DalanShif
           <input
             type="number"
             value={shiftInput}
-            onChange={(e) => setShiftInput(e.target.value)}
+            onChange={(e) => handleChange(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && onRun()}
             placeholder="Введите число..."
             className="w-full bg-black border border-[#FFD700]/30 text-white rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-[#FFD700]"

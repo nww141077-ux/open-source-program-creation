@@ -176,7 +176,15 @@ def handler(event: dict, context) -> dict:
             })}
 
         except Exception as e:
-            last_error = str(e)
+            err_str = str(e)
+            if "401" in err_str:
+                last_error = f"Неверный API-ключ провайдера {try_provider} (401 Unauthorized)"
+            elif "429" in err_str:
+                last_error = f"Превышен лимит запросов провайдера {try_provider} (429)"
+            elif "403" in err_str:
+                last_error = f"Доступ запрещён для провайдера {try_provider} (403)"
+            else:
+                last_error = f"{try_provider}: {err_str}"
             continue
 
-    return {"statusCode": 502, "headers": CORS, "body": json.dumps({"error": f"Все провайдеры недоступны: {last_error}"})}
+    return {"statusCode": 502, "headers": CORS, "body": json.dumps({"error": f"Все провайдеры недоступны. {last_error}"})}

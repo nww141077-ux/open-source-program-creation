@@ -97,6 +97,7 @@ const EcsuDalan = () => {
 
   useEffect(() => {
     if (autoSync) {
+      if (autoSyncRef.current) clearInterval(autoSyncRef.current);
       autoSyncRef.current = setInterval(() => {
         runSync(true);
       }, 30000);
@@ -114,13 +115,14 @@ const EcsuDalan = () => {
       setLastSync(new Date().toLocaleTimeString("ru-RU"));
       if (!silent) {
         setSyncMsg({ text: data.message || "Синхронизация завершена", ok: data.ok });
-        setTimeout(() => setSyncMsg(null), 4000);
+        setTimeout(() => setSyncMsg(null), 6000);
       }
       loadStatus();
     } catch {
       if (!silent) setSyncMsg({ text: "Ошибка синхронизации", ok: false });
+    } finally {
+      if (!silent) setSyncing(false);
     }
-    if (!silent) setSyncing(false);
   };
 
   const runOracle = async () => {
@@ -226,6 +228,7 @@ const EcsuDalan = () => {
           shiftInput={shiftInput}
           setShiftInput={setShiftInput}
           shiftResult={shiftResult}
+          setShiftResult={setShiftResult}
           onRun={runShift}
         />
       )}

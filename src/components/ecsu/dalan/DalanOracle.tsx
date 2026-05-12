@@ -136,7 +136,7 @@ const DalanOracle = ({
         ) : (
           <div className="space-y-3 max-h-56 overflow-y-auto">
             {log.map((e, i) => (
-              <div key={i} className="border border-[#FFD700]/10 rounded-lg p-3 bg-black/30">
+              <div key={`${e.timestamp}-${i}`} className="border border-[#FFD700]/10 rounded-lg p-3 bg-black/30">
                 <div className="text-gray-500 text-xs font-mono mb-1">[{e.timestamp}] АНАЛИЗ DALAN:</div>
                 <div className="text-white text-sm mb-1">{e.task}</div>
                 <div className="flex gap-4">
