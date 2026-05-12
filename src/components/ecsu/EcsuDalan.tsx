@@ -62,8 +62,8 @@ const EcsuDalan = () => {
   const [task, setTask] = useState("");
   const [log, setLog] = useState<OracleEntry[]>([]);
   const [running, setRunning] = useState(false);
-  const [aiProvider, setAiProvider] = useState("openrouter");
-  const [aiModel, setAiModel] = useState("llama-3.1-8b");
+  const [aiProvider, setAiProvider] = useState("groq");
+  const [aiModel, setAiModel] = useState("llama-3.3-70b");
   const [aiReply, setAiReply] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [shiftInput, setShiftInput] = useState("");

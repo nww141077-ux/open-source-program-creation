@@ -121,42 +121,62 @@ def handler(event: dict, context) -> dict:
         return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "Invalid JSON"})}
 
     messages = body.get("messages", [])
-    provider = body.get("provider", "openrouter")
-    model_key = body.get("model", "llama-3.1-8b")
+    provider = body.get("provider", "groq")
+    model_key = body.get("model", "llama-3.3-70b")
 
     if not messages:
         return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "No messages"})}
 
-    pconf = PROVIDERS.get(provider)
-    if not pconf:
-        return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": f"Unknown provider: {provider}"})}
+    # Цепочка фоллбэков: если основной провайдер не работает — переключаемся
+    fallback_chain = [
+        (provider, model_key),
+    ]
+    if provider != "groq":
+        fallback_chain.append(("groq", "llama-3.3-70b"))
+    if provider != "openrouter":
+        fallback_chain.append(("openrouter", "llama-3.1-8b"))
 
-    model_id = pconf["models"].get(model_key, list(pconf["models"].values())[0])
+    last_error = "Unknown error"
+    for try_provider, try_model_key in fallback_chain:
+        pconf = PROVIDERS.get(try_provider)
+        if not pconf:
+            continue
+        model_id = pconf["models"].get(try_model_key, list(pconf["models"].values())[0])
+        try:
+            if try_provider in ("openrouter", "groq"):
+                api_key = os.environ.get(pconf["key_env"], "")
+                if not api_key:
+                    last_error = f"Нет ключа {pconf['key_env']}"
+                    continue
+                reply = call_openrouter_groq(pconf["url"], api_key, model_id, messages, SYSTEM_PROMPT)
 
-    try:
-        if provider in ("openrouter", "groq"):
-            api_key = os.environ.get(pconf["key_env"], "")
-            if not api_key:
-                return {"statusCode": 500, "headers": CORS, "body": json.dumps({"error": f"Missing {pconf['key_env']}"})}
-            reply = call_openrouter_groq(pconf["url"], api_key, model_id, messages, SYSTEM_PROMPT)
+            elif try_provider == "gemini":
+                api_key = os.environ.get(pconf["key_env"], "")
+                if not api_key:
+                    last_error = "Нет ключа GEMINI_API_KEY"
+                    continue
+                reply = call_gemini(api_key, model_id, messages, SYSTEM_PROMPT)
 
-        elif provider == "gemini":
-            api_key = os.environ.get(pconf["key_env"], "")
-            if not api_key:
-                return {"statusCode": 500, "headers": CORS, "body": json.dumps({"error": "Missing GEMINI_API_KEY"})}
-            reply = call_gemini(api_key, model_id, messages, SYSTEM_PROMPT)
+            elif try_provider == "yandex":
+                api_key = os.environ.get(pconf["key_env"], "")
+                folder_id = os.environ.get(pconf["folder_env"], "")
+                if not api_key or not folder_id:
+                    last_error = "Нет ключей YandexGPT"
+                    continue
+                reply = call_yandex(api_key, folder_id, model_id, messages, SYSTEM_PROMPT)
 
-        elif provider == "yandex":
-            api_key = os.environ.get(pconf["key_env"], "")
-            folder_id = os.environ.get(pconf["folder_env"], "")
-            if not api_key or not folder_id:
-                return {"statusCode": 500, "headers": CORS, "body": json.dumps({"error": "Missing YANDEX_GPT_API_KEY or YANDEX_FOLDER_ID"})}
-            reply = call_yandex(api_key, folder_id, model_id, messages, SYSTEM_PROMPT)
+            else:
+                continue
 
-        return {"statusCode": 200, "headers": CORS, "body": json.dumps({"reply": reply, "provider": provider, "model": model_key})}
+            return {"statusCode": 200, "headers": CORS, "body": json.dumps({
+                "reply": reply,
+                "provider": try_provider,
+                "model": try_model_key,
+                "fallback": try_provider != provider,
+            })}
 
-    except urllib.error.HTTPError as e:
-        err_body = e.read().decode() if hasattr(e, "read") else str(e)
-        return {"statusCode": 502, "headers": CORS, "body": json.dumps({"error": f"Provider error: {e.code}", "detail": err_body})}
-    except Exception as e:
-        return {"statusCode": 500, "headers": CORS, "body": json.dumps({"error": str(e)})}
+        except Exception as e:
+            last_error = str(e)
+            continue
+
+    return {"statusCode": 502, "headers": CORS, "body": json.dumps({"error": f"Все провайдеры недоступны: {last_error}"})}

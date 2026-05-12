@@ -59,8 +59,8 @@ const AiAssistantTab = () => {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [aiProvider, setAiProvider] = useState("openrouter");
-  const [aiModel, setAiModel] = useState("llama-3.1-8b");
+  const [aiProvider, setAiProvider] = useState("groq");
+  const [aiModel, setAiModel] = useState("llama-3.3-70b");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
