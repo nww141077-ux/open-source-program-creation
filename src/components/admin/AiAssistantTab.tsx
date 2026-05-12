@@ -1,7 +1,39 @@
 import { useState, useRef, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 
-const AI_URL = "https://functions.poehali.dev/e74ce640-7610-467a-81ee-cab7c2347d3e";
+const AI_URL = "https://functions.poehali.dev/7b0103d3-1c04-463b-b543-f2f2b89a53df";
+
+const AI_PROVIDERS = [
+  {
+    id: "openrouter", label: "OpenRouter", models: [
+      { id: "llama-3.1-8b", label: "Llama 3.1 8B (free)" },
+      { id: "llama-3.3-70b", label: "Llama 3.3 70B (free)" },
+      { id: "mixtral-8x7b", label: "Mixtral 8x7B (free)" },
+      { id: "gemma-2-9b", label: "Gemma 2 9B (free)" },
+      { id: "deepseek-r1", label: "DeepSeek R1 (free)" },
+    ]
+  },
+  {
+    id: "groq", label: "Groq", models: [
+      { id: "llama-3.1-8b", label: "Llama 3.1 8B" },
+      { id: "llama-3.3-70b", label: "Llama 3.3 70B" },
+      { id: "mixtral-8x7b", label: "Mixtral 8x7B" },
+    ]
+  },
+  {
+    id: "gemini", label: "Google Gemini", models: [
+      { id: "gemini-flash", label: "Gemini 1.5 Flash" },
+      { id: "gemini-2-flash", label: "Gemini 2.0 Flash" },
+      { id: "gemini-pro", label: "Gemini 1.5 Pro" },
+    ]
+  },
+  {
+    id: "yandex", label: "YandexGPT", models: [
+      { id: "yandexgpt-lite", label: "YandexGPT Lite" },
+      { id: "yandexgpt", label: "YandexGPT Pro" },
+    ]
+  },
+];
 
 interface Message {
   role: "user" | "assistant";
@@ -27,6 +59,8 @@ const AiAssistantTab = () => {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [aiProvider, setAiProvider] = useState("openrouter");
+  const [aiModel, setAiModel] = useState("llama-3.1-8b");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,6 +81,8 @@ const AiAssistantTab = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          provider: aiProvider,
+          model: aiModel,
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
         }),
       });
@@ -71,16 +107,40 @@ const AiAssistantTab = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-140px)]">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 bg-gradient-to-br from-[#e94560] to-[#9b1dcc] rounded-xl flex items-center justify-center">
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        <div className="w-10 h-10 bg-gradient-to-br from-[#e94560] to-[#9b1dcc] rounded-xl flex items-center justify-center flex-shrink-0">
           <Icon name="Bot" size={20} className="text-white" />
         </div>
         <div>
           <div className="text-white font-bold text-lg">ИИ-Ассистент</div>
           <div className="text-green-400 text-xs flex items-center gap-1">
             <span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block animate-pulse" />
-            Онлайн · GPT-4o
+            Онлайн · {AI_PROVIDERS.find(p=>p.id===aiProvider)?.label} · {aiModel}
           </div>
+        </div>
+        <div className="ml-auto flex gap-2">
+          <select
+            value={aiProvider}
+            onChange={(e) => {
+              setAiProvider(e.target.value);
+              const prov = AI_PROVIDERS.find(p => p.id === e.target.value);
+              if (prov) setAiModel(prov.models[0].id);
+            }}
+            className="bg-[#1a1a2e] border border-[#e94560]/20 text-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none"
+          >
+            {AI_PROVIDERS.map(p => (
+              <option key={p.id} value={p.id}>{p.label}</option>
+            ))}
+          </select>
+          <select
+            value={aiModel}
+            onChange={(e) => setAiModel(e.target.value)}
+            className="bg-[#1a1a2e] border border-[#e94560]/20 text-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none"
+          >
+            {AI_PROVIDERS.find(p => p.id === aiProvider)?.models.map(m => (
+              <option key={m.id} value={m.id}>{m.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 

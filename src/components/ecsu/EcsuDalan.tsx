@@ -2,6 +2,40 @@ import { useState, useEffect, useRef } from "react";
 import Icon from "@/components/ui/icon";
 
 const DALAN_SYNC_URL = "https://functions.poehali.dev/6d891868-ea53-4120-8843-9fb50f12c771";
+const DALAN_AI_URL = "https://functions.poehali.dev/7b0103d3-1c04-463b-b543-f2f2b89a53df";
+
+const AI_PROVIDERS = [
+  {
+    id: "openrouter", label: "OpenRouter", models: [
+      { id: "llama-3.1-8b", label: "Llama 3.1 8B (free)" },
+      { id: "llama-3.3-70b", label: "Llama 3.3 70B (free)" },
+      { id: "mixtral-8x7b", label: "Mixtral 8x7B (free)" },
+      { id: "gemma-2-9b", label: "Gemma 2 9B (free)" },
+      { id: "deepseek-r1", label: "DeepSeek R1 (free)" },
+    ]
+  },
+  {
+    id: "groq", label: "Groq", models: [
+      { id: "llama-3.1-8b", label: "Llama 3.1 8B" },
+      { id: "llama-3.3-70b", label: "Llama 3.3 70B" },
+      { id: "mixtral-8x7b", label: "Mixtral 8x7B" },
+      { id: "gemma-2-9b", label: "Gemma 2 9B" },
+    ]
+  },
+  {
+    id: "gemini", label: "Google Gemini", models: [
+      { id: "gemini-flash", label: "Gemini 1.5 Flash" },
+      { id: "gemini-2-flash", label: "Gemini 2.0 Flash" },
+      { id: "gemini-pro", label: "Gemini 1.5 Pro" },
+    ]
+  },
+  {
+    id: "yandex", label: "YandexGPT", models: [
+      { id: "yandexgpt-lite", label: "YandexGPT Lite" },
+      { id: "yandexgpt", label: "YandexGPT Pro" },
+    ]
+  },
+];
 
 function calculateShift(inputValue: number) {
   const result = inputValue * (11 / 10);
@@ -28,6 +62,10 @@ const EcsuDalan = () => {
   const [task, setTask] = useState("");
   const [log, setLog] = useState<OracleEntry[]>([]);
   const [running, setRunning] = useState(false);
+  const [aiProvider, setAiProvider] = useState("openrouter");
+  const [aiModel, setAiModel] = useState("llama-3.1-8b");
+  const [aiReply, setAiReply] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [shiftInput, setShiftInput] = useState("");
   const [shiftResult, setShiftResult] = useState<{ nominal: number; actual: number; delta: number } | null>(null);
 
@@ -115,15 +153,34 @@ const EcsuDalan = () => {
     if (!silent) setSyncing(false);
   };
 
-  const runOracle = () => {
+  const runOracle = async () => {
     if (!task.trim()) return;
     setRunning(true);
-    setTimeout(() => {
-      const result = Math.floor(Math.random() * 6 + 110);
-      setLog((prev) => [{ task, result, timestamp: new Date().toLocaleTimeString("ru-RU") }, ...prev]);
-      setTask("");
-      setRunning(false);
-    }, 1200);
+    setAiReply(null);
+    setAiError(null);
+    try {
+      const res = await fetch(DALAN_AI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: aiProvider,
+          model: aiModel,
+          messages: [{ role: "user", content: task }],
+        }),
+      });
+      const data = await res.json();
+      if (data.reply) {
+        setAiReply(data.reply);
+        const result = Math.floor(Math.random() * 6 + 110);
+        setLog((prev) => [{ task, result, timestamp: new Date().toLocaleTimeString("ru-RU") }, ...prev]);
+        setTask("");
+      } else {
+        setAiError(data.error || "Нет ответа от ИИ");
+      }
+    } catch {
+      setAiError("Ошибка соединения с DALAN AI");
+    }
+    setRunning(false);
   };
 
   const runShift = () => {
@@ -186,6 +243,33 @@ const EcsuDalan = () => {
               <Icon name="Terminal" size={15} className="text-[#FFD700]" />
               <span className="text-[#FFD700] font-bold text-sm tracking-widest">SYNERGON-ORACLE · ЕЦСУ</span>
             </div>
+
+            {/* Выбор провайдера и модели */}
+            <div className="flex gap-2 mb-3">
+              <select
+                value={aiProvider}
+                onChange={(e) => {
+                  setAiProvider(e.target.value);
+                  const prov = AI_PROVIDERS.find(p => p.id === e.target.value);
+                  if (prov) setAiModel(prov.models[0].id);
+                }}
+                className="bg-[#0d1225] border border-[#FFD700]/20 text-[#FFD700] rounded-lg px-3 py-2 text-xs focus:outline-none"
+              >
+                {AI_PROVIDERS.map(p => (
+                  <option key={p.id} value={p.id}>{p.label}</option>
+                ))}
+              </select>
+              <select
+                value={aiModel}
+                onChange={(e) => setAiModel(e.target.value)}
+                className="bg-[#0d1225] border border-[#FFD700]/20 text-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none flex-1"
+              >
+                {AI_PROVIDERS.find(p => p.id === aiProvider)?.models.map(m => (
+                  <option key={m.id} value={m.id}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+
             <textarea
               value={task}
               onChange={(e) => setTask(e.target.value)}
@@ -201,6 +285,23 @@ const EcsuDalan = () => {
               {running ? <Icon name="Loader2" size={15} className="animate-spin" /> : <Icon name="Zap" size={15} />}
               ЗАПУСТИТЬ ОПТИМИЗАЦИЮ DALAN
             </button>
+
+            {/* AI ответ */}
+            {aiReply && (
+              <div className="mt-3 bg-[#00FF41]/5 border border-[#00FF41]/20 rounded-lg p-4">
+                <div className="text-[#00FF41] text-xs font-mono mb-2 flex items-center gap-2">
+                  <Icon name="Bot" size={12} />
+                  DALAN · {AI_PROVIDERS.find(p=>p.id===aiProvider)?.label} · {aiModel}
+                </div>
+                <div className="text-gray-200 text-sm whitespace-pre-wrap leading-relaxed">{aiReply}</div>
+              </div>
+            )}
+            {aiError && (
+              <div className="mt-3 bg-[#e94560]/10 border border-[#e94560]/30 rounded-lg p-3 text-[#e94560] text-sm flex items-center gap-2">
+                <Icon name="AlertTriangle" size={14} />
+                {aiError}
+              </div>
+            )}
           </div>
           <div className="bg-[#060d1f] border border-blue-900/20 rounded-xl p-5">
             <div className="text-[#FFD700] font-bold text-sm mb-3 flex items-center gap-2">
