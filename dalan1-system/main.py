@@ -146,3 +146,18 @@ try:
         
 except Exception as e:
     print(f"Произошла ошибка: {e}")
+    # Вставляем полный код main.py из вышеприведённого листингаfrom fastapi import FastAPI
+import uvicorn
+# Импортируем наш новый мост
+from engine import start_engine
+
+app = FastAPI()
+
+# Запускаем движок при старте сервера
+@app.on_event("startup")
+async def startup_event():
+    start_engine()
+
+if __name__ == "__main__":
+    # Запускаем на твоем любимом порту 5000
+    uvicorn.run(app, host="127.0.0.1", port=8008)
