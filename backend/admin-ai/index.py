@@ -10,7 +10,6 @@ import urllib.error
 from datetime import datetime
 
 SCHEMA = "t_p38294978_open_source_program_"
-OPENROUTER_KEY = (os.environ.get("OPENROUTER_API_KEY") or "").strip()
 
 def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
@@ -93,8 +92,10 @@ def execute_action(action: dict) -> str:
         cur.close()
         conn.close()
 
+DALAN_AI_URL = "https://functions.poehali.dev/7b0103d3-1c04-463b-b543-f2f2b89a53df"
+
 def call_ai(messages: list, system_state: dict) -> str:
-    system_prompt = f"""Ты — автономный ИИ-ассистент администратора системы ECSU DALAN.
+    system_context = f"""Ты — автономный ИИ-ассистент администратора системы ECSU DALAN.
 Ты управляешь системой через JSON-команды. Отвечай ТОЛЬКО на русском языке.
 
 ТЕКУЩЕЕ СОСТОЯНИЕ СИСТЕМЫ:
@@ -111,29 +112,26 @@ def call_ai(messages: list, system_state: dict) -> str:
 - restore_backup: {{"type": "restore_backup", "id": 123}}
 
 Если просто вопрос — отвечай без блока action.
-Будь краток и конкретен. Перечисляй текущие значения когда нужно."""
+Будь краток и конкретен."""
+
+    # Вставляем системный контекст первым сообщением
+    augmented_messages = [{"role": "user", "content": system_context + "\n\n---\n" + messages[0]["content"]}] + messages[1:]
 
     payload = json.dumps({
-        "model": "openai/gpt-4o-mini",
-        "messages": [{"role": "system", "content": system_prompt}] + messages,
-        "temperature": 0.4,
-        "max_tokens": 1000,
+        "provider": "openrouter",
+        "model": "llama-3.1-8b",
+        "messages": augmented_messages,
     }).encode("utf-8")
 
     req = urllib.request.Request(
-        "https://openrouter.ai/api/v1/chat/completions",
+        DALAN_AI_URL,
         data=payload,
-        headers={
-            "Authorization": f"Bearer {OPENROUTER_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://poehali.dev",
-            "X-Title": "ECSU DALAN Admin",
-        },
+        headers={"Content-Type": "application/json"},
         method="POST"
     )
-    with urllib.request.urlopen(req, timeout=25) as resp:
+    with urllib.request.urlopen(req, timeout=30) as resp:
         result = json.loads(resp.read().decode("utf-8"))
-    return result["choices"][0]["message"]["content"]
+    return result.get("reply", "Нет ответа")
 
 def handler(event: dict, context) -> dict:
     headers = {
@@ -152,7 +150,18 @@ def handler(event: dict, context) -> dict:
         return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "messages required"})}
 
     system_state = get_system_state()
-    ai_response = call_ai(messages, system_state)
+
+    try:
+        ai_response = call_ai(messages, system_state)
+    except Exception as e:
+        return {
+            "statusCode": 200,
+            "headers": headers,
+            "body": json.dumps({
+                "reply": f"ИИ-модуль временно недоступен: {str(e)[:200]}. Попробуй другой провайдер или проверь ключи API в настройках.",
+                "action_result": None,
+            }, ensure_ascii=False)
+        }
 
     action_result = None
     if "<action>" in ai_response and "</action>" in ai_response:

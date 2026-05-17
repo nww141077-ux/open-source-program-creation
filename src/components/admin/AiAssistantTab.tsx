@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 
-const AI_URL = "https://functions.poehali.dev/7b0103d3-1c04-463b-b543-f2f2b89a53df";
+const AI_URL = "https://functions.poehali.dev/e74ce640-7610-467a-81ee-cab7c2347d3e";
 
 const AI_PROVIDERS = [
   {
