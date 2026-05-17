@@ -1,6 +1,0 @@
-{
-  "message_id": "uuid",
-  "source": "Russia_North",
-  "target": "Dalan-1",
-  "type": "incident_report" | "status_update" | "resource_request",
-  "payload":
