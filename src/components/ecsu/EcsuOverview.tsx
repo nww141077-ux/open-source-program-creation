@@ -343,17 +343,17 @@ const EcsuOverview = () => {
         </div>
       </div>
 
-      {/* ═══ Футер — дата 13 апреля 2026 как на скриншоте ═══ */}
+      {/* ═══ Футер — обновлён до 20 мая 2026 ═══ */}
       <footer className="mt-6 px-6 py-4 border-t border-blue-900/20 text-center">
         <div className="text-gray-700 text-[10px]">
-          © 13 апреля 2026 · ECSU 2.0 · Все права защищены
+          © 20 мая 2026 · ECSU 2.0 · Все права защищены
         </div>
         <div className="text-gray-800 text-[9px] mt-0.5">
           Платформа разработана группой компаний Николаева. Все операции фиксируются.
           Несанкционированный доступ запрещён.
         </div>
         <div className="text-gray-800 text-[9px] mt-0.5">
-          Программа TahkaOS · Фоновая программа ECSU
+          Программа TahkaOS · Фоновая программа ECSU · v2.0.5 · обновлено 20.05.2026
         </div>
       </footer>
     </div>
