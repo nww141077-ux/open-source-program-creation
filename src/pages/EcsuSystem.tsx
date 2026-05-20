@@ -12,6 +12,7 @@ import EcsuLicense from "@/components/ecsu/EcsuLicense";
 import EcsuLoader from "@/components/ecsu/EcsuLoader";
 import EcsuSettings from "@/components/ecsu/EcsuSettings";
 import AdminPanel from "@/components/AdminPanel";
+import FloatingAiChat from "@/components/ecsu/FloatingAiChat";
 
 type Section = "overview" | "incidents" | "forecast" | "analytics" | "organs" | "security" | "license" | "loader" | "settings" | "finance" | "dalan" | "admin";
 
@@ -171,6 +172,7 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
           {active === "dalan" && <EcsuDalan />}
         </div>
       </div>
+      <FloatingAiChat />
     </div>
   );
 };
