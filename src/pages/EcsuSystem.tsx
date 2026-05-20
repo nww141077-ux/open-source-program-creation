@@ -13,6 +13,7 @@ import EcsuLoader from "@/components/ecsu/EcsuLoader";
 import EcsuSettings from "@/components/ecsu/EcsuSettings";
 import AdminPanel from "@/components/AdminPanel";
 import FloatingAiChat from "@/components/ecsu/FloatingAiChat";
+import EcsuCpvoa from "@/components/ecsu/EcsuCpvoa";
 
 type Section = "overview" | "incidents" | "forecast" | "analytics" | "organs" | "security" | "license" | "loader" | "settings" | "finance" | "dalan" | "admin";
 
@@ -74,6 +75,7 @@ interface Props {
 const EcsuSystem = ({ onLogout, role, userName }: Props) => {
   const [active, setActive] = useState<Section>("overview");
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showCpvoa, setShowCpvoa] = useState(false);
 
   const navItems = allNavItems.filter((item) => !item.adminOnly || role === "admin");
 
@@ -103,6 +105,7 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
           {topNavItems.map((item) => (
             <button
               key={item.label}
+              onClick={() => item.label === "ЦПВОА" ? setShowCpvoa(true) : undefined}
               className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all hover:opacity-90 border border-white/10"
               style={{
                 background: tabColors[item.label] || "#1a2030",
@@ -173,6 +176,7 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
         </div>
       </div>
       <FloatingAiChat />
+      {showCpvoa && <EcsuCpvoa onClose={() => setShowCpvoa(false)} />}
     </div>
   );
 };
