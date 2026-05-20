@@ -81,10 +81,293 @@ const LogLine = ({ line }: { line: string }) => {
 };
 
 // ──────────────────────────────────────────
+// АНАЛИЗАТОР АЛГОРИТМА СО СДВИГОМ
+// ──────────────────────────────────────────
+const AlgorithmAnalyzer = () => {
+  const [omega, setOmega]       = useState(0.1);
+  const [phase, setPhase]       = useState(0.5);
+  const [amplitude, setAmpl]    = useState(0.8);
+  const [base, setBase]         = useState(50);
+  const [threadCount, setThrC]  = useState(100);
+  const [tSec, setTSec]         = useState(0);
+  const [playing, setPlaying]   = useState(false);
+  const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Автопроигрывание времени
+  useEffect(() => {
+    if (playing) {
+      animRef.current = setInterval(() => setTSec(t => parseFloat((t + 0.1).toFixed(2))), 100);
+    } else {
+      if (animRef.current) clearInterval(animRef.current);
+    }
+    return () => { if (animRef.current) clearInterval(animRef.current); };
+  }, [playing]);
+
+  // Вычисляем нагрузки по формуле
+  const calcLoads = (t: number, ph: number): number[] => {
+    const n = Math.max(2, Math.min(200, threadCount));
+    return Array.from({ length: n }, (_, i) => {
+      const phi_i = (2 * Math.PI / n) * i;
+      const v = base * (1 + amplitude * Math.sin(omega * t + phi_i + ph));
+      return Math.max(0, Math.min(100, Math.round(v)));
+    });
+  };
+
+  const loads   = calcLoads(tSec, phase);
+  const avg     = loads.reduce((a, b) => a + b, 0) / loads.length;
+  const minL    = Math.min(...loads);
+  const maxL    = Math.max(...loads);
+  const spread  = maxL - minL;
+
+  // Сравнение: без сдвига vs со сдвигом
+  const loadsNoShift   = calcLoads(tSec, 0);
+  const avgNoShift     = loadsNoShift.reduce((a, b) => a + b, 0) / loadsNoShift.length;
+
+  // SVG волна (100 точек по времени)
+  const wavePoints = (ph: number, color: string) => {
+    const pts = Array.from({ length: 200 }, (_, i) => {
+      const t2 = i * 0.1;
+      const phi0 = 0; // нулевой поток
+      const v = base * (1 + amplitude * Math.sin(omega * t2 + phi0 + ph));
+      const y = 80 - (Math.max(0, Math.min(100, v)) / 100) * 70;
+      return `${i * 2},${y}`;
+    }).join(" ");
+    return <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />;
+  };
+
+  // Гистограмма потоков
+  const barW = 3, barGap = 1;
+  const svgW = loads.length * (barW + barGap);
+
+  const Slider = ({
+    label, value, min, max, step, onChange, color, unit
+  }: {
+    label: string; value: number; min: number; max: number;
+    step: number; onChange: (v: number) => void; color: string; unit?: string;
+  }) => (
+    <div className="space-y-1">
+      <div className="flex justify-between text-xs">
+        <span className="text-gray-400">{label}</span>
+        <span className="font-mono" style={{ color }}>{value}{unit}</span>
+      </div>
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={e => onChange(parseFloat(e.target.value))}
+        className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+        style={{ accentColor: color }}
+      />
+    </div>
+  );
+
+  return (
+    <div className="space-y-5">
+
+      {/* Формула */}
+      <div className="bg-[#060d1f] border border-cyan-900/40 rounded-xl p-4">
+        <div className="text-gray-400 text-xs font-medium uppercase tracking-wide mb-2">Формула алгоритма</div>
+        <div className="font-mono text-sm text-cyan-300 leading-7">
+          load<sub className="text-xs">i</sub>(t) = <span className="text-white">{base}</span>
+          {" × (1 + "}
+          <span className="text-yellow-400">{amplitude}</span>
+          {" × sin("}
+          <span className="text-blue-400">{omega}</span>
+          {"·t + φ"}
+          <sub className="text-xs">i</sub>
+          {" + "}
+          <span className="text-green-400">{phase.toFixed(3)}</span>
+          {"))"}
+        </div>
+        <div className="text-gray-600 text-xs mt-1">
+          где φ<sub>i</sub> = (2π / N) × i — равномерный сдвиг между потоками
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+
+        {/* Параметры */}
+        <div className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-4 space-y-4">
+          <div className="text-gray-400 text-xs font-medium uppercase tracking-wide">Параметры</div>
+
+          <Slider label="Сдвиг фазы φ" value={phase} min={0} max={6.28} step={0.01}
+            onChange={setPhase} color="#34d399" unit=" рад" />
+          <Slider label="Амплитуда A" value={amplitude} min={0} max={1} step={0.01}
+            onChange={setAmpl} color="#f59e0b" />
+          <Slider label="Частота ω" value={omega} min={0.01} max={1} step={0.01}
+            onChange={setOmega} color="#60a5fa" />
+          <Slider label="Базовая нагрузка" value={base} min={10} max={90} step={1}
+            onChange={setBase} color="#a78bfa" unit="%" />
+          <Slider label="Кол-во потоков N" value={threadCount} min={2} max={200} step={1}
+            onChange={setThrC} color="#e94560" />
+
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs">
+              <span className="text-gray-400">Время t</span>
+              <span className="text-white font-mono">{tSec.toFixed(1)} с</span>
+            </div>
+            <div className="flex gap-2">
+              <input type="range" min={0} max={62.8} step={0.1} value={tSec}
+                onChange={e => setTSec(parseFloat(e.target.value))}
+                className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer"
+                style={{ accentColor: "#fff" }}
+              />
+              <button
+                onClick={() => setPlaying(p => !p)}
+                className="px-3 py-1 rounded-lg text-xs font-medium transition-all"
+                style={playing
+                  ? { background: "#e9456022", color: "#e94560", border: "1px solid #e9456044" }
+                  : { background: "#34d39922", color: "#34d399", border: "1px solid #34d39944" }
+                }
+              >
+                {playing ? "⏸" : "▶"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Метрики */}
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: "Среднее",    value: avg.toFixed(1) + "%",  color: "#60a5fa" },
+              { label: "Размах",     value: spread + "%",          color: "#f59e0b" },
+              { label: "Минимум",    value: minL + "%",            color: "#34d399" },
+              { label: "Максимум",   value: maxL + "%",            color: "#e94560" },
+            ].map(m => (
+              <div key={m.label} className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-3">
+                <div className="text-xs text-gray-500">{m.label}</div>
+                <div className="text-xl font-bold font-mono mt-0.5" style={{ color: m.color }}>{m.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Эффект сдвига */}
+          <div className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-3 space-y-2">
+            <div className="text-gray-400 text-xs font-medium uppercase tracking-wide">Эффект сдвига φ = {phase.toFixed(2)}</div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-500">Без сдвига (φ=0)</span>
+              <span className="text-gray-300 font-mono">{avgNoShift.toFixed(1)}%</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-green-400">Со сдвигом (φ={phase.toFixed(2)})</span>
+              <span className="text-green-400 font-mono">{avg.toFixed(1)}%</span>
+            </div>
+            <div className="flex items-center justify-between text-xs border-t border-white/5 pt-2">
+              <span className="text-gray-400">Δ изменение</span>
+              <span className="font-mono font-bold" style={{ color: Math.abs(avg - avgNoShift) < 0.5 ? "#34d399" : "#f59e0b" }}>
+                {(avg - avgNoShift).toFixed(2)}%
+              </span>
+            </div>
+            <div className="text-gray-600 text-xs mt-1">
+              {spread < 10
+                ? "✓ Нагрузка равномерно распределена"
+                : spread < 40
+                ? "⚠ Умеренная неравномерность"
+                : "⚠ Высокая неравномерность потоков"
+              }
+            </div>
+          </div>
+
+          {/* Анализ периода */}
+          <div className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-3 space-y-1.5 text-xs">
+            <div className="text-gray-400 font-medium uppercase tracking-wide">Математика</div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Период T = 2π/ω</span>
+              <span className="text-white font-mono">{(2 * Math.PI / omega).toFixed(2)} с</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Частота f = ω/2π</span>
+              <span className="text-white font-mono">{(omega / (2 * Math.PI)).toFixed(4)} Гц</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Макс. теоретически</span>
+              <span className="text-white font-mono">{Math.round(base * (1 + amplitude))}%</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Мин. теоретически</span>
+              <span className="text-white font-mono">{Math.round(base * (1 - amplitude))}%</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Сдвиг потоков Δφ</span>
+              <span className="text-cyan-400 font-mono">{(2 * Math.PI / threadCount).toFixed(4)} рад</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* График волны */}
+      <div className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-gray-400 text-xs font-medium uppercase tracking-wide">Волна нагрузки (поток 0) · t = {tSec.toFixed(1)}с</div>
+          <div className="flex items-center gap-4 text-xs">
+            <span className="flex items-center gap-1.5">
+              <span className="w-4 h-0.5 bg-gray-500 inline-block rounded" />
+              <span className="text-gray-500">φ = 0</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-4 h-0.5 bg-green-400 inline-block rounded" />
+              <span className="text-gray-400">φ = {phase.toFixed(2)}</span>
+            </span>
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-lg bg-[#060d1f]" style={{ height: 90 }}>
+          {/* Сетка */}
+          {[25, 50, 75].map(y => (
+            <div key={y} className="absolute w-full border-t border-white/5"
+              style={{ top: `${(1 - y / 100) * 80 + 5}%` }} />
+          ))}
+          {/* Текущее t */}
+          <div className="absolute top-0 bottom-0 border-l border-yellow-400/50"
+            style={{ left: `${(tSec / 62.8) * 100}%` }} />
+          <svg width="100%" height="100%" viewBox={`0 0 400 80`} preserveAspectRatio="none" className="absolute inset-0">
+            {wavePoints(0, "#4b5563")}
+            {wavePoints(phase, "#34d399")}
+          </svg>
+          {/* Метки Y */}
+          <div className="absolute right-1 top-1 text-gray-600 text-[9px]">100%</div>
+          <div className="absolute right-1 bottom-1 text-gray-600 text-[9px]">0%</div>
+        </div>
+      </div>
+
+      {/* Гистограмма потоков */}
+      <div className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-4">
+        <div className="text-gray-400 text-xs font-medium uppercase tracking-wide mb-3">
+          Распределение нагрузки по {loads.length} потокам при t = {tSec.toFixed(1)}с
+        </div>
+        <div className="overflow-x-auto">
+          <svg width={svgW} height={60} className="block">
+            {loads.map((v, i) => {
+              const h   = Math.max(1, (v / 100) * 56);
+              const col = v > 80 ? "#e94560" : v > 60 ? "#f59e0b" : v > 30 ? "#34d399" : "#60a5fa";
+              return (
+                <rect key={i} x={i * (barW + barGap)} y={60 - h}
+                  width={barW} height={h} rx="0.5" fill={col} opacity={0.85} />
+              );
+            })}
+            {/* Линия среднего */}
+            <line x1={0} y1={60 - (avg / 100) * 56} x2={svgW} y2={60 - (avg / 100) * 56}
+              stroke="#ffffff44" strokeWidth="0.8" strokeDasharray="4,4" />
+          </svg>
+        </div>
+        <div className="flex items-center gap-4 mt-2 text-xs text-gray-600">
+          <span className="flex items-center gap-1"><span className="w-2 h-2 bg-[#60a5fa] rounded-sm inline-block" /> 0–30%</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 bg-[#34d399] rounded-sm inline-block" /> 30–60%</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 bg-[#f59e0b] rounded-sm inline-block" /> 60–80%</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 bg-[#e94560] rounded-sm inline-block" /> 80–100%</span>
+          <span className="ml-auto flex items-center gap-1">
+            <span className="w-4 h-px bg-white/30 inline-block" style={{ borderTop: "1px dashed" }} />
+            среднее {avg.toFixed(1)}%
+          </span>
+        </div>
+      </div>
+
+    </div>
+  );
+};
+
+// ──────────────────────────────────────────
 // ГЛАВНЫЙ КОМПОНЕНТ
 // ──────────────────────────────────────────
 const EcsuTahkaOS = () => {
-  const [tab, setTab] = useState<"kernel" | "monitor" | "calc" | "psu">("kernel");
+  const [tab, setTab] = useState<"kernel" | "monitor" | "calc" | "psu" | "analysis">("kernel");
 
   // ── ЯДРО ──
   const [kernelRunning, setKernelRunning] = useState(false);
@@ -226,10 +509,11 @@ const EcsuTahkaOS = () => {
 
   // ── ВКЛАДКИ ──
   const tabs = [
-    { id: "kernel",  label: "Ядро",         icon: "Cpu" },
-    { id: "monitor", label: "Монитор",       icon: "Activity" },
-    { id: "calc",    label: "Калькулятор",   icon: "Calculator" },
-    { id: "psu",     label: "Питание",       icon: "Zap" },
+    { id: "kernel",   label: "Ядро",         icon: "Cpu" },
+    { id: "monitor",  label: "Монитор",       icon: "Activity" },
+    { id: "calc",     label: "Калькулятор",   icon: "Calculator" },
+    { id: "psu",      label: "Питание",       icon: "Zap" },
+    { id: "analysis", label: "Анализ",        icon: "BarChart2" },
   ] as const;
 
   const formatUptime = (s: number) => {
@@ -557,6 +841,9 @@ const EcsuTahkaOS = () => {
           </div>
         </div>
       )}
+
+      {/* ═══════════════════ АНАЛИЗ ═══════════════════ */}
+      {tab === "analysis" && <AlgorithmAnalyzer />}
     </div>
   );
 };
