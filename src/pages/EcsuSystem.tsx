@@ -15,8 +15,9 @@ import AdminPanel from "@/components/AdminPanel";
 import FloatingAiChat from "@/components/ecsu/FloatingAiChat";
 import EcsuCpvoa from "@/components/ecsu/EcsuCpvoa";
 import EcsuMusonSync from "@/components/ecsu/EcsuMusonSync";
+import EcsuTahkaOS from "@/components/ecsu/EcsuTahkaOS";
 
-type Section = "overview" | "incidents" | "forecast" | "analytics" | "organs" | "security" | "license" | "loader" | "settings" | "finance" | "dalan" | "admin";
+type Section = "overview" | "incidents" | "forecast" | "analytics" | "organs" | "security" | "license" | "loader" | "settings" | "finance" | "dalan" | "tahka" | "admin";
 
 const allNavItems: { id: Section; label: string; icon: string; color?: string; adminOnly?: boolean }[] = [
   { id: "overview", label: "Обзор", icon: "LayoutDashboard" },
@@ -30,6 +31,7 @@ const allNavItems: { id: Section; label: string; icon: string; color?: string; a
   { id: "settings", label: "Настройки", icon: "Settings" },
   { id: "finance", label: "Финансы", icon: "DollarSign", adminOnly: true },
   { id: "dalan", label: "Dalan ИИ", icon: "Brain", color: "#e94560", adminOnly: true },
+  { id: "tahka", label: "TahkaOS", icon: "Cpu", color: "#22d3ee", adminOnly: true },
   { id: "admin", label: "Администратор", icon: "Settings2", color: "#FFD700", adminOnly: true },
 ];
 
@@ -183,6 +185,7 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
           {active === "settings" && <EcsuSettings />}
           {active === "finance" && <EcsuFinance />}
           {active === "dalan" && <EcsuDalan />}
+          {active === "tahka" && <EcsuTahkaOS />}
         </div>
       </div>
       <FloatingAiChat />
