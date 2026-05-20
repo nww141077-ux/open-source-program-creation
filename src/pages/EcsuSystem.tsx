@@ -22,20 +22,20 @@ type Section =
   | "organs" | "security" | "license" | "loader" | "settings"
   | "finance" | "dalan" | "tahka" | "admin";
 
-// ── Основная навигация (левая панель быстрых кнопок на скриншоте 17 апр)
+// ── Основная навигация
 const quickNavItems: { id: Section; label: string; icon: string; color: string; bg: string; adminOnly?: boolean }[] = [
-  { id: "overview",   label: "Обзор",        icon: "LayoutDashboard", color: "#60a5fa", bg: "#1e3a5f" },
-  { id: "incidents",  label: "Инциденты",    icon: "AlertTriangle",   color: "#e94560", bg: "#3d1520" },
-  { id: "analytics",  label: "Аналитика",    icon: "BarChart2",       color: "#a78bfa", bg: "#2d1f4a" },
-  { id: "organs",     label: "Поглощение",   icon: "Zap",             color: "#e94560", bg: "#3d1520" },
-  { id: "finance",    label: "Финансы",      icon: "DollarSign",      color: "#fbbf24", bg: "#3d2e00", adminOnly: true },
-  { id: "settings",   label: "Владелец",     icon: "Crown",           color: "#f97316", bg: "#3d1f00" },
-  { id: "license",    label: "Правовая база",icon: "Scale",           color: "#60a5fa", bg: "#1e3a5f" },
-  { id: "dalan",      label: "API",          icon: "Code2",           color: "#34d399", bg: "#1a3d2e", adminOnly: true },
-  { id: "loader",     label: "Документы",    icon: "FileText",        color: "#94a3b8", bg: "#1e2533" },
-  { id: "forecast",   label: "Пользователями",icon: "Users",          color: "#a78bfa", bg: "#2d1f4a" },
-  { id: "security",   label: "Вознаграждения",icon: "Gift",           color: "#fbbf24", bg: "#3d2e00" },
-  { id: "tahka",      label: "Экстренные",   icon: "Siren",           color: "#e94560", bg: "#3d1520", adminOnly: true },
+  { id: "overview",   label: "Обзор",          icon: "LayoutDashboard", color: "#60a5fa", bg: "#1e3a5f" },
+  { id: "incidents",  label: "Инциденты",      icon: "AlertTriangle",   color: "#e94560", bg: "#3d1520" },
+  { id: "forecast",   label: "Прогнозы",       icon: "TrendingUp",      color: "#a78bfa", bg: "#2d1f4a" },
+  { id: "analytics",  label: "Аналитика",      icon: "BarChart2",       color: "#a78bfa", bg: "#2d1f4a" },
+  { id: "organs",     label: "Органы ECSU",    icon: "Network",         color: "#60a5fa", bg: "#1e3a5f" },
+  { id: "security",   label: "Безопасность",   icon: "Shield",          color: "#34d399", bg: "#1a3d2e" },
+  { id: "license",    label: "Лицензия",       icon: "BadgeCheck",      color: "#60a5fa", bg: "#1e3a5f" },
+  { id: "loader",     label: "Загрузчик",      icon: "Upload",          color: "#94a3b8", bg: "#1e2533" },
+  { id: "settings",   label: "Настройки",      icon: "Settings",        color: "#f97316", bg: "#3d1f00" },
+  { id: "finance",    label: "Финансы",        icon: "DollarSign",      color: "#fbbf24", bg: "#3d2e00", adminOnly: true },
+  { id: "dalan",      label: "Dalan ИИ",       icon: "Brain",           color: "#e94560", bg: "#3d1520", adminOnly: true },
+  { id: "tahka",      label: "TahkaOS",        icon: "Cpu",             color: "#22d3ee", bg: "#0d2a33", adminOnly: true },
 ];
 
 interface Props {
@@ -104,19 +104,29 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
             </button>
           ))}
 
-          {/* Уведомления */}
+          {/* Уведомления → открывает Инциденты */}
           <button
-            className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all hover:opacity-90 border border-white/10"
-            style={{ background: "#2d2a14", color: "#f59e0b" }}
+            onClick={() => setActive("incidents")}
+            className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all hover:opacity-90 border"
+            style={{
+              background: active === "incidents" ? "#3d2a00dd" : "#2d2a14",
+              color: "#f59e0b",
+              borderColor: active === "incidents" ? "#f59e0b55" : "rgba(255,255,255,0.08)",
+            }}
           >
             <Icon name="Bell" size={10} style={{ color: "#f59e0b" }} />
             Уведомления
           </button>
 
-          {/* Возможности */}
+          {/* Возможности → открывает Прогнозы */}
           <button
-            className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all hover:opacity-90 border border-white/10"
-            style={{ background: "#1a3d2e", color: "#34d399" }}
+            onClick={() => setActive("forecast")}
+            className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all hover:opacity-90 border"
+            style={{
+              background: active === "forecast" ? "#1a3d2edd" : "#1a3d2e",
+              color: "#34d399",
+              borderColor: active === "forecast" ? "#34d39955" : "rgba(255,255,255,0.08)",
+            }}
           >
             <Icon name="Sparkles" size={10} style={{ color: "#34d399" }} />
             Возможности
