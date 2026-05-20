@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
 
-type Tab = "provider" | "dns" | "modem";
+type Tab = "provider" | "dns" | "modem" | "satellite";
 
 interface Provider {
   id: string;
@@ -64,6 +64,35 @@ const EcsuCpvoa = ({ onClose }: { onClose: () => void }) => {
     { id: "2", name: "Модем 2 (Билайн)", apn: "internet.beeline.ru", operator: "Билайн", signal: 45, status: "disconnected", interface: "ppp1" },
     { id: "3", name: "Модем 3 (МегаФон)", apn: "internet", operator: "МегаФон", signal: 62, status: "disconnected", interface: "ppp2" },
   ]);
+
+  const [satQuery, setSatQuery] = useState("");
+  const [satResults, setSatResults] = useState<{ title: string; url: string; source: string }[]>([]);
+  const [satLoading, setSatLoading] = useState(false);
+  const [satEngine, setSatEngine] = useState<"google" | "yandex" | "bing">("google");
+
+  const satSearch = () => {
+    if (!satQuery.trim()) return;
+    setSatLoading(true);
+    setSatResults([]);
+    const q = encodeURIComponent(satQuery);
+    const allResults = [
+      { title: `${satQuery} — Google`, url: `https://www.google.com/search?q=${q}`, source: "Google" },
+      { title: `${satQuery} — Яндекс`, url: `https://yandex.ru/search/?text=${q}`, source: "Яндекс" },
+      { title: `${satQuery} — Bing`, url: `https://www.bing.com/search?q=${q}`, source: "Bing" },
+      { title: `${satQuery} — DuckDuckGo`, url: `https://duckduckgo.com/?q=${q}`, source: "DuckDuckGo" },
+      { title: `${satQuery} — YouTube видео`, url: `https://www.youtube.com/results?search_query=${q}`, source: "YouTube" },
+      { title: `${satQuery} — Википедия`, url: `https://ru.wikipedia.org/w/index.php?search=${q}`, source: "Википедия" },
+    ];
+    const engineFirst: Record<string, string> = { google: "Google", yandex: "Яндекс", bing: "Bing" };
+    const sorted = [
+      ...allResults.filter(r => r.source === engineFirst[satEngine]),
+      ...allResults.filter(r => r.source !== engineFirst[satEngine]),
+    ];
+    setTimeout(() => {
+      setSatResults(sorted);
+      setSatLoading(false);
+    }, 1400);
+  };
 
   const [addingProvider, setAddingProvider] = useState(false);
   const [addingDns, setAddingDns] = useState(false);
@@ -162,6 +191,7 @@ const EcsuCpvoa = ({ onClose }: { onClose: () => void }) => {
     { id: "provider", label: "Провайдер", icon: "Globe" },
     { id: "dns", label: "DNS", icon: "Server" },
     { id: "modem", label: "Модем", icon: "Smartphone" },
+    { id: "satellite", label: "Спутниковый поиск", icon: "Satellite" },
   ];
 
   return (
@@ -501,6 +531,116 @@ const EcsuCpvoa = ({ onClose }: { onClose: () => void }) => {
                   <Icon name="Plus" size={14} />
                   Добавить модем
                 </button>
+              )}
+            </>
+          )}
+
+          {/* СПУТНИКОВЫЙ ПОИСК */}
+          {tab === "satellite" && (
+            <>
+              <div className="text-gray-400 text-xs mb-3">
+                Поиск информации через спутниковый интернет-канал ЦПВОА. Запрос транслируется через активный спутниковый узел сети.
+              </div>
+
+              {/* Статус спутника */}
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-[#a78bfa]/10 border border-[#a78bfa]/30 mb-3">
+                <div className="w-9 h-9 rounded-lg bg-[#a78bfa]/20 flex items-center justify-center flex-shrink-0">
+                  <Icon name="Satellite" size={18} className="text-[#a78bfa]" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-white text-sm font-medium">VSAT Орион-2 · Спутниковый узел</div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="w-1.5 h-1.5 bg-[#a78bfa] rounded-full animate-pulse" />
+                    <span className="text-[#a78bfa] text-xs">Канал активен · 50 Мбит/с · Пинг 650мс</span>
+                  </div>
+                </div>
+                <div className="text-gray-500 text-xs text-right">
+                  <div>Орбита: ГСО</div>
+                  <div>36 000 км</div>
+                </div>
+              </div>
+
+              {/* Выбор поисковика */}
+              <div className="flex gap-2 mb-3">
+                {([
+                  { id: "google", label: "Google", color: "#60a5fa" },
+                  { id: "yandex", label: "Яндекс", color: "#f59e0b" },
+                  { id: "bing", label: "Bing", color: "#34d399" },
+                ] as const).map(e => (
+                  <button
+                    key={e.id}
+                    onClick={() => setSatEngine(e.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border"
+                    style={satEngine === e.id
+                      ? { background: e.color + "22", borderColor: e.color + "66", color: e.color }
+                      : { background: "transparent", borderColor: "rgba(255,255,255,0.05)", color: "#6b7280" }
+                    }
+                  >
+                    {e.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Поисковая строка */}
+              <div className="flex gap-2 mb-4">
+                <input
+                  value={satQuery}
+                  onChange={e => setSatQuery(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && satSearch()}
+                  placeholder="Введите поисковый запрос..."
+                  className="flex-1 bg-[#0d1225] border border-[#a78bfa]/30 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#a78bfa]/60 placeholder-gray-600"
+                />
+                <button
+                  onClick={satSearch}
+                  disabled={satLoading || !satQuery.trim()}
+                  className="px-4 py-2.5 bg-[#a78bfa] hover:bg-[#8b5cf6] disabled:opacity-40 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  {satLoading ? (
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Icon name="Search" size={14} />
+                  )}
+                  Поиск
+                </button>
+              </div>
+
+              {/* Результаты */}
+              {satLoading && (
+                <div className="flex items-center gap-3 p-4 bg-[#a78bfa]/5 rounded-xl border border-[#a78bfa]/20">
+                  <span className="w-4 h-4 border-2 border-[#a78bfa]/30 border-t-[#a78bfa] rounded-full animate-spin flex-shrink-0" />
+                  <span className="text-[#a78bfa] text-sm">Передача запроса через спутниковый канал...</span>
+                </div>
+              )}
+              {!satLoading && satResults.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-gray-500 text-xs mb-1">Найдено источников: {satResults.length}</div>
+                  {satResults.map((r, i) => (
+                    <a
+                      key={i}
+                      href={r.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 rounded-xl bg-[#1a1a2e]/60 border border-white/5 hover:border-[#a78bfa]/30 hover:bg-[#a78bfa]/5 transition-all group"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-[#a78bfa]/10 flex items-center justify-center flex-shrink-0">
+                        <Icon name="ExternalLink" size={13} className="text-[#a78bfa]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white text-sm group-hover:text-[#a78bfa] transition-colors truncate">{r.title}</div>
+                        <div className="text-gray-600 text-xs mt-0.5">{r.source} · через спутниковый узел ЦПВОА</div>
+                      </div>
+                      <Icon name="ChevronRight" size={14} className="text-gray-600 group-hover:text-[#a78bfa] flex-shrink-0 transition-colors" />
+                    </a>
+                  ))}
+                </div>
+              )}
+              {!satLoading && satResults.length === 0 && !satQuery && (
+                <div className="flex flex-col items-center gap-3 py-8 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-[#a78bfa]/10 flex items-center justify-center">
+                    <Icon name="Satellite" size={26} className="text-[#a78bfa]" />
+                  </div>
+                  <div className="text-gray-500 text-sm">Введи запрос для поиска через спутниковый канал</div>
+                </div>
               )}
             </>
           )}
