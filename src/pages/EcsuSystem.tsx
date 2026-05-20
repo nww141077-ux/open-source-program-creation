@@ -14,6 +14,7 @@ import EcsuSettings from "@/components/ecsu/EcsuSettings";
 import AdminPanel from "@/components/AdminPanel";
 import FloatingAiChat from "@/components/ecsu/FloatingAiChat";
 import EcsuCpvoa from "@/components/ecsu/EcsuCpvoa";
+import EcsuMusonSync from "@/components/ecsu/EcsuMusonSync";
 
 type Section = "overview" | "incidents" | "forecast" | "analytics" | "organs" | "security" | "license" | "loader" | "settings" | "finance" | "dalan" | "admin";
 
@@ -76,6 +77,7 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
   const [active, setActive] = useState<Section>("overview");
   const [showAdmin, setShowAdmin] = useState(false);
   const [showCpvoa, setShowCpvoa] = useState(false);
+  const [showMuson, setShowMuson] = useState(false);
 
   const navItems = allNavItems.filter((item) => !item.adminOnly || role === "admin");
 
@@ -129,6 +131,14 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
               <div className="text-gray-500 text-[8px]">{role === "admin" ? "Администратор" : "Пользователь"}</div>
             </div>
           </div>
+          <button
+            onClick={() => setShowMuson(true)}
+            className="flex items-center gap-1 px-2 py-1 bg-blue-900/40 border border-blue-700/40 rounded-lg hover:bg-blue-800/50 transition-colors"
+            title="Мусон-Агент · Синхронизация ПК"
+          >
+            <Icon name="CloudCog" size={12} className="text-blue-400" />
+            <span className="text-blue-400 text-[9px] font-semibold">МУСОН</span>
+          </button>
           <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
           <button onClick={onLogout} className="text-gray-500 hover:text-red-400 transition-colors p-1">
             <Icon name="LogOut" size={14} />
@@ -177,6 +187,7 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
       </div>
       <FloatingAiChat />
       {showCpvoa && <EcsuCpvoa onClose={() => setShowCpvoa(false)} />}
+      {showMuson && <EcsuMusonSync onClose={() => setShowMuson(false)} />}
     </div>
   );
 };
