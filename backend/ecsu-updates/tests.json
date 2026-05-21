@@ -30,6 +30,29 @@
       "expectedStatus": 200,
       "expectedBody": { "pending": [] },
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST create snapshot",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "snapshot",
+        "name": "Тест снапшот 20.05.2026",
+        "description": "Проверочный снапшот",
+        "snapshot_type": "manual",
+        "state": { "version": "2.0.5", "test": true }
+      },
+      "expectedStatus": 200,
+      "expectedBody": { "ok": true },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "GET snapshots list",
+      "method": "GET",
+      "path": "/?action=snapshots",
+      "expectedStatus": 200,
+      "expectedBody": { "snapshots": [] },
+      "bodyMatcher": "partial"
     }
   ]
 }

@@ -35,17 +35,38 @@ const STATUS_META: Record<UpdateStatus, { label: string; color: string }> = {
   archived: { label: "Архив",      color: "#6b7280" },
 };
 
+interface Snapshot {
+  id: number;
+  name: string;
+  description: string;
+  snapshot_type: string;
+  created_by: string;
+  created_at: string;
+  is_active: boolean;
+  tag: string;
+  size_kb: number;
+  rollback_count: number;
+}
+
 interface Props {
   onClose: () => void;
 }
 
 const EcsuUpdateManager = ({ onClose }: Props) => {
-  const [updates, setUpdates]     = useState<AppUpdate[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [tab, setTab]             = useState<"list" | "create" | "agents">("list");
-  const [saving, setSaving]       = useState(false);
-  const [saved, setSaved]         = useState(false);
-  const [agents, setAgents]       = useState<{ agent_id: string; hostname: string; status: string }[]>([]);
+  const [updates, setUpdates]         = useState<AppUpdate[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [tab, setTab]                 = useState<"list" | "create" | "snapshots" | "agents">("list");
+  const [saving, setSaving]           = useState(false);
+  const [saved, setSaved]             = useState(false);
+  const [agents, setAgents]           = useState<{ agent_id: string; hostname: string; status: string }[]>([]);
+  const [snapshots, setSnapshots]     = useState<Snapshot[]>([]);
+  const [snapLoading, setSnapLoading] = useState(false);
+  const [snapForm, setSnapForm]       = useState({ name: "", description: "", tag: "" });
+  const [snapSaving, setSnapSaving]   = useState(false);
+  const [snapSaved, setSnapSaved]     = useState(false);
+  const [rollbackId, setRollbackId]   = useState<number | null>(null);
+  const [rollbackReason, setRollbackReason] = useState("");
+  const [rolling, setRolling]         = useState(false);
 
   // Форма создания
   const [form, setForm] = useState({
@@ -80,9 +101,75 @@ const EcsuUpdateManager = ({ onClose }: Props) => {
     } catch { /* нет связи */ }
   };
 
+  const loadSnapshots = async () => {
+    setSnapLoading(true);
+    try {
+      const r = await fetch(`${UPDATES_URL}?action=snapshots`);
+      const d = await r.json();
+      setSnapshots((d.snapshots || []).filter((s: Snapshot) => s.snapshot_type !== "rollback_command"));
+    } catch { /* нет связи */ }
+    setSnapLoading(false);
+  };
+
+  const createSnapshot = async () => {
+    setSnapSaving(true);
+    const name = snapForm.name.trim() || `Снапшот ${new Date().toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}`;
+    try {
+      await fetch(UPDATES_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "snapshot",
+          name,
+          description: snapForm.description,
+          tag: snapForm.tag,
+          snapshot_type: "manual",
+          state: { version: "2.0.5", saved_at: new Date().toISOString(), tag: snapForm.tag, updates_count: updates.length },
+        }),
+      });
+      setSnapSaved(true);
+      setSnapForm({ name: "", description: "", tag: "" });
+      await loadSnapshots();
+      setTimeout(() => setSnapSaved(false), 2000);
+    } catch { /* ошибка */ }
+    setSnapSaving(false);
+  };
+
+  const doRollback = async () => {
+    if (!rollbackId) return;
+    setRolling(true);
+    try {
+      await fetch(UPDATES_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "rollback",
+          snapshot_id: rollbackId,
+          reason: rollbackReason || "Инициировано с сайта",
+          rolled_by: "admin",
+        }),
+      });
+      setRollbackId(null);
+      setRollbackReason("");
+      await loadSnapshots();
+    } catch { /* ошибка */ }
+    setRolling(false);
+  };
+
+  const deleteSnapshot = async (id: number) => {
+    if (!confirm("Удалить снапшот?")) return;
+    await fetch(UPDATES_URL, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "snapshot", id }),
+    });
+    setSnapshots(prev => prev.filter(s => s.id !== id));
+  };
+
   useEffect(() => {
     loadUpdates();
     loadAgents();
+    loadSnapshots();
   }, []);
 
   const createUpdate = async () => {
@@ -162,9 +249,10 @@ const EcsuUpdateManager = ({ onClose }: Props) => {
         {/* ── Вкладки ── */}
         <div className="flex gap-1 px-5 pt-3 pb-0">
           {[
-            { id: "list"   as const, label: "Очередь обновлений",   icon: "List" },
-            { id: "create" as const, label: "Создать обновление",    icon: "Plus" },
-            { id: "agents" as const, label: "ПК-приложения",         icon: "Laptop" },
+            { id: "list"      as const, label: "Обновления",     icon: "List" },
+            { id: "create"    as const, label: "Создать",         icon: "Plus" },
+            { id: "snapshots" as const, label: "Снапшоты / Откат", icon: "RotateCcw" },
+            { id: "agents"    as const, label: "ПК-агенты",       icon: "Laptop" },
           ].map(t => (
             <button
               key={t.id}
@@ -528,6 +616,191 @@ const EcsuUpdateManager = ({ onClose }: Props) => {
               </div>
             </div>
           )}
+
+          {/* ══════════════════════════════════════════
+              СНАПШОТЫ И ОТКАТ
+          ══════════════════════════════════════════ */}
+          {tab === "snapshots" && (
+            <div className="space-y-5">
+
+              {/* Блок создания снапшота */}
+              <div className="bg-[#0a1f1a] border border-[#34d399]/20 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Icon name="Camera" size={15} className="text-[#34d399]" />
+                  <span className="text-white text-sm font-semibold">Создать снапшот</span>
+                  <span className="text-gray-600 text-xs ml-1">— точка восстановления системы</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="col-span-2">
+                    <input
+                      value={snapForm.name}
+                      onChange={e => setSnapForm({ ...snapForm, name: e.target.value })}
+                      placeholder={`Снапшот ${new Date().toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`}
+                      className="w-full bg-[#060d1f] border border-[#34d399]/20 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#34d399]/50 placeholder-gray-600"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      value={snapForm.description}
+                      onChange={e => setSnapForm({ ...snapForm, description: e.target.value })}
+                      placeholder="Описание (необязательно)"
+                      className="w-full bg-[#060d1f] border border-blue-900/20 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#34d399]/50 placeholder-gray-600"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      value={snapForm.tag}
+                      onChange={e => setSnapForm({ ...snapForm, tag: e.target.value })}
+                      placeholder="Тег (напр: v2.0.5-stable)"
+                      className="w-full bg-[#060d1f] border border-blue-900/20 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#34d399]/50 placeholder-gray-600 font-mono"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={createSnapshot}
+                  disabled={snapSaving || snapSaved}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                    snapSaved
+                      ? "bg-green-600 text-white"
+                      : "bg-[#34d399] hover:bg-[#2bb884] text-black disabled:opacity-50"
+                  }`}
+                >
+                  <Icon name={snapSaved ? "Check" : snapSaving ? "Loader" : "Camera"} size={14} className={snapSaving ? "animate-spin" : ""} />
+                  {snapSaved ? "Снапшот создан!" : snapSaving ? "Сохранение..." : "Сохранить снапшот"}
+                </button>
+              </div>
+
+              {/* Список снапшотов */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-400 text-xs">
+                    Точек восстановления: {snapshots.length}
+                  </span>
+                  <button onClick={loadSnapshots} className="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1 transition-colors">
+                    <Icon name="RefreshCw" size={10} />
+                    Обновить
+                  </button>
+                </div>
+
+                {snapLoading && (
+                  <div className="flex items-center justify-center gap-2 text-gray-500 text-sm py-6">
+                    <Icon name="Loader" size={15} className="animate-spin" />
+                    Загрузка...
+                  </div>
+                )}
+
+                {!snapLoading && snapshots.length === 0 && (
+                  <div className="flex flex-col items-center gap-3 py-8 text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-[#34d399]/10 flex items-center justify-center">
+                      <Icon name="Camera" size={22} className="text-[#34d399]/40" />
+                    </div>
+                    <div className="text-gray-600 text-sm">Снапшотов пока нет. Создайте первую точку восстановления.</div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {snapshots.map(s => (
+                    <div
+                      key={s.id}
+                      className={`p-4 rounded-xl border transition-all ${
+                        rollbackId === s.id
+                          ? "bg-orange-950/30 border-orange-500/40"
+                          : "bg-[#0d1225] border-white/5 hover:border-white/10"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-[#34d399]/10 flex items-center justify-center flex-shrink-0">
+                          <Icon name="Camera" size={16} className="text-[#34d399]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-white font-semibold text-sm">{s.name}</span>
+                            {s.tag && (
+                              <span className="text-[10px] bg-blue-900/30 text-blue-400 px-1.5 py-0.5 rounded font-mono">
+                                {s.tag}
+                              </span>
+                            )}
+                          </div>
+                          {s.description && (
+                            <div className="text-gray-400 text-xs mt-0.5">{s.description}</div>
+                          )}
+                          <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-600">
+                            <span>{s.created_at ? new Date(s.created_at).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</span>
+                            {s.size_kb > 0 && <span>{s.size_kb} КБ</span>}
+                            {s.rollback_count > 0 && (
+                              <span className="text-orange-400 flex items-center gap-1">
+                                <Icon name="RotateCcw" size={9} />
+                                Откатов: {s.rollback_count}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {rollbackId !== s.id ? (
+                            <button
+                              onClick={() => { setRollbackId(s.id); setRollbackReason(""); }}
+                              title="Откатить к этому снапшоту"
+                              className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-900/20 border border-orange-700/30 text-orange-400 text-xs rounded-lg hover:bg-orange-900/30 transition-colors"
+                            >
+                              <Icon name="RotateCcw" size={12} />
+                              Откат
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setRollbackId(null)}
+                              className="text-gray-500 hover:text-gray-300 p-1 transition-colors"
+                            >
+                              <Icon name="X" size={14} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => deleteSnapshot(s.id)}
+                            title="Удалить снапшот"
+                            className="p-1.5 text-gray-600 hover:text-red-400 transition-colors"
+                          >
+                            <Icon name="Trash2" size={14} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Панель подтверждения отката */}
+                      {rollbackId === s.id && (
+                        <div className="mt-3 pt-3 border-t border-orange-700/20 space-y-2">
+                          <div className="flex items-center gap-2 text-orange-400 text-xs mb-2">
+                            <Icon name="AlertTriangle" size={12} />
+                            <span>Все ПК-агенты получат команду откатиться к этому снапшоту</span>
+                          </div>
+                          <input
+                            value={rollbackReason}
+                            onChange={e => setRollbackReason(e.target.value)}
+                            placeholder="Причина отката (необязательно)"
+                            className="w-full bg-[#060d1f] border border-orange-700/20 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-500/40 placeholder-gray-600"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={doRollback}
+                              disabled={rolling}
+                              className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
+                            >
+                              <Icon name={rolling ? "Loader" : "RotateCcw"} size={13} className={rolling ? "animate-spin" : ""} />
+                              {rolling ? "Отправка команды..." : "Подтвердить откат"}
+                            </button>
+                            <button
+                              onClick={() => setRollbackId(null)}
+                              className="px-4 py-2 bg-white/5 text-gray-400 text-sm rounded-lg hover:bg-white/10 transition-colors"
+                            >
+                              Отмена
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
 
         {/* ── Подвал ── */}
@@ -725,6 +998,95 @@ def report_applied(update_ids: list, hostname: str):
     except Exception as e:
         log.warning(f"Не удалось отправить отчёт: {e}")
 
+# ─── Снапшоты и откат ───────────────────────────────────────────────────────
+SNAPSHOTS_DIR = AGENT_DIR / "ecsu_snapshots"
+SNAPSHOTS_DIR.mkdir(exist_ok=True)
+
+def save_local_snapshot(tag: str = "auto") -> str:
+    """Сохраняет локальный снапшот состояния ПК."""
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    snap_file = SNAPSHOTS_DIR / f"snap_{ts}_{tag}.json"
+    state = {
+        "saved_at": datetime.now().isoformat(),
+        "agent_id": AGENT_ID,
+        "tag": tag,
+        "config_files": [str(f) for f in CONFIG_DIR.glob("*.json")],
+        "update_files": [str(f) for f in UPDATES_DIR.glob("*.json")],
+    }
+    with open(snap_file, "w", encoding="utf-8") as f:
+        json.dump(state, f, ensure_ascii=False, indent=2)
+    log.info(f"Локальный снапшот сохранён: {snap_file}")
+    return str(snap_file)
+
+def do_rollback_local(snapshot: dict) -> bool:
+    """Выполняет откат по команде с сервера."""
+    name = snapshot.get("name", "неизвестно")
+    state = snapshot.get("state", {})
+    log.info(f"[ОТКАТ] Начинаю откат к снапшоту: {name}")
+
+    # Сохраняем текущее состояние перед откатом
+    save_local_snapshot(tag="before_rollback")
+
+    # Создаём резервную копию текущих конфигов
+    backup_dir = AGENT_DIR / "ecsu_backup_before_rollback"
+    backup_dir.mkdir(exist_ok=True)
+    import shutil
+    for cfg in CONFIG_DIR.glob("*.json"):
+        shutil.copy2(cfg, backup_dir / cfg.name)
+
+    # Если в state есть конфиги — восстанавливаем
+    rollback_configs = state.get("configs", {})
+    for cfg_name, cfg_data in rollback_configs.items():
+        cfg_file = CONFIG_DIR / cfg_name
+        with open(cfg_file, "w", encoding="utf-8") as f:
+            json.dump(cfg_data, f, ensure_ascii=False, indent=2)
+        log.info(f"  [ОТКАТ] Восстановлен конфиг: {cfg_name}")
+
+    # Сохраняем лог отката
+    rollback_log = AGENT_DIR / "rollback_history.json"
+    history = []
+    if rollback_log.exists():
+        try:
+            with open(rollback_log) as f:
+                history = json.load(f)
+        except Exception:
+            pass
+    history.append({
+        "snapshot_id": snapshot.get("id"),
+        "snapshot_name": name,
+        "rolled_at": datetime.now().isoformat(),
+        "result": "ok"
+    })
+    with open(rollback_log, "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
+
+    print(f"[ECSU] ✓ Откат выполнен: {name}")
+    log.info(f"[ОТКАТ] Успешно выполнен откат к: {name}")
+    return True
+
+def check_rollback(hostname: str):
+    """Проверяет наличие команды отката с сайта."""
+    try:
+        r = requests.get(
+            f"{UPDATES_URL}?action=rollback_target&agent_id={AGENT_ID}",
+            timeout=10
+        )
+        data = r.json()
+        if data.get("has_rollback") and data.get("snapshot"):
+            snap = data["snapshot"]
+            log.info(f"[ОТКАТ] Получена команда отката: #{snap.get('id')} {snap.get('name')}")
+            ok = do_rollback_local(snap)
+            # Подтверждаем откат серверу
+            requests.post(UPDATES_URL, json={
+                "action": "rollback_done",
+                "agent_id": AGENT_ID,
+                "hostname": hostname,
+                "snapshot_id": snap.get("id"),
+                "result": "ok" if ok else "error",
+            }, timeout=10)
+    except Exception as e:
+        log.debug(f"Проверка отката: {e}")
+
 # ─── Основной цикл ──────────────────────────────────────────────────────────
 def main_loop():
     ping_count = 0
@@ -762,6 +1124,11 @@ def main_loop():
             else:
                 if ping_count % 10 == 0:
                     log.info(f"Heartbeat #{ping_count} | CPU:{pc['cpu_percent']}% RAM:{pc['ram_percent']}% | Обновлений нет")
+
+            # Проверяем команду отката (каждые 3 пинга)
+            if ping_count % 3 == 0:
+                check_rollback(pc["hostname"])
+
 
         except requests.exceptions.ConnectionError:
             log.warning("Нет соединения с сервером ECSU. Повтор через 30 сек...")
