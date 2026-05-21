@@ -23,7 +23,7 @@ import EcsuGraphium from "@/components/ecsu/EcsuGraphium";
 type Section =
   | "overview" | "incidents" | "forecast" | "analytics"
   | "organs" | "security" | "license" | "loader" | "settings"
-  | "finance" | "dalan" | "tahka" | "admin" | "owner" | "graphium";
+  | "finance" | "dalan" | "tahka" | "admin" | "owner" | "graphium" | "cpvoa";
 
 // ── Верхняя навигация (цветные таблетки)
 const topNavItems: { id: Section | "cpvoa" | "updates" | "uved" | "vozm" | "admin_btn"; label: string; icon: string; color: string; bg: string; adminOnly?: boolean }[] = [
@@ -65,7 +65,6 @@ interface Props {
 const EcsuSystem = ({ onLogout, role, userName }: Props) => {
   const [active, setActive] = useState<Section>("overview");
   const [showAdmin, setShowAdmin]     = useState(false);
-  const [showCpvoa, setShowCpvoa]     = useState(false);
   const [showMuson, setShowMuson]     = useState(false);
   const [showUpdates, setShowUpdates] = useState(false);
 
@@ -74,7 +73,7 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
   }
 
   const handleTopNav = (id: string) => {
-    if (id === "cpvoa")     { setShowCpvoa(true); return; }
+    if (id === "cpvoa")     { setActive("cpvoa"); return; }
     if (id === "updates")   { setShowUpdates(true); return; }
     if (id === "admin_btn") { setShowAdmin(true); return; }
     if (id === "uved")      { setActive("incidents"); return; }
@@ -280,12 +279,12 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
           {active === "tahka"     && <EcsuTahkaOS />}
           {active === "owner"     && <EcsuOwner />}
           {active === "graphium"  && <EcsuGraphium />}
+          {active === "cpvoa"     && <EcsuCpvoa />}
         </div>
       </div>
 
       <FloatingAiChat />
-      {showCpvoa   && <EcsuCpvoa   onClose={() => setShowCpvoa(false)} />}
-      {showMuson   && <EcsuMusonSync onClose={() => setShowMuson(false)} />}
+      {showMuson   && <EcsuMusonSync   onClose={() => setShowMuson(false)} />}
       {showUpdates && <EcsuUpdateManager onClose={() => setShowUpdates(false)} />}
     </div>
   );
