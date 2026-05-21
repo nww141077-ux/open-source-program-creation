@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 
 const UPDATES_URL = "https://functions.poehali.dev/0639f989-669a-462c-aac5-7730ba2e2470";
@@ -48,6 +48,19 @@ interface Snapshot {
   rollback_count: number;
 }
 
+interface DeliveryFile {
+  id: number;
+  filename: string;
+  description: string;
+  file_type: string;
+  dest_path: string;
+  size_bytes: number;
+  created_by: string;
+  created_at: string;
+  status: string;
+  delivered_count: number;
+}
+
 interface Props {
   onClose: () => void;
 }
@@ -55,10 +68,15 @@ interface Props {
 const EcsuUpdateManager = ({ onClose }: Props) => {
   const [updates, setUpdates]         = useState<AppUpdate[]>([]);
   const [loading, setLoading]         = useState(true);
-  const [tab, setTab]                 = useState<"list" | "create" | "snapshots" | "agents">("list");
+  const [tab, setTab]                 = useState<"list" | "create" | "files" | "snapshots" | "agents">("list");
   const [saving, setSaving]           = useState(false);
   const [saved, setSaved]             = useState(false);
   const [agents, setAgents]           = useState<{ agent_id: string; hostname: string; status: string }[]>([]);
+  const [files, setFiles]             = useState<DeliveryFile[]>([]);
+  const [filesLoading, setFilesLoading] = useState(false);
+  const [fileUploading, setFileUploading] = useState(false);
+  const [fileForm, setFileForm]       = useState({ description: "", dest_path: "", file_type: "document" });
+  const fileInputRef                  = React.useRef<HTMLInputElement>(null);
   const [snapshots, setSnapshots]     = useState<Snapshot[]>([]);
   const [snapLoading, setSnapLoading] = useState(false);
   const [snapForm, setSnapForm]       = useState({ name: "", description: "", tag: "" });
@@ -109,6 +127,52 @@ const EcsuUpdateManager = ({ onClose }: Props) => {
       setSnapshots((d.snapshots || []).filter((s: Snapshot) => s.snapshot_type !== "rollback_command"));
     } catch { /* нет связи */ }
     setSnapLoading(false);
+  };
+
+  const loadFiles = async () => {
+    setFilesLoading(true);
+    try {
+      const r = await fetch(`${UPDATES_URL}?action=files`);
+      const d = await r.json();
+      setFiles(d.files || []);
+    } catch { /* нет связи */ }
+    setFilesLoading(false);
+  };
+
+  const uploadFile = async (file: File) => {
+    setFileUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = (reader.result as string).split(",")[1] || "";
+        await fetch(UPDATES_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "upload_file",
+            filename: file.name,
+            description: fileForm.description,
+            file_type: fileForm.file_type,
+            content_b64: base64,
+            dest_path: fileForm.dest_path,
+          }),
+        });
+        setFileForm({ description: "", dest_path: "", file_type: "document" });
+        await loadFiles();
+      };
+      reader.readAsDataURL(file);
+    } catch { /* ошибка */ }
+    setFileUploading(false);
+  };
+
+  const deleteFile = async (id: number) => {
+    if (!confirm("Удалить файл?")) return;
+    await fetch(UPDATES_URL, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "file", id }),
+    });
+    setFiles(prev => prev.filter(f => f.id !== id));
   };
 
   const createSnapshot = async () => {
@@ -170,6 +234,7 @@ const EcsuUpdateManager = ({ onClose }: Props) => {
     loadUpdates();
     loadAgents();
     loadSnapshots();
+    loadFiles();
   }, []);
 
   const createUpdate = async () => {
@@ -249,10 +314,11 @@ const EcsuUpdateManager = ({ onClose }: Props) => {
         {/* ── Вкладки ── */}
         <div className="flex gap-1 px-5 pt-3 pb-0">
           {[
-            { id: "list"      as const, label: "Обновления",     icon: "List" },
-            { id: "create"    as const, label: "Создать",         icon: "Plus" },
+            { id: "list"      as const, label: "Обновления",       icon: "List" },
+            { id: "create"    as const, label: "Создать",           icon: "Plus" },
+            { id: "files"     as const, label: "Файлы на ПК",      icon: "FolderUp" },
             { id: "snapshots" as const, label: "Снапшоты / Откат", icon: "RotateCcw" },
-            { id: "agents"    as const, label: "ПК-агенты",       icon: "Laptop" },
+            { id: "agents"    as const, label: "ПК-агенты",        icon: "Laptop" },
           ].map(t => (
             <button
               key={t.id}
@@ -613,6 +679,155 @@ const EcsuUpdateManager = ({ onClose }: Props) => {
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* ══════════════════════════════════════════
+              ФАЙЛЫ НА ПК
+          ══════════════════════════════════════════ */}
+          {tab === "files" && (
+            <div className="space-y-4">
+
+              {/* Загрузка файла */}
+              <div className="bg-[#0a1222] border border-blue-800/30 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Icon name="FolderUp" size={15} className="text-blue-400" />
+                  <span className="text-white text-sm font-semibold">Отправить файл на все ПК</span>
+                </div>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-gray-500 text-[10px] mb-1 block">Описание файла</label>
+                      <input
+                        value={fileForm.description}
+                        onChange={e => setFileForm(f => ({ ...f, description: e.target.value }))}
+                        placeholder="Что это за файл"
+                        className="w-full bg-[#060d1f] border border-blue-900/30 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-gray-500 text-[10px] mb-1 block">Путь назначения на ПК</label>
+                      <input
+                        value={fileForm.dest_path}
+                        onChange={e => setFileForm(f => ({ ...f, dest_path: e.target.value }))}
+                        placeholder="C:\ECSU\configs\ (необязательно)"
+                        className="w-full bg-[#060d1f] border border-blue-900/30 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-blue-500/50 placeholder-gray-600"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <select
+                      value={fileForm.file_type}
+                      onChange={e => setFileForm(f => ({ ...f, file_type: e.target.value }))}
+                      className="bg-[#060d1f] border border-blue-900/30 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none"
+                    >
+                      <option value="document">Документ</option>
+                      <option value="config">Конфигурация</option>
+                      <option value="script">Скрипт</option>
+                      <option value="data">Данные (JSON/CSV)</option>
+                      <option value="image">Изображение</option>
+                      <option value="archive">Архив</option>
+                    </select>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      onChange={e => { if (e.target.files?.[0]) uploadFile(e.target.files[0]); }}
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={fileUploading}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-700 hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
+                    >
+                      <Icon name={fileUploading ? "Loader" : "Upload"} size={14} className={fileUploading ? "animate-spin" : ""} />
+                      {fileUploading ? "Загрузка..." : "Выбрать файл"}
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-3 text-gray-600 text-[10px] flex items-center gap-1.5">
+                  <Icon name="Info" size={10} />
+                  Файл будет автоматически доставлен на все онлайн ПК-агенты. Агент сохранит его в папку назначения.
+                </div>
+              </div>
+
+              {/* Список файлов */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-400 text-xs">Файлы в очереди доставки: {files.filter(f => f.status === "active").length}</span>
+                  <button onClick={loadFiles} className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-xs transition-colors">
+                    <Icon name="RefreshCw" size={10} />
+                    Обновить
+                  </button>
+                </div>
+
+                {filesLoading && (
+                  <div className="flex justify-center items-center gap-2 text-gray-500 text-sm py-6">
+                    <Icon name="Loader" size={15} className="animate-spin" />
+                    Загрузка...
+                  </div>
+                )}
+
+                {!filesLoading && files.length === 0 && (
+                  <div className="flex flex-col items-center gap-3 py-8 text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-900/20 flex items-center justify-center">
+                      <Icon name="FolderOpen" size={22} className="text-blue-600/40" />
+                    </div>
+                    <div className="text-gray-600 text-sm">Файлов для доставки нет</div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {files.map(f => {
+                    const typeIcon: Record<string, string> = {
+                      document: "FileText", config: "Settings", script: "Terminal",
+                      data: "Database", image: "Image", archive: "Archive",
+                    };
+                    const icon = typeIcon[f.file_type] || "File";
+                    const sizeStr = f.size_bytes > 1024 * 1024
+                      ? `${(f.size_bytes / 1024 / 1024).toFixed(1)} МБ`
+                      : f.size_bytes > 1024
+                      ? `${(f.size_bytes / 1024).toFixed(0)} КБ`
+                      : `${f.size_bytes} Б`;
+                    return (
+                      <div key={f.id} className="flex items-start gap-3 p-3 bg-[#0d1225] border border-white/5 rounded-xl hover:border-white/10 transition-all">
+                        <div className="w-9 h-9 rounded-lg bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                          <Icon name={icon} size={16} className="text-blue-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-white text-sm font-semibold truncate">{f.filename}</span>
+                            <span className="text-[10px] bg-blue-900/30 text-blue-400 px-1.5 py-0.5 rounded">{f.file_type}</span>
+                            {f.status !== "active" && (
+                              <span className="text-[10px] bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded">{f.status}</span>
+                            )}
+                          </div>
+                          {f.description && <div className="text-gray-400 text-xs mt-0.5">{f.description}</div>}
+                          {f.dest_path && (
+                            <div className="text-gray-600 text-[10px] font-mono mt-0.5 flex items-center gap-1">
+                              <Icon name="FolderOpen" size={9} />
+                              {f.dest_path}
+                            </div>
+                          )}
+                          <div className="flex items-center gap-3 mt-1 text-[11px] text-gray-600">
+                            <span>{f.created_at ? new Date(f.created_at).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—"}</span>
+                            <span>{sizeStr}</span>
+                            <span className="flex items-center gap-1 text-green-600">
+                              <Icon name="CheckCircle" size={9} />
+                              Доставлено: {f.delivered_count} ПК
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => deleteFile(f.id)}
+                          className="p-1.5 text-gray-600 hover:text-red-400 transition-colors shrink-0"
+                        >
+                          <Icon name="Trash2" size={14} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}
@@ -998,6 +1213,72 @@ def report_applied(update_ids: list, hostname: str):
     except Exception as e:
         log.warning(f"Не удалось отправить отчёт: {e}")
 
+# ─── Получение файлов с сайта ───────────────────────────────────────────────
+RECEIVED_DIR = AGENT_DIR / "ecsu_received"
+RECEIVED_DIR.mkdir(exist_ok=True)
+
+def check_and_download_files(hostname: str):
+    """Проверяет и скачивает файлы отправленные с сайта."""
+    try:
+        r = requests.get(
+            f"{UPDATES_URL}?action=files_pending&agent_id={AGENT_ID}",
+            timeout=15
+        )
+        data = r.json()
+        files = data.get("files", [])
+        if not files:
+            return
+
+        log.info(f"[ФАЙЛЫ] Получено файлов для доставки: {len(files)}")
+        received_ids = []
+
+        for f in files:
+            fid      = f.get("id")
+            filename = f.get("filename", "file")
+            content  = f.get("content_b64", "")
+            dest     = f.get("dest_path", "").strip()
+            ftype    = f.get("file_type", "document")
+
+            try:
+                import base64
+                file_bytes = base64.b64decode(content) if content else b""
+
+                # Определяем папку назначения
+                if dest:
+                    save_dir = Path(dest)
+                elif ftype == "config":
+                    save_dir = CONFIG_DIR
+                elif ftype == "script":
+                    save_dir = AGENT_DIR
+                else:
+                    save_dir = RECEIVED_DIR
+
+                save_dir.mkdir(parents=True, exist_ok=True)
+                save_path = save_dir / filename
+
+                with open(save_path, "wb") as fp:
+                    fp.write(file_bytes)
+
+                log.info(f"  [ФАЙЛ] Сохранён: {save_path} ({len(file_bytes)} байт)")
+                print(f"[ECSU] ✓ Получен файл: {filename} → {save_path}")
+                received_ids.append(fid)
+
+            except Exception as e:
+                log.error(f"Ошибка сохранения файла #{fid} {filename}: {e}")
+
+        # Подтверждаем получение
+        if received_ids:
+            requests.post(UPDATES_URL, json={
+                "action": "file_received",
+                "agent_id": AGENT_ID,
+                "hostname": hostname,
+                "file_ids": received_ids,
+            }, timeout=10)
+            log.info(f"[ФАЙЛЫ] Подтверждено получение {len(received_ids)} файлов")
+
+    except Exception as e:
+        log.debug(f"Проверка файлов: {e}")
+
 # ─── Снапшоты и откат ───────────────────────────────────────────────────────
 SNAPSHOTS_DIR = AGENT_DIR / "ecsu_snapshots"
 SNAPSHOTS_DIR.mkdir(exist_ok=True)
@@ -1128,6 +1409,10 @@ def main_loop():
             # Проверяем команду отката (каждые 3 пинга)
             if ping_count % 3 == 0:
                 check_rollback(pc["hostname"])
+
+            # Проверяем файлы для доставки (каждые 2 пинга)
+            if ping_count % 2 == 0:
+                check_and_download_files(pc["hostname"])
 
 
         except requests.exceptions.ConnectionError:

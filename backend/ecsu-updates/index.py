@@ -40,6 +40,55 @@ def handler(event: dict, context) -> dict:
     try:
 
         # ════════════════════════════════════════════════════════════
+        #  GET  /?action=files  — список файлов для доставки на ПК
+        # ════════════════════════════════════════════════════════════
+        if method == "GET" and action == "files":
+            cur.execute("""
+                SELECT f.id, f.filename, f.description, f.file_type,
+                       f.dest_path, f.size_bytes, f.created_by, f.created_at, f.status,
+                       COUNT(l.id) AS delivered_count
+                FROM ecsu_delivery_files f
+                LEFT JOIN ecsu_delivery_log l ON l.file_id = f.id
+                WHERE f.status != 'deleted'
+                GROUP BY f.id
+                ORDER BY f.created_at DESC
+                LIMIT 100
+            """)
+            rows = cur.fetchall()
+            files = [{
+                "id": r[0], "filename": r[1], "description": r[2],
+                "file_type": r[3], "dest_path": r[4],
+                "size_bytes": r[5], "created_by": r[6],
+                "created_at": r[7].isoformat() if r[7] else None,
+                "status": r[8], "delivered_count": r[9],
+            } for r in rows]
+            return resp(200, {"files": files, "total": len(files)})
+
+        # ════════════════════════════════════════════════════════════
+        #  GET  /?action=files_pending&agent_id=XXX — файлы для агента
+        # ════════════════════════════════════════════════════════════
+        if method == "GET" and action == "files_pending":
+            agent_id = qs.get("agent_id", "")
+            cur.execute("""
+                SELECT id, filename, description, file_type,
+                       content_b64, dest_path, size_bytes, created_at
+                FROM ecsu_delivery_files
+                WHERE status = 'active'
+                  AND id NOT IN (
+                      SELECT file_id FROM ecsu_delivery_log WHERE agent_id = %s
+                  )
+                ORDER BY created_at ASC
+            """, (agent_id,))
+            rows = cur.fetchall()
+            files = [{
+                "id": r[0], "filename": r[1], "description": r[2],
+                "file_type": r[3], "content_b64": r[4] or "",
+                "dest_path": r[5], "size_bytes": r[6],
+                "created_at": r[7].isoformat() if r[7] else None,
+            } for r in rows]
+            return resp(200, {"files": files, "count": len(files)})
+
+        # ════════════════════════════════════════════════════════════
         #  GET  /?action=snapshots  — список снапшотов
         # ════════════════════════════════════════════════════════════
         if method == "GET" and action == "snapshots":
@@ -149,6 +198,41 @@ def handler(event: dict, context) -> dict:
         if method == "POST":
             body       = json.loads(event.get("body") or "{}")
             post_action = body.get("action", "create")
+
+            # ── Загрузить файл для доставки на ПК ────────────────
+            if post_action == "upload_file":
+                filename    = body.get("filename", "file.txt")
+                description = body.get("description", "")
+                file_type   = body.get("file_type", "document")
+                content_b64 = body.get("content_b64", "")
+                dest_path   = body.get("dest_path", "")
+                created_by  = body.get("created_by", "admin")
+                size_bytes  = len(content_b64.encode()) * 3 // 4
+
+                cur.execute("""
+                    INSERT INTO ecsu_delivery_files
+                        (filename, description, file_type, content_b64,
+                         dest_path, size_bytes, created_by)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                """, (filename, description, file_type, content_b64,
+                      dest_path, size_bytes, created_by))
+                new_id = cur.fetchone()[0]
+                conn.commit()
+                return resp(200, {"ok": True, "id": new_id, "size_bytes": size_bytes})
+
+            # ── Агент подтверждает получение файла ────────────────
+            if post_action == "file_received":
+                agent_id = body.get("agent_id", "")
+                hostname = body.get("hostname", "")
+                file_ids = body.get("file_ids", [])
+                for fid in file_ids:
+                    cur.execute("""
+                        INSERT INTO ecsu_delivery_log (file_id, agent_id, hostname)
+                        VALUES (%s, %s, %s)
+                    """, (fid, agent_id, hostname))
+                conn.commit()
+                return resp(200, {"ok": True, "recorded": len(file_ids)})
 
             # ── Агент подтверждает применение обновлений ──────────
             if post_action == "applied":
@@ -286,6 +370,9 @@ def handler(event: dict, context) -> dict:
                 sid = body.get("id")
                 cur.execute("DELETE FROM ecsu_rollback_log WHERE snapshot_id = %s", (sid,))
                 cur.execute("DELETE FROM ecsu_snapshots WHERE id = %s", (sid,))
+            elif del_type == "file":
+                fid = body.get("id")
+                cur.execute("UPDATE ecsu_delivery_files SET status = 'deleted' WHERE id = %s", (fid,))
             else:
                 uid = body.get("id")
                 cur.execute("DELETE FROM ecsu_update_log WHERE update_id = %s", (uid,))

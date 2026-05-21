@@ -18,11 +18,12 @@ import EcsuMusonSync from "@/components/ecsu/EcsuMusonSync";
 import EcsuTahkaOS from "@/components/ecsu/EcsuTahkaOS";
 import EcsuOwner from "@/components/ecsu/EcsuOwner";
 import EcsuUpdateManager from "@/components/ecsu/EcsuUpdateManager";
+import EcsuGraphium from "@/components/ecsu/EcsuGraphium";
 
 type Section =
   | "overview" | "incidents" | "forecast" | "analytics"
   | "organs" | "security" | "license" | "loader" | "settings"
-  | "finance" | "dalan" | "tahka" | "admin" | "owner";
+  | "finance" | "dalan" | "tahka" | "admin" | "owner" | "graphium";
 
 // ── Основная навигация (как было 17 апреля + дополнения 20 мая)
 const quickNavItems: { id: Section; label: string; icon: string; color: string; bg: string; adminOnly?: boolean }[] = [
@@ -39,6 +40,7 @@ const quickNavItems: { id: Section; label: string; icon: string; color: string; 
   { id: "security",   label: "Вознаграждения", icon: "Gift",            color: "#fbbf24", bg: "#3d2e00" },
   { id: "tahka",      label: "Экстренные",     icon: "Siren",           color: "#e94560", bg: "#3d1520", adminOnly: true },
   { id: "settings",   label: "Настройки",      icon: "Settings",        color: "#64748b", bg: "#1e2533" },
+  { id: "graphium",   label: "Графиум",        icon: "BookOpen",        color: "#a78bfa", bg: "#12081f" },
 ];
 
 interface Props {
@@ -198,6 +200,7 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
         {active === "dalan"     && <EcsuDalan />}
         {active === "tahka"     && <EcsuTahkaOS />}
         {active === "owner"     && <EcsuOwner />}
+        {active === "graphium"  && <EcsuGraphium />}
       </div>
 
       <FloatingAiChat />
