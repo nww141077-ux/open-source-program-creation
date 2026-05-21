@@ -1,0 +1,35 @@
+{
+  "tests": [
+    {
+      "name": "GET all updates",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": { "updates": [] },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST create update",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "version": "2.0.5",
+        "title": "Тест обновления",
+        "description": "Проверочное обновление",
+        "update_type": "patch",
+        "status": "active"
+      },
+      "expectedStatus": 200,
+      "expectedBody": { "ok": true },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "GET pending via query action",
+      "method": "GET",
+      "path": "/?action=pending&agent_id=test-agent-001",
+      "expectedStatus": 200,
+      "expectedBody": { "pending": [] },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
