@@ -16,26 +16,28 @@ import FloatingAiChat from "@/components/ecsu/FloatingAiChat";
 import EcsuCpvoa from "@/components/ecsu/EcsuCpvoa";
 import EcsuMusonSync from "@/components/ecsu/EcsuMusonSync";
 import EcsuTahkaOS from "@/components/ecsu/EcsuTahkaOS";
+import EcsuOwner from "@/components/ecsu/EcsuOwner";
 
 type Section =
   | "overview" | "incidents" | "forecast" | "analytics"
   | "organs" | "security" | "license" | "loader" | "settings"
-  | "finance" | "dalan" | "tahka" | "admin";
+  | "finance" | "dalan" | "tahka" | "admin" | "owner";
 
-// ── Основная навигация
+// ── Основная навигация (как было 17 апреля + дополнения 20 мая)
 const quickNavItems: { id: Section; label: string; icon: string; color: string; bg: string; adminOnly?: boolean }[] = [
   { id: "overview",   label: "Обзор",          icon: "LayoutDashboard", color: "#60a5fa", bg: "#1e3a5f" },
   { id: "incidents",  label: "Инциденты",      icon: "AlertTriangle",   color: "#e94560", bg: "#3d1520" },
-  { id: "forecast",   label: "Прогнозы",       icon: "TrendingUp",      color: "#a78bfa", bg: "#2d1f4a" },
   { id: "analytics",  label: "Аналитика",      icon: "BarChart2",       color: "#a78bfa", bg: "#2d1f4a" },
-  { id: "organs",     label: "Органы ECSU",    icon: "Network",         color: "#60a5fa", bg: "#1e3a5f" },
-  { id: "security",   label: "Безопасность",   icon: "Shield",          color: "#34d399", bg: "#1a3d2e" },
-  { id: "license",    label: "Лицензия",       icon: "BadgeCheck",      color: "#60a5fa", bg: "#1e3a5f" },
-  { id: "loader",     label: "Загрузчик",      icon: "Upload",          color: "#94a3b8", bg: "#1e2533" },
-  { id: "settings",   label: "Настройки",      icon: "Settings",        color: "#f97316", bg: "#3d1f00" },
+  { id: "organs",     label: "Поглощение",     icon: "Zap",             color: "#e94560", bg: "#3d1520" },
   { id: "finance",    label: "Финансы",        icon: "DollarSign",      color: "#fbbf24", bg: "#3d2e00", adminOnly: true },
-  { id: "dalan",      label: "Dalan ИИ",       icon: "Brain",           color: "#e94560", bg: "#3d1520", adminOnly: true },
-  { id: "tahka",      label: "TahkaOS",        icon: "Cpu",             color: "#22d3ee", bg: "#0d2a33", adminOnly: true },
+  { id: "owner",      label: "Владелец",       icon: "Crown",           color: "#f97316", bg: "#3d1f00" },
+  { id: "license",    label: "Правовая база",  icon: "Scale",           color: "#60a5fa", bg: "#1e3a5f" },
+  { id: "dalan",      label: "API",            icon: "Code2",           color: "#34d399", bg: "#1a3d2e", adminOnly: true },
+  { id: "loader",     label: "Документы",      icon: "FileText",        color: "#94a3b8", bg: "#1e2533" },
+  { id: "forecast",   label: "Пользователи",   icon: "Users",           color: "#a78bfa", bg: "#2d1f4a" },
+  { id: "security",   label: "Вознаграждения", icon: "Gift",            color: "#fbbf24", bg: "#3d2e00" },
+  { id: "tahka",      label: "Экстренные",     icon: "Siren",           color: "#e94560", bg: "#3d1520", adminOnly: true },
+  { id: "settings",   label: "Настройки",      icon: "Settings",        color: "#64748b", bg: "#1e2533" },
 ];
 
 interface Props {
@@ -185,6 +187,7 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
         {active === "finance"   && <EcsuFinance />}
         {active === "dalan"     && <EcsuDalan />}
         {active === "tahka"     && <EcsuTahkaOS />}
+        {active === "owner"     && <EcsuOwner />}
       </div>
 
       <FloatingAiChat />

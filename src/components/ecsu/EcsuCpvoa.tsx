@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
 
-type Tab = "provider" | "dns" | "modem" | "satellite";
+type Tab = "provider" | "dns" | "modem" | "satellite" | "priorities";
 
 interface Provider {
   id: string;
@@ -188,10 +188,11 @@ const EcsuCpvoa = ({ onClose }: { onClose: () => void }) => {
   const removeModem = (id: string) => setModems((prev) => prev.filter((m) => m.id !== id));
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: "provider", label: "Провайдер", icon: "Globe" },
-    { id: "dns", label: "DNS", icon: "Server" },
-    { id: "modem", label: "Модем", icon: "Smartphone" },
-    { id: "satellite", label: "Спутниковый поиск", icon: "Satellite" },
+    { id: "provider",   label: "Провайдер",          icon: "Globe" },
+    { id: "dns",        label: "DNS",                 icon: "Server" },
+    { id: "modem",      label: "Модем",               icon: "Smartphone" },
+    { id: "satellite",  label: "Спутниковый поиск",   icon: "Satellite" },
+    { id: "priorities", label: "Приоритеты",          icon: "ListOrdered" },
   ];
 
   return (
@@ -642,6 +643,71 @@ const EcsuCpvoa = ({ onClose }: { onClose: () => void }) => {
                   <div className="text-gray-500 text-sm">Введи запрос для поиска через спутниковый канал</div>
                 </div>
               )}
+            </>
+          )}
+
+          {/* ПРИОРИТЕТЫ (дополнение 20.05.2026) */}
+          {tab === "priorities" && (
+            <>
+              <div className="text-gray-400 text-xs mb-3">
+                Приоритеты ЦПВОА по состоянию на 20.05.2026 — автоматически сформированы на основе данных сети.
+              </div>
+
+              {/* Статус сети */}
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {[
+                  { label: "Активный канал", value: "Ростелеком ВОЛС", color: "#34d399", icon: "Wifi" },
+                  { label: "Нагрузка сети", value: "34%", color: "#60a5fa", icon: "Activity" },
+                  { label: "Пакетные потери", value: "0.02%", color: "#fbbf24", icon: "AlertTriangle" },
+                ].map(s => (
+                  <div key={s.label} className="bg-[#0d1225] border border-white/5 rounded-xl p-3">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Icon name={s.icon} size={12} style={{ color: s.color }} />
+                      <span className="text-gray-500 text-[10px]">{s.label}</span>
+                    </div>
+                    <div className="text-sm font-bold" style={{ color: s.color }}>{s.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Список приоритетов */}
+              <div className="space-y-2">
+                {[
+                  { priority: 1, task: "Восстановить VSAT Орион — ошибка подключения", status: "critical", assignee: "Оператор ЦПВОА", deadline: "20.05.2026" },
+                  { priority: 2, task: "Проверить резервный DNS 1.1.1.1 — задержка 230мс", status: "high", assignee: "Системный администратор", deadline: "21.05.2026" },
+                  { priority: 3, task: "Обновить профиль APN Билайн", status: "medium", assignee: "Оператор ЦПВОА", deadline: "22.05.2026" },
+                  { priority: 4, task: "Добавить резервный канал МегаФон 5G", status: "medium", assignee: "Администратор", deadline: "25.05.2026" },
+                  { priority: 5, task: "Провести тест пропускной способности всех каналов", status: "low", assignee: "Аналитик", deadline: "31.05.2026" },
+                ].map(item => {
+                  const sc: Record<string, { color: string; label: string; bg: string }> = {
+                    critical: { color: "#e94560", label: "Критический", bg: "#3d1520" },
+                    high:     { color: "#f97316", label: "Высокий",     bg: "#3d1f00" },
+                    medium:   { color: "#fbbf24", label: "Средний",     bg: "#3d2e00" },
+                    low:      { color: "#60a5fa", label: "Низкий",      bg: "#1e3a5f" },
+                  };
+                  const s = sc[item.status];
+                  return (
+                    <div key={item.priority} className="flex items-center gap-3 p-3 bg-[#0d1225] border border-white/5 rounded-xl hover:border-white/10 transition-colors">
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
+                        style={{ background: s.bg, color: s.color }}
+                      >
+                        {item.priority}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white text-sm truncate">{item.task}</div>
+                        <div className="text-gray-600 text-[11px] mt-0.5">{item.assignee} · до {item.deadline}</div>
+                      </div>
+                      <div
+                        className="text-[10px] px-2 py-0.5 rounded font-semibold shrink-0"
+                        style={{ background: s.bg, color: s.color }}
+                      >
+                        {s.label}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </>
           )}
         </div>
