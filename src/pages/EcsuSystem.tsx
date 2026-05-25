@@ -18,20 +18,21 @@ import EcsuMusonSync from "@/components/ecsu/EcsuMusonSync";
 import EcsuTahkaOS from "@/components/ecsu/EcsuTahkaOS";
 import EcsuOwner from "@/components/ecsu/EcsuOwner";
 import EcsuKovcheg from "@/components/ecsu/EcsuKovcheg";
+import EcsuAbsorption from "@/components/ecsu/EcsuAbsorption";
 import EcsuUpdateManager from "@/components/ecsu/EcsuUpdateManager";
 import EcsuGraphium from "@/components/ecsu/EcsuGraphium";
 
 type Section =
   | "overview" | "incidents" | "forecast" | "analytics"
   | "organs" | "security" | "license" | "loader" | "settings"
-  | "finance" | "dalan" | "tahka" | "admin" | "owner" | "graphium" | "cpvoa" | "kovcheg";
+  | "finance" | "dalan" | "tahka" | "admin" | "owner" | "graphium" | "cpvoa" | "kovcheg" | "absorption";
 
 // ── Верхняя навигация (цветные таблетки)
 const topNavItems: { id: Section | "cpvoa" | "updates" | "uved" | "vozm" | "admin_btn"; label: string; icon: string; color: string; bg: string; adminOnly?: boolean }[] = [
   { id: "cpvoa",     label: "ЦПВОА",        icon: "Radar",           color: "#34d399", bg: "#1a3d2e" },
   { id: "uved",      label: "Уведомления",  icon: "Bell",            color: "#f59e0b", bg: "#2d2a14" },
   { id: "analytics", label: "Аналитика",    icon: "BarChart2",       color: "#a78bfa", bg: "#2d1f4a" },
-  { id: "organs",    label: "Поглощение",   icon: "Zap",             color: "#e94560", bg: "#3d1520" },
+  { id: "absorption", label: "Поглощение",  icon: "Zap",             color: "#e94560", bg: "#3d1520" },
   { id: "finance",   label: "Финансы",      icon: "DollarSign",      color: "#fbbf24", bg: "#3d2e00", adminOnly: true },
   { id: "owner",     label: "Владелец",     icon: "Crown",           color: "#f97316", bg: "#3d1f00" },
   { id: "license",   label: "Правовая база",icon: "Scale",           color: "#60a5fa", bg: "#1e3a5f" },
@@ -289,8 +290,9 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
           {active === "tahka"     && <EcsuTahkaOS />}
           {active === "owner"     && <EcsuOwner />}
           {active === "graphium"  && <EcsuGraphium />}
-          {active === "cpvoa"     && <EcsuCpvoa />}
+          {active === "cpvoa"      && <EcsuCpvoa />}
           {active === "kovcheg"   && <EcsuKovcheg />}
+          {active === "absorption" && <EcsuAbsorption />}
         </div>
       </div>
 
