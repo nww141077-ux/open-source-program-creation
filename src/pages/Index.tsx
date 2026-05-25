@@ -2,9 +2,7 @@ import { useState } from "react";
 import EcsuSystem from "@/pages/EcsuSystem";
 
 const USERS: Record<string, { password: string; role: "admin" | "user"; name: string }> = {
-  admin: { password: "admin123", role: "admin", name: "Администратор" },
-  operator: { password: "ecsu2026", role: "user", name: "Оператор" },
-  analyst: { password: "dalan001", role: "user", name: "Аналитик" },
+  nikolaev: { password: "141077nww&ECSU", role: "admin", name: "Владелец системы" },
 };
 
 const loadSession = () => {
@@ -25,7 +23,7 @@ const Index = () => {
 
   const handleLogin = () => {
     const user = USERS[login.trim().toLowerCase()];
-    if (user) {
+    if (user && user.password === password) {
       setRole(user.role);
       setUserName(user.name);
       setError("");
@@ -97,13 +95,6 @@ const Index = () => {
         >
           Войти
         </button>
-
-        <div className="mt-4 bg-[#060d1f] rounded-lg p-3 text-xs text-gray-600 space-y-1">
-          <div className="text-gray-500 font-medium mb-1">Доступные аккаунты:</div>
-          <div>· <span className="text-gray-400">admin</span> / admin123 — Администратор</div>
-          <div>· <span className="text-gray-400">operator</span> / ecsu2026 — Оператор</div>
-          <div>· <span className="text-gray-400">analyst</span> / dalan001 — Аналитик</div>
-        </div>
 
         <div className="text-center text-gray-700 text-xs mt-4">SYNERGON GLOBAL · УБО: Николаев В.В.</div>
       </div>
