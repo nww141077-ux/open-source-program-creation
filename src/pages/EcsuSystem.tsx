@@ -17,13 +17,14 @@ import EcsuCpvoa from "@/components/ecsu/EcsuCpvoa";
 import EcsuMusonSync from "@/components/ecsu/EcsuMusonSync";
 import EcsuTahkaOS from "@/components/ecsu/EcsuTahkaOS";
 import EcsuOwner from "@/components/ecsu/EcsuOwner";
+import EcsuKovcheg from "@/components/ecsu/EcsuKovcheg";
 import EcsuUpdateManager from "@/components/ecsu/EcsuUpdateManager";
 import EcsuGraphium from "@/components/ecsu/EcsuGraphium";
 
 type Section =
   | "overview" | "incidents" | "forecast" | "analytics"
   | "organs" | "security" | "license" | "loader" | "settings"
-  | "finance" | "dalan" | "tahka" | "admin" | "owner" | "graphium" | "cpvoa";
+  | "finance" | "dalan" | "tahka" | "admin" | "owner" | "graphium" | "cpvoa" | "kovcheg";
 
 // ── Верхняя навигация (цветные таблетки)
 const topNavItems: { id: Section | "cpvoa" | "updates" | "uved" | "vozm" | "admin_btn"; label: string; icon: string; color: string; bg: string; adminOnly?: boolean }[] = [
@@ -235,6 +236,15 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
                 <span className={`text-[11px] font-medium ${active === "owner" ? "text-orange-300" : "text-gray-600 group-hover:text-gray-400"}`}>Владелец</span>
               </button>
               <button
+                onClick={() => setActive("kovcheg")}
+                className={`flex items-center gap-2.5 px-4 py-2 text-left transition-all group ${
+                  active === "kovcheg" ? "bg-cyan-900/20 border-r-2 border-cyan-500" : "hover:bg-white/5 border-r-2 border-transparent"
+                }`}
+              >
+                <Icon name="Anchor" size={13} className={active === "kovcheg" ? "text-cyan-400" : "text-gray-600 group-hover:text-gray-400"} />
+                <span className={`text-[11px] font-medium ${active === "kovcheg" ? "text-cyan-300" : "text-gray-600 group-hover:text-gray-400"}`}>Ковчег</span>
+              </button>
+              <button
                 onClick={() => setActive("tahka")}
                 className={`flex items-center gap-2.5 px-4 py-2 text-left transition-all group ${
                   active === "tahka" ? "bg-red-900/20 border-r-2 border-red-500" : "hover:bg-white/5 border-r-2 border-transparent"
@@ -280,6 +290,7 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
           {active === "owner"     && <EcsuOwner />}
           {active === "graphium"  && <EcsuGraphium />}
           {active === "cpvoa"     && <EcsuCpvoa />}
+          {active === "kovcheg"   && <EcsuKovcheg />}
         </div>
       </div>
 
