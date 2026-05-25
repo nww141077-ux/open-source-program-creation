@@ -1,376 +1,397 @@
-import { useState, useEffect, useRef } from "react";
 import Icon from "@/components/ui/icon";
+import { useState, useEffect } from "react";
 
-interface Incident {
-  id: string;
-  type: string;
-  severity: "low" | "medium" | "high" | "critical";
-  time: string;
-  description: string;
-  coords: string;
-  source: string;
-}
+const INCIDENTS_URL =
+  "https://functions.poehali.dev/df1d9dd9-c455-479d-807f-b25e000928ff";
 
-interface AnomalyEvent {
-  time: string;
-  title: string;
-  severity: "low" | "medium" | "high" | "critical";
-}
-
-const SEVERITY_COLOR: Record<string, string> = {
-  low: "#34d399",
-  medium: "#f59e0b",
-  high: "#f97316",
+const SEV_COLOR: Record<string, string> = {
   critical: "#e94560",
+  high: "#f59e0b",
+  medium: "#a78bfa",
+  low: "#94a3b8",
 };
 
-const SEVERITY_LABEL: Record<string, string> = {
-  low: "Низкая",
-  medium: "Средняя",
-  high: "Высокая",
-  critical: "Критическая",
+const COUNTRY_XY: Record<string, [number, number]> = {
+  Russia: [68, 25], "Russian Federation": [68, 25],
+  China: [75, 36], "United States": [20, 36], USA: [20, 36],
+  India: [68, 46], Brazil: [35, 60], Global: [50, 50],
+  Japan: [82, 34], Germany: [50, 28], France: [48, 30],
+  "United Kingdom": [46, 26], Ukraine: [55, 28], Iran: [60, 38],
+  Syria: [57, 38], Pakistan: [65, 40], Turkey: [56, 33],
+  "North Korea": [80, 32], "South Korea": [81, 34],
+  Australia: [80, 66], Canada: [22, 23], Mexico: [18, 43],
+  Indonesia: [78, 54], Philippines: [82, 48], Thailand: [76, 46],
+  Spain: [46, 34], Italy: [51, 33], Poland: [52, 27],
+  Nigeria: [50, 50], Egypt: [56, 41], "South Africa": [55, 70],
 };
 
-const INITIAL_INCIDENTS: Incident[] = [
-  {
-    id: "1",
-    type: "Визуальный",
-    severity: "critical",
-    time: "21:09",
-    description: "Дрейф частоты приёмника сверх нормы — визуальный",
-    coords: "64.5°N 102.6°E",
-    source: "Визуальный #8",
-  },
+function getXY(country: string): [number, number] {
+  if (COUNTRY_XY[country]) return COUNTRY_XY[country];
+  const u = country.toUpperCase();
+  if (u.includes("CHINA")) return [75, 36];
+  if (u.includes("RUSSIA")) return [68, 25];
+  if (u.includes("INDIA")) return [68, 46];
+  if (u.includes("JAPAN")) return [82, 34];
+  if (u.includes("AFRICA")) return [52, 55];
+  return [30 + Math.random() * 40, 30 + Math.random() * 30];
+}
+
+interface ApiIncident {
+  id: number;
+  title: string;
+  country: string;
+  severity: string;
+  status: string;
+  type?: string;
+  created_at: string;
+}
+
+interface MapDot {
+  x: number;
+  y: number;
+  severity: string;
+  country: string;
+}
+
+const STRATEGIC_OBJECTS = [
+  { name: "Узел ЦПВОА-1 · Москва", status: "online", color: "#00c896" },
+  { name: "Ретранслятор FM-101 · Урал", status: "warning", color: "#f59e0b" },
+  { name: "Меш-узел #7 · Сибирь", status: "online", color: "#00c896" },
+  { name: "Буфер #3 · Дальний Восток", status: "critical", color: "#e94560" },
+  { name: "Внешний IP-шлюз · Запад", status: "online", color: "#00c896" },
+  { name: "Резервный канал · Юг", status: "offline", color: "#94a3b8" },
 ];
 
-const ANOMALY_HISTORY: AnomalyEvent[] = [
-  { time: "14:32", title: "Аномалия FM 101.2 МГц", severity: "high" },
-  { time: "14:15", title: "Световой сигнал — камера #4", severity: "medium" },
-  { time: "13:58", title: "Неизвестный меш-узел #7", severity: "low" },
-  { time: "13:45", title: "Атака на буфер сообщений", severity: "critical" },
-  { time: "12:10", title: "Синхронизация завершена", severity: "low" },
-];
-
-const SOURCES = [
-  { id: "radio", label: "Радио", icon: "Radio", count: 3, color: "#34d399" },
-  { id: "camera", label: "Камеры", icon: "Camera", count: 1, color: "#60a5fa" },
-  { id: "mesh", label: "Меш-сеть", icon: "Network", count: 2, color: "#a78bfa" },
-  { id: "inet", label: "Интернет", icon: "Globe", count: 0, color: "#34d399" },
-];
-
-// Узлы на "карте" (радар)
-const MAP_NODES = [
-  { id: "buf1", label: "Буфер", x: 42, y: 52, severity: "critical" as const },
-  { id: "buf2", label: "Буфер #3", x: 38, y: 48, severity: "critical" as const },
-  { id: "fm",   label: "FM 101.2 МГц", x: 50, y: 44, severity: "medium" as const },
-  { id: "mesh", label: "Меш-узел #7", x: 62, y: 50, severity: "medium" as const },
-  { id: "ext",  label: "Внешний IP", x: 74, y: 40, severity: "high" as const },
-];
-
-const EcsuCpvoa = ({ onClose }: { onClose?: () => void }) => {
-  const [incidents, setIncidents] = useState<Incident[]>(INITIAL_INCIDENTS);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [updateCount, setUpdateCount] = useState(1);
-  const [lastUpdate, setLastUpdate] = useState("21:09:21");
-  const [aiQuery, setAiQuery] = useState("");
-  const [showRecommendations, setShowRecommendations] = useState(true);
-  const [newIncident, setNewIncident] = useState({ type: "", description: "", severity: "medium" as Incident["severity"], coords: "", source: "" });
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+const EcsuCpvoa = () => {
+  const [query, setQuery] = useState("");
+  const [incidents, setIncidents] = useState<ApiIncident[]>([]);
+  const [mapDots, setMapDots] = useState<MapDot[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [recentTab, setRecentTab] = useState<"all" | "open" | "closed">("all");
 
   useEffect(() => {
-    if (isPaused) { if (intervalRef.current) clearInterval(intervalRef.current); return; }
-    intervalRef.current = setInterval(() => {
-      const now = new Date();
-      setLastUpdate(`${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}:${String(now.getSeconds()).padStart(2,"0")}`);
-      setUpdateCount(c => c + 1);
-    }, 8000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [isPaused]);
+    fetch(`${INCIDENTS_URL}?action=list&limit=200`)
+      .then((r) => r.json())
+      .then((data) => {
+        const incs: ApiIncident[] = data.incidents || [];
+        setIncidents(incs);
 
-  const addIncident = () => {
-    if (!newIncident.type || !newIncident.description) return;
-    const now = new Date();
-    setIncidents(prev => [{
-      id: Date.now().toString(),
-      ...newIncident,
-      time: `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`,
-    }, ...prev]);
-    setNewIncident({ type: "", description: "", severity: "medium", coords: "", source: "" });
-    setShowAddForm(false);
-  };
+        const byCountry: Record<string, { severity: string }> = {};
+        incs.forEach((inc) => {
+          if (!byCountry[inc.country]) byCountry[inc.country] = { severity: inc.severity };
+          const order = ["critical", "high", "medium", "low"];
+          if (order.indexOf(inc.severity) < order.indexOf(byCountry[inc.country].severity))
+            byCountry[inc.country].severity = inc.severity;
+        });
+        setMapDots(
+          Object.entries(byCountry).map(([country, info]) => {
+            const [x, y] = getXY(country);
+            return { x, y, severity: info.severity, country };
+          })
+        );
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
 
-  const criticalCount = incidents.filter(i => i.severity === "critical").length;
+  const recentFiltered = incidents
+    .filter((inc) => {
+      if (recentTab === "open") return inc.status !== "resolved";
+      if (recentTab === "closed") return inc.status === "resolved";
+      return true;
+    })
+    .slice(0, 8);
 
   return (
-    <div className="flex flex-col h-full bg-[#080c1a] text-white">
+    <div className="min-h-full pb-8 text-white" style={{ background: "#080c1a" }}>
 
-      {/* Поисковая строка ИИ */}
-      <div className="px-4 pt-4 pb-3">
-        <div className="flex items-center gap-2 bg-[#0d1225] border border-blue-900/40 rounded-lg px-3 py-2.5">
+      {/* Поиск */}
+      <div className="px-6 pt-5 pb-4">
+        <div
+          className="flex items-center gap-3 rounded-xl px-4 py-3 border border-blue-900/40"
+          style={{ background: "#0d1225" }}
+        >
+          <Icon name="Search" size={16} className="text-gray-500 shrink-0" />
           <input
-            value={aiQuery}
-            onChange={e => setAiQuery(e.target.value)}
-            placeholder="Введите запрос для анализа через ЦПВОА (например: 'ЦПВОА: проверить аномалии в эфире на 101.2 МГц')"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Введи запрос для поиска через ЦПВОА (например: ЦПВОА, проверить активности в эфире на 192.3 МГц)"
             className="flex-1 bg-transparent text-sm text-gray-300 placeholder-gray-600 outline-none"
           />
-          <button className="w-8 h-8 bg-[#34d399] rounded-lg flex items-center justify-center hover:bg-[#22c55e] transition-colors flex-shrink-0">
-            <Icon name="Search" size={14} className="text-black" />
-          </button>
+          {query && (
+            <button onClick={() => setQuery("")} className="text-gray-600 hover:text-gray-400">
+              <Icon name="X" size={14} />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Быстрые кнопки модулей */}
-      <div className="px-4 pb-3 grid grid-cols-5 gap-2">
+      {/* 5 кнопок действий */}
+      <div className="px-6 mb-6 grid grid-cols-5 gap-3">
         {[
-          { label: "Мониторинг эфира", icon: "Radio", color: "#34d399", bg: "#1a3d2e" },
-          { label: "Визуальный анализ", icon: "Eye", color: "#60a5fa", bg: "#1e3a5f" },
-          { label: "Меш-сеть", icon: "Network", color: "#f59e0b", bg: "#3d2e00" },
-          { label: "Оффлайн-режим", icon: "WifiOff", color: "#94a3b8", bg: "#1e2533" },
-          { label: "Экстренный сигнал", icon: "Siren", color: "#e94560", bg: "#3d1520" },
-        ].map(btn => (
+          { label: "Мониторинг эфира", icon: "Radio", color: "#00c896", bg: "#00c89615" },
+          { label: "Тревожный режим", icon: "ShieldAlert", color: "#60a5fa", bg: "#60a5fa15" },
+          { label: "База сигналов", icon: "Database", color: "#f59e0b", bg: "#f59e0b15" },
+          { label: "Справочная", icon: "BookOpen", color: "#94a3b8", bg: "#94a3b815" },
+          { label: "ЭКСТРЕННЫЙ СИГНАЛ", icon: "Siren", color: "#e94560", bg: "#e9456015" },
+        ].map((btn) => (
           <button
             key={btn.label}
-            className="flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all hover:opacity-80"
+            className="flex flex-col items-center gap-2 py-4 px-2 rounded-2xl border transition-all hover:opacity-80 active:scale-95"
             style={{ background: btn.bg, borderColor: btn.color + "44" }}
           >
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: btn.color + "22" }}>
-              <Icon name={btn.icon} size={16} style={{ color: btn.color }} />
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: btn.color + "22" }}
+            >
+              <Icon name={btn.icon} size={20} style={{ color: btn.color }} />
             </div>
-            <span className="text-[10px] font-medium text-center leading-tight" style={{ color: btn.color }}>{btn.label}</span>
+            <span
+              className="text-[11px] font-semibold text-center leading-tight"
+              style={{ color: btn.color }}
+            >
+              {btn.label}
+            </span>
           </button>
         ))}
       </div>
 
-      {/* Карта инцидентов */}
-      <div className="px-4 pb-3">
-        <div className="bg-[#0a0f1e] border border-blue-900/40 rounded-xl overflow-hidden">
-          {/* Заголовок карты */}
-          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-blue-900/30">
+      {/* Карта инцидентов ЦПВОА */}
+      <div className="px-6 mb-6">
+        <div
+          className="rounded-2xl border border-blue-900/30 overflow-hidden"
+          style={{ background: "#0d1225" }}
+        >
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-blue-900/30">
             <Icon name="Map" size={14} className="text-blue-400" />
-            <span className="text-blue-300 text-xs font-semibold uppercase tracking-wider">Карта инцидентов</span>
-            <span className="px-1.5 py-0.5 bg-blue-900/40 rounded text-[10px] text-blue-400">{incidents.length} точек</span>
-            <span className="px-1.5 py-0.5 bg-[#34d399]/10 border border-[#34d399]/20 rounded text-[10px] text-[#34d399] flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-[#34d399] rounded-full animate-pulse inline-block" />
-              авто-обновление
+            <span className="text-white text-xs font-bold uppercase tracking-widest">
+              Карта инцидентов ЦПВОА
             </span>
-            <span className="text-gray-600 text-[10px] ml-auto">обновл. {updateCount} раз · {lastUpdate}</span>
-            <button
-              onClick={() => setIsPaused(p => !p)}
-              className="px-2 py-0.5 rounded text-[10px] border flex items-center gap-1"
-              style={isPaused
-                ? { background: "#34d399"+"22", borderColor: "#34d399"+"44", color: "#34d399" }
-                : { background: "#f59e0b"+"22", borderColor: "#f59e0b"+"44", color: "#f59e0b" }
-              }
-            >
-              <Icon name={isPaused ? "Play" : "Pause"} size={10} />
-              {isPaused ? "Старт" : "Пауза"}
-            </button>
-            <button
-              onClick={() => setShowAddForm(s => !s)}
-              className="px-2 py-0.5 rounded text-[10px] border border-blue-700/40 text-blue-400 hover:bg-blue-900/30 transition-colors flex items-center gap-1"
-            >
-              <Icon name="Plus" size={10} />
-              Добавить
-            </button>
-            <button className="px-2 py-0.5 rounded text-[10px] border border-gray-700/40 text-gray-500 hover:bg-gray-900/30 transition-colors">
-              Скрыть
-            </button>
+            <span className="ml-2 bg-blue-900/40 text-blue-400 text-[10px] px-2 py-0.5 rounded-full">
+              {mapDots.length} объектов
+            </span>
+            <div className="ml-auto flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
+              </span>
+              <span className="text-green-400 text-[10px] font-mono">LIVE</span>
+            </div>
           </div>
 
-          {/* Визуальная "карта" — эллипс-радар */}
-          <div className="relative bg-[#060b18] h-48 overflow-hidden">
-            {/* Концентрические эллипсы */}
-            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <ellipse cx="50" cy="55" rx="48" ry="30" fill="none" stroke="#1e3a5f" strokeWidth="0.3" />
-              <ellipse cx="50" cy="55" rx="34" ry="21" fill="none" stroke="#1e3a5f" strokeWidth="0.3" />
-              <ellipse cx="50" cy="55" rx="20" ry="13" fill="none" stroke="#1e3a5f" strokeWidth="0.3" />
-              <ellipse cx="50" cy="55" rx="48" ry="30" fill="rgba(30,58,95,0.08)" />
-              {/* Линии сетки */}
-              <line x1="2" y1="55" x2="98" y2="55" stroke="#1e3a5f" strokeWidth="0.2" />
-              <line x1="50" y1="25" x2="50" y2="85" stroke="#1e3a5f" strokeWidth="0.2" />
+          <div
+            className="relative mx-4 my-4 rounded-xl overflow-hidden"
+            style={{ height: 200, background: "#060d1f" }}
+          >
+            {/* Сетка */}
+            <svg className="absolute inset-0 w-full h-full opacity-10">
+              {[...Array(7)].map((_, i) => (
+                <line key={`h${i}`} x1="0" y1={`${i * 17}%`} x2="100%" y2={`${i * 17}%`}
+                  stroke="#60a5fa" strokeWidth="0.5" />
+              ))}
+              {[...Array(10)].map((_, i) => (
+                <line key={`v${i}`} x1={`${i * 11}%`} y1="0" x2={`${i * 11}%`} y2="100%"
+                  stroke="#60a5fa" strokeWidth="0.5" />
+              ))}
             </svg>
-
-            {/* Узлы */}
-            {MAP_NODES.map(node => (
-              <div
-                key={node.id}
-                className="absolute flex flex-col items-center"
-                style={{ left: `${node.x}%`, top: `${node.y}%`, transform: "translate(-50%,-50%)" }}
-              >
+            {/* Континенты */}
+            <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 100 80">
+              <ellipse cx="65" cy="30" rx="27" ry="13" fill="#1e3a5f" />
+              <ellipse cx="20" cy="28" rx="12" ry="11" fill="#1e3a5f" />
+              <ellipse cx="30" cy="58" rx="7" ry="12" fill="#1e3a5f" />
+              <ellipse cx="52" cy="53" rx="8" ry="13" fill="#1e3a5f" />
+              <ellipse cx="80" cy="63" rx="6" ry="5" fill="#1e3a5f" />
+            </svg>
+            {/* Точки */}
+            {mapDots.slice(0, 30).map((dot, i) => {
+              const col = SEV_COLOR[dot.severity] || "#94a3b8";
+              const sz = dot.severity === "critical" ? 8 : dot.severity === "high" ? 7 : 5;
+              return (
                 <div
-                  className="w-4 h-4 rounded-full border-2 animate-pulse"
+                  key={i}
+                  className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${dot.x}%`, top: `${dot.y}%` }}
+                >
+                  <div
+                    className="rounded-full animate-pulse"
+                    style={{
+                      width: sz, height: sz,
+                      background: col,
+                      boxShadow: `0 0 ${sz + 4}px ${col}`,
+                    }}
+                  />
+                </div>
+              );
+            })}
+            {/* Легенда */}
+            <div className="absolute bottom-2 left-3 flex gap-3">
+              {[["#e94560", "Крит."], ["#f59e0b", "Выс."], ["#a78bfa", "Ср."], ["#94a3b8", "Низ."]].map(
+                ([c, l]) => (
+                  <div key={l} className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: c }} />
+                    <span className="text-[9px] text-gray-500">{l}</span>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Секция ИНЦИДЕНТЫ */}
+      <div className="px-6 mb-6">
+        <div
+          className="rounded-2xl border border-blue-900/30 overflow-hidden"
+          style={{ background: "#0d1225" }}
+        >
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-blue-900/30">
+            <Icon name="AlertTriangle" size={14} className="text-red-400" />
+            <span className="text-white text-xs font-bold uppercase tracking-widest">Инциденты</span>
+            <span className="ml-auto text-gray-600 text-[10px]">
+              {incidents.length} записей
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="py-8 text-center text-gray-600 text-sm animate-pulse">Загрузка...</div>
+          ) : (
+            <div className="divide-y divide-white/5 max-h-72 overflow-y-auto">
+              {incidents.slice(0, 12).map((inc) => {
+                const col = SEV_COLOR[inc.severity] || "#94a3b8";
+                const date = inc.created_at?.slice(0, 10).split("-").reverse().join(".") || "—";
+                return (
+                  <div key={inc.id} className="flex items-center gap-3 px-5 py-3 hover:bg-white/5 transition-colors cursor-default">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ background: col, boxShadow: `0 0 5px ${col}` }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-gray-200 text-sm truncate">{inc.title}</div>
+                      <div className="text-gray-500 text-[11px] mt-0.5">
+                        {inc.country} · {date}
+                      </div>
+                    </div>
+                    <span
+                      className="text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0"
+                      style={{ background: col + "22", color: col }}
+                    >
+                      {inc.severity}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Секция ПОСЛЕДНИЕ ДАННЫЕ с вкладками */}
+      <div className="px-6 mb-6">
+        <div
+          className="rounded-2xl border border-blue-900/30 overflow-hidden"
+          style={{ background: "#0d1225" }}
+        >
+          <div className="flex items-center gap-2 px-5 pt-4 pb-3 border-b border-blue-900/30">
+            <Icon name="Clock" size={14} className="text-purple-400" />
+            <span className="text-white text-xs font-bold uppercase tracking-widest">Последние данные</span>
+          </div>
+
+          {/* Вкладки */}
+          <div className="flex gap-1 px-4 py-3 border-b border-blue-900/20">
+            {(["all", "open", "closed"] as const).map((tab) => {
+              const labels = { all: "Все", open: "Открытые", closed: "Закрытые" };
+              const active = recentTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setRecentTab(tab)}
+                  className="px-4 py-1.5 rounded-lg text-xs font-medium transition-all border"
+                  style={
+                    active
+                      ? { background: "#6d28d9", borderColor: "#7c3aed88", color: "#fff" }
+                      : { background: "transparent", borderColor: "#1e3a5f", color: "#6b7280" }
+                  }
+                >
+                  {labels[tab]}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="divide-y divide-white/5 max-h-56 overflow-y-auto">
+            {recentFiltered.map((inc) => {
+              const col = SEV_COLOR[inc.severity] || "#94a3b8";
+              const date = inc.created_at?.slice(0, 10).split("-").reverse().join(".") || "—";
+              return (
+                <div key={inc.id} className="flex items-center gap-3 px-5 py-3 hover:bg-white/5 transition-colors">
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ background: col }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-gray-200 text-sm truncate">{inc.title}</div>
+                    <div className="text-gray-500 text-[11px] mt-0.5">{inc.country} · {date}</div>
+                  </div>
+                  <span
+                    className="text-[10px] px-2 py-0.5 rounded-full shrink-0"
+                    style={{ background: col + "22", color: col }}
+                  >
+                    {inc.status === "resolved" ? "закрыт" : "открыт"}
+                  </span>
+                </div>
+              );
+            })}
+            {recentFiltered.length === 0 && (
+              <div className="py-6 text-center text-gray-600 text-sm">Нет данных</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Стратегические объекты */}
+      <div className="px-6">
+        <div
+          className="rounded-2xl border border-blue-900/30 overflow-hidden"
+          style={{ background: "#0d1225" }}
+        >
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-blue-900/30">
+            <Icon name="Shield" size={14} className="text-yellow-400" />
+            <span className="text-white text-xs font-bold uppercase tracking-widest">
+              Стратегические объекты
+            </span>
+          </div>
+          <div className="divide-y divide-white/5">
+            {STRATEGIC_OBJECTS.map((obj) => (
+              <div key={obj.name} className="flex items-center gap-3 px-5 py-3 hover:bg-white/5 transition-colors">
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{
-                    background: SEVERITY_COLOR[node.severity] + "88",
-                    borderColor: SEVERITY_COLOR[node.severity],
-                    boxShadow: `0 0 8px ${SEVERITY_COLOR[node.severity]}88`,
+                    background: obj.color,
+                    boxShadow: `0 0 6px ${obj.color}`,
                   }}
                 />
-                <span className="text-[8px] mt-0.5 px-1 py-0.5 bg-black/60 rounded whitespace-nowrap" style={{ color: SEVERITY_COLOR[node.severity] }}>
-                  {node.label}
+                <span className="flex-1 text-gray-200 text-sm">{obj.name}</span>
+                <span
+                  className="text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0"
+                  style={{ background: obj.color + "22", color: obj.color }}
+                >
+                  {obj.status === "online"
+                    ? "онлайн"
+                    : obj.status === "warning"
+                    ? "предупр."
+                    : obj.status === "critical"
+                    ? "критично"
+                    : "офлайн"}
                 </span>
               </div>
             ))}
-
-            {/* Критических метка */}
-            {criticalCount > 0 && (
-              <div className="absolute top-2 right-3 flex items-center gap-1 text-[10px] text-[#e94560]">
-                <Icon name="AlertTriangle" size={10} className="text-[#e94560]" />
-                {criticalCount} критических
-              </div>
-            )}
-
-            {/* Легенда */}
-            <div className="absolute bottom-2 left-3 flex items-center gap-3">
-              {["low","medium","high","critical"].map(s => (
-                <div key={s} className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full inline-block" style={{ background: SEVERITY_COLOR[s] }} />
-                  <span className="text-[8px] text-gray-500">{SEVERITY_LABEL[s]}</span>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Форма добавления инцидента */}
-      {showAddForm && (
-        <div className="px-4 pb-3">
-          <div className="bg-[#0d1225] border border-blue-900/40 rounded-xl p-4 space-y-3">
-            <div className="text-sm font-semibold text-blue-300 flex items-center gap-2">
-              <Icon name="Plus" size={14} />
-              Новый инцидент
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <input value={newIncident.type} onChange={e => setNewIncident(p => ({...p, type: e.target.value}))}
-                placeholder="Тип (Визуальный, Радио...)"
-                className="bg-[#060b18] border border-blue-900/30 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-600 outline-none" />
-              <select value={newIncident.severity} onChange={e => setNewIncident(p => ({...p, severity: e.target.value as Incident["severity"]}))}
-                className="bg-[#060b18] border border-blue-900/30 rounded-lg px-3 py-1.5 text-sm text-white outline-none">
-                {["low","medium","high","critical"].map(s => <option key={s} value={s}>{SEVERITY_LABEL[s]}</option>)}
-              </select>
-            </div>
-            <input value={newIncident.description} onChange={e => setNewIncident(p => ({...p, description: e.target.value}))}
-              placeholder="Описание инцидента"
-              className="w-full bg-[#060b18] border border-blue-900/30 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-600 outline-none" />
-            <div className="grid grid-cols-2 gap-2">
-              <input value={newIncident.coords} onChange={e => setNewIncident(p => ({...p, coords: e.target.value}))}
-                placeholder="Координаты (64.5°N 102.6°E)"
-                className="bg-[#060b18] border border-blue-900/30 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-600 outline-none" />
-              <input value={newIncident.source} onChange={e => setNewIncident(p => ({...p, source: e.target.value}))}
-                placeholder="Источник"
-                className="bg-[#060b18] border border-blue-900/30 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-600 outline-none" />
-            </div>
-            <div className="flex gap-2">
-              <button onClick={addIncident} className="flex-1 py-1.5 bg-[#34d399] text-black text-sm font-semibold rounded-lg hover:bg-[#22c55e] transition-colors">Добавить</button>
-              <button onClick={() => setShowAddForm(false)} className="px-4 py-1.5 bg-gray-800 text-gray-400 text-sm rounded-lg hover:bg-gray-700 transition-colors">Отмена</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Список инцидентов */}
-      <div className="px-4 pb-3">
-        <div className="flex items-center gap-2 mb-2">
-          <Icon name="AlertTriangle" size={14} className="text-[#f59e0b]" />
-          <span className="text-sm font-semibold text-white uppercase tracking-wider">Инциденты</span>
-          <span className="w-5 h-5 flex items-center justify-center bg-[#e94560] text-white text-[10px] font-bold rounded-full">{incidents.length}</span>
-        </div>
-        <div className="space-y-2">
-          {incidents.map(inc => (
-            <div key={inc.id} className="bg-[#0a0f1e] border border-blue-900/30 rounded-xl p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-semibold text-gray-300">{inc.type}</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: SEVERITY_COLOR[inc.severity]+"22", color: SEVERITY_COLOR[inc.severity] }}>
-                  {SEVERITY_LABEL[inc.severity]}
-                </span>
-                <span className="text-gray-600 text-[10px] ml-auto">{inc.time}</span>
-              </div>
-              <p className="text-gray-400 text-xs">{inc.description}</p>
-              {(inc.coords || inc.source) && (
-                <div className="flex items-center gap-3 mt-1.5">
-                  {inc.coords && <span className="text-[10px] text-gray-600">{inc.coords}</span>}
-                  {inc.source && (
-                    <span className="flex items-center gap-1 text-[10px] text-blue-400">
-                      <Icon name="Link" size={9} />
-                      {inc.source}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Источники данных */}
-      <div className="px-4 pb-3">
-        <div className="flex items-center gap-2 mb-2">
-          <Icon name="Database" size={14} className="text-blue-400" />
-          <span className="text-sm font-semibold text-white uppercase tracking-wider">Источники данных</span>
-        </div>
-        <div className="grid grid-cols-4 gap-2">
-          {SOURCES.map(src => (
-            <div
-              key={src.id}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl border"
-              style={{ background: src.color + "11", borderColor: src.color + "33" }}
-            >
-              <Icon name={src.icon} size={13} style={{ color: src.color }} />
-              <span className="text-xs text-gray-300">{src.label}</span>
-              {src.count > 0 && (
-                <span className="ml-auto text-[10px] font-bold" style={{ color: src.color }}>{src.count}</span>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Рекомендации */}
-      {showRecommendations && (
-        <div className="px-4 pb-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Icon name="Lightbulb" size={14} className="text-[#f59e0b]" />
-            <span className="text-sm font-semibold text-white uppercase tracking-wider">Рекомендации</span>
-          </div>
-          <div className="space-y-2">
-            {[
-              "Активировать все датчики для подтверждения критического инцидента (узел #буфер)",
-              "Переключить соединение на меш-сеть для обхода потенциально скомпрометированного канала",
-              "Буферизировать исходящие сообщения до завершения верификации источника аномалии",
-            ].map((rec, i) => (
-              <div key={i} className="flex items-start gap-3 bg-[#0a0f1e] border border-blue-900/30 rounded-xl px-4 py-2.5">
-                <span className="w-5 h-5 flex items-center justify-center bg-blue-900/40 text-blue-400 text-[10px] font-bold rounded-full flex-shrink-0 mt-0.5">{i+1}</span>
-                <span className="text-gray-300 text-xs leading-relaxed">{rec}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Хронология аномалий */}
-      <div className="px-4 pb-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Icon name="Clock" size={14} className="text-gray-400" />
-          <span className="text-sm font-semibold text-white uppercase tracking-wider">Хронология аномалий</span>
-        </div>
-        <div className="space-y-1.5">
-          {ANOMALY_HISTORY.map((ev, i) => (
-            <div key={i} className="flex items-center gap-3 px-3 py-2 bg-[#0a0f1e] border border-blue-900/20 rounded-lg">
-              <span className="text-[10px] text-gray-600 w-10 flex-shrink-0">{ev.time}</span>
-              <span
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ background: SEVERITY_COLOR[ev.severity] }}
-              />
-              <span className="text-xs text-gray-300 flex-1">{ev.title}</span>
-              <span
-                className="px-2 py-0.5 rounded-full text-[9px] font-semibold flex-shrink-0"
-                style={{ background: SEVERITY_COLOR[ev.severity]+"22", color: SEVERITY_COLOR[ev.severity] }}
-              >
-                {SEVERITY_LABEL[ev.severity]}
-              </span>
-            </div>
-          ))}
+      <div className="mt-8 px-6 text-center">
+        <div className="text-gray-700 text-[10px]">
+          © 2026 · ЦПВОА · ECSU 2.0 · SYNERGON GLOBAL
         </div>
       </div>
     </div>
