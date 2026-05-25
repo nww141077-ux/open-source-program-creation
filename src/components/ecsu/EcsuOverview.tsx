@@ -49,23 +49,11 @@ interface Stats {
 interface MapDot { country: string; severity: string; x: number; y: number; count: number; }
 interface RecentInc { title: string; country: string; severity: string; created_at: string; }
 
-// Дни недели для гистограммы — фиксированные данные на 17 апреля
 const WEEK_BARS = [
-  { day: "Пн", value: 39, label: "39" },
-  { day: "Вт", value: 8,  label: "8" },
-  { day: "Ср", value: 24, label: "24" },
-  { day: "Чт", value: 16, label: "16" },
-  { day: "Пт", value: 9,  label: "9" },
-  { day: "Сб", value: 34, label: "34" },
-  { day: "Вс", value: 34, label: "34" },
-];
-
-// Типы инцидентов — фиксированные данные на 17 апреля
-const INCIDENT_TYPES = [
-  { label: "Экология", count: 45, pct: 45, color: "#34d399" },
-  { label: "Вода",     count: 25, pct: 25, color: "#60a5fa" },
-  { label: "Воздух",   count: 19, pct: 19, color: "#fbbf24" },
-  { label: "Кибер",    count: 6,  pct: 6,  color: "#e94560" },
+  { day: "Пн", value: 39 }, { day: "Вт", value: 8 },
+  { day: "Ср", value: 24 }, { day: "Чт", value: 16 },
+  { day: "Пт", value: 9  }, { day: "Сб", value: 34 },
+  { day: "Вс", value: 34 },
 ];
 
 const EcsuOverview = () => {
@@ -73,7 +61,7 @@ const EcsuOverview = () => {
   const [mapDots, setMapDots] = useState<MapDot[]>([]);
   const [recent, setRecent]   = useState<RecentInc[]>([]);
   const [loading, setLoading] = useState(true);
-  const [rightTab, setRightTab] = useState<"types" | "map">("types");
+  const [mapMode, setMapMode] = useState<"flat" | "heat">("flat");
 
   useEffect(() => {
     fetch(`${INCIDENTS_URL}?action=stats`)
@@ -97,7 +85,7 @@ const EcsuOverview = () => {
         setMapDots(Object.entries(byCountry).map(([country, info]) => ({
           country, severity: info.severity, count: info.count, ...getCoords(country),
         })));
-        setRecent(incs.slice(0, 6).map((inc: RecentInc & { severity: string }) => ({
+        setRecent(incs.slice(0, 8).map((inc: RecentInc & { severity: string }) => ({
           title: inc.title, country: inc.country,
           severity: inc.severity, created_at: inc.created_at,
         })));
@@ -106,47 +94,23 @@ const EcsuOverview = () => {
       .catch(() => setLoading(false));
   }, []);
 
-  // Статкарточки — по скриншоту 17 апреля
+  const maxBar = Math.max(...WEEK_BARS.map(b => b.value));
+  const activeCount = mapDots.filter(d => d.severity === "critical" || d.severity === "high").length;
+
   const statsCards = [
-    {
-      label: "Всего инцидентов",
-      value: stats ? stats.total.toString() : "...",
-      delta: stats ? `+${stats.critical}%` : "+12%",
-      icon: "AlertTriangle", color: "#e94560",
-      show: true,
-    },
-    {
-      label: "Решено",
-      value: stats ? stats.resolved.toString() : "893",
-      delta: stats ? `+${Math.round(stats.resolved / (stats.total || 1) * 10)}%` : "+12%",
-      icon: "CheckCircle", color: "#00c896",
-      show: true,
-    },
-    {
-      label: "Активных",
-      value: stats ? stats.active.toString() : "241",
-      delta: stats ? `+${stats.high}%` : "+6%",
-      icon: "Activity", color: "#f59e0b",
-      show: true,
-    },
-    {
-      label: "Стран-участниц",
-      value: stats ? stats.countries.toString() : "47",
-      delta: "+2",
-      icon: "Globe", color: "#60a5fa",
-      show: true,
-    },
+    { label: "Всего инцидентов", value: stats ? stats.total.toString() : "...", delta: stats ? `+${stats.critical}%` : "+12%", icon: "AlertTriangle", color: "#e94560" },
+    { label: "Решено",           value: stats ? stats.resolved.toString() : "...", delta: stats ? `+${Math.round(stats.resolved / (stats.total || 1) * 10)}%` : "+8%", icon: "CheckCircle", color: "#00c896" },
+    { label: "Активных",         value: stats ? stats.active.toString() : "...", delta: stats ? `-${stats.high}%` : "-3%", icon: "Activity", color: "#f59e0b" },
+    { label: "Стран-участниц",   value: stats ? stats.countries.toString() : "...", delta: "+2", icon: "Globe", color: "#a78bfa" },
   ];
 
-  const maxBar = Math.max(...WEEK_BARS.map(b => b.value));
-
   return (
-    <div className="flex flex-col min-h-full">
-      {/* ═══ Шапка ═══ */}
-      <div className="px-6 pt-4 pb-2 flex items-center justify-between">
+    <div className="flex flex-col min-h-full pb-6">
+
+      {/* Шапка */}
+      <div className="px-4 pt-3 pb-2 flex items-center justify-between">
         <div>
-          <div className="text-gray-500 text-xs uppercase tracking-widest">СИСТЕМЫ</div>
-          <div className="text-gray-600 text-xs">регионы</div>
+          <div className="text-gray-500 text-[10px] uppercase tracking-widest">Апрель 2026 · Все регионы</div>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
@@ -154,208 +118,194 @@ const EcsuOverview = () => {
         </div>
       </div>
 
-      {/* ═══ Стат-карточки (4 штуки как на скриншоте) ═══ */}
-      <div className="px-6 mb-4">
-        <div className="grid grid-cols-4 gap-3">
+      {/* Карточки 2×2 */}
+      <div className="px-4 mb-4">
+        <div className="grid grid-cols-2 gap-3">
           {statsCards.map((s) => (
             <div key={s.label}
-              className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-4 relative overflow-hidden">
-              <div className="flex items-center justify-between mb-1">
-                <Icon name={s.icon} size={16} style={{ color: s.color }} />
+              className="bg-[#0d1225] border border-blue-900/30 rounded-2xl p-4 relative overflow-hidden">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                  style={{ background: s.color + "22" }}>
+                  <Icon name={s.icon} size={16} style={{ color: s.color }} />
+                </div>
                 <span className="text-xs font-bold" style={{ color: s.color }}>{s.delta}</span>
               </div>
-              <div className="text-3xl font-black text-white leading-tight mt-1"
-                style={{ color: s.color }}>{s.value}</div>
+              <div className="text-3xl font-black leading-tight" style={{ color: s.color }}>
+                {s.value}
+              </div>
               <div className="text-gray-500 text-xs mt-1">{s.label}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ═══ Нижняя двухколонная зона ═══ */}
-      <div className="flex gap-4 px-6 flex-1 pb-0">
-
-        {/* Левая колонка: гистограмма + инциденты */}
-        <div className="flex-1 min-w-0 flex flex-col gap-4">
-
-          {/* Гистограмма — «За неделю» */}
-          <div className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-4">
-            <div className="text-gray-400 text-xs font-medium uppercase tracking-wide mb-3">
-              За неделю
-            </div>
-            <div className="flex items-end gap-2" style={{ height: 120 }}>
-              {WEEK_BARS.map((b) => {
-                const h = Math.max(8, (b.value / maxBar) * 100);
-                return (
-                  <div key={b.day} className="flex-1 flex flex-col items-center gap-1">
-                    <div className="text-gray-400 text-[10px] font-mono">{b.label}</div>
-                    <div
-                      className="w-full rounded-t-md relative overflow-hidden"
-                      style={{
-                        height: h,
-                        background: "linear-gradient(180deg, #60a5fa55 0%, #a78bfa44 50%, #e9456033 100%)",
-                        border: "1px solid #60a5fa33",
-                      }}
-                    >
-                      {/* Штриховка */}
-                      <div className="absolute inset-0"
-                        style={{
-                          backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(96,165,250,0.08) 3px, rgba(96,165,250,0.08) 4px)",
-                        }}
-                      />
-                    </div>
-                    <div className="text-gray-600 text-[9px]">{b.day}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Список инцидентов */}
-          <div className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-4 flex-1">
-            <div className="text-gray-400 text-xs font-medium uppercase tracking-wide mb-3 flex items-center gap-2">
-              <Icon name="AlertTriangle" size={12} className="text-blue-400" />
-              Не инциденты
-            </div>
-            <div className="space-y-2">
-              {loading ? (
-                <div className="text-gray-600 text-xs animate-pulse">Загрузка...</div>
-              ) : recent.map((e, i) => {
-                const color = dotColor[e.severity as keyof typeof dotColor] || "#94a3b8";
-                return (
-                  <div key={i}
-                    className="flex items-center gap-3 py-1.5 border-b border-white/5 last:border-0">
-                    <span className="text-gray-600 text-xs font-mono w-16 shrink-0">
-                      {e.created_at?.slice(0, 10).split("-").reverse().join(".")}
-                    </span>
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0"
-                      style={{ background: color, boxShadow: `0 0 4px ${color}` }} />
-                    <span className="text-gray-300 text-xs truncate flex-1">{e.title}</span>
-                    <span
-                      className="text-[10px] px-2 py-0.5 rounded font-semibold shrink-0"
-                      style={{ background: color + "22", color }}
-                    >
-                      Активен
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Правая колонка: По типам + карта */}
-        <div className="w-72 shrink-0 flex flex-col gap-4">
-
-          {/* По типам */}
-          <div className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-4">
+      {/* Карта инцидентов */}
+      <div className="px-4 mb-4">
+        <div className="bg-[#0d1225] border border-blue-900/30 rounded-2xl overflow-hidden">
+          {/* Заголовок карты */}
+          <div className="px-4 pt-4 pb-3">
             <div className="flex items-center justify-between mb-3">
-              <div className="text-white font-bold text-sm">По типам</div>
-              <div className="flex gap-1">
-                {(["types", "map"] as const).map(t => (
-                  <button key={t}
-                    onClick={() => setRightTab(t)}
-                    className="text-[10px] px-2 py-0.5 rounded transition-all"
-                    style={rightTab === t
-                      ? { background: "#1e3a5f", color: "#60a5fa" }
-                      : { color: "#4b5563" }
-                    }
-                  >
-                    {t === "types" ? "Типы" : "Карта"}
-                  </button>
+              <div className="flex items-center gap-2">
+                <Icon name="Map" size={14} className="text-purple-400" />
+                <span className="text-white font-bold text-sm tracking-wide">КАРТА ИНЦИДЕНТОВ</span>
+                <span className="bg-purple-900/40 text-purple-400 text-[10px] px-2 py-0.5 rounded-full">
+                  {mapDots.length} объектов
+                </span>
+              </div>
+            </div>
+            {/* Переключатели */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMapMode("flat")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                style={mapMode === "flat"
+                  ? { background: "#6d28d9", color: "#fff" }
+                  : { background: "#1a1f35", color: "#6b7280" }}
+              >
+                <Icon name="Map" size={11} />
+                Плоская
+              </button>
+              <button
+                onClick={() => setMapMode("heat")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                style={mapMode === "heat"
+                  ? { background: "#6d28d9", color: "#fff" }
+                  : { background: "#1a1f35", color: "#6b7280" }}
+              >
+                <Icon name="Flame" size={11} />
+                Тепловая
+              </button>
+              {/* Легенда */}
+              <div className="flex items-center gap-2 ml-auto">
+                {[["#e94560","Крит."],["#f59e0b","Выс."],["#a78bfa","Ср."],["#94a3b8","Низ."]].map(([c,l]) => (
+                  <div key={l} className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full" style={{ background: c }} />
+                    <span className="text-[9px] text-gray-500">{l}</span>
+                  </div>
                 ))}
               </div>
             </div>
-
-            {rightTab === "types" && (
-              <div className="space-y-3">
-                {INCIDENT_TYPES.map(t => (
-                  <div key={t.label}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-gray-400 text-xs">{t.label}</span>
-                      <span className="text-xs font-bold" style={{ color: t.color }}>
-                        {t.count} ({t.pct}%)
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-700"
-                        style={{ width: `${t.pct}%`, background: t.color }}
-                      />
-                    </div>
-                  </div>
-                ))}
-                <button className="text-gray-600 text-xs mt-1 hover:text-gray-400 transition-colors">
-                  Все →
-                </button>
-              </div>
-            )}
-
-            {rightTab === "map" && (
-              <div className="relative bg-[#060d1f] rounded-lg overflow-hidden" style={{ height: 160 }}>
-                <svg className="absolute inset-0 w-full h-full opacity-10">
-                  {[...Array(6)].map((_, i) => (
-                    <line key={`h${i}`} x1="0" y1={`${i*20}%`} x2="100%" y2={`${i*20}%`} stroke="#60a5fa" strokeWidth="0.5" />
-                  ))}
-                  {[...Array(6)].map((_, i) => (
-                    <line key={`v${i}`} x1={`${i*20}%`} y1="0" x2={`${i*20}%`} y2="100%" stroke="#60a5fa" strokeWidth="0.5" />
-                  ))}
-                </svg>
-                {mapDots.slice(0, 20).map((dot, i) => {
-                  const color = dotColor[dot.severity as keyof typeof dotColor] || "#94a3b8";
-                  const size = (dotSize[dot.severity as keyof typeof dotSize] || 8) * 0.7;
-                  return (
-                    <div key={i}
-                      className="absolute transform -translate-x-1/2 -translate-y-1/2"
-                      style={{ left: `${dot.x}%`, top: `${dot.y}%` }}>
-                      <div className="rounded-full animate-pulse"
-                        style={{ width: size, height: size, background: color, boxShadow: `0 0 6px ${color}` }} />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
 
-          {/* Список активных инцидентов справа (как на скриншоте) */}
-          <div className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-4 flex-1">
-            <div className="space-y-1.5">
-              {loading ? (
-                <div className="text-gray-600 text-xs animate-pulse">Загрузка...</div>
-              ) : recent.slice(0, 6).map((e, i) => {
-                const color = dotColor[e.severity as keyof typeof dotColor] || "#94a3b8";
-                return (
-                  <div key={i}
-                    className="flex items-center justify-between py-1 border-b border-white/5 last:border-0 gap-2">
-                    <span className="text-gray-400 text-[10px] truncate flex-1">{e.country}</span>
-                    <span
-                      className="text-[9px] px-1.5 py-0.5 rounded font-semibold shrink-0"
-                      style={{ background: color + "22", color }}
-                    >
-                      Активен
-                    </span>
-                    <Icon name="ChevronRight" size={10} className="text-gray-700 shrink-0" />
-                  </div>
-                );
-              })}
+          {/* Сама карта */}
+          <div className="relative mx-4 mb-3 bg-[#060d1f] rounded-xl overflow-hidden" style={{ height: 200 }}>
+            {/* Сетка */}
+            <svg className="absolute inset-0 w-full h-full opacity-10">
+              {[...Array(8)].map((_, i) => (
+                <line key={`h${i}`} x1="0" y1={`${i*14}%`} x2="100%" y2={`${i*14}%`} stroke="#60a5fa" strokeWidth="0.5" />
+              ))}
+              {[...Array(10)].map((_, i) => (
+                <line key={`v${i}`} x1={`${i*11}%`} y1="0" x2={`${i*11}%`} y2="100%" stroke="#60a5fa" strokeWidth="0.5" />
+              ))}
+            </svg>
+
+            {/* Континенты (упрощённые блоки) */}
+            <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 100 80">
+              {/* Евразия */}
+              <ellipse cx="65" cy="32" rx="28" ry="14" fill="#1e3a5f" />
+              {/* Северная Америка */}
+              <ellipse cx="20" cy="30" rx="13" ry="12" fill="#1e3a5f" />
+              {/* Южная Америка */}
+              <ellipse cx="30" cy="60" rx="8" ry="13" fill="#1e3a5f" />
+              {/* Африка */}
+              <ellipse cx="52" cy="55" rx="9" ry="14" fill="#1e3a5f" />
+              {/* Австралия */}
+              <ellipse cx="80" cy="65" rx="7" ry="6" fill="#1e3a5f" />
+            </svg>
+
+            {/* Точки */}
+            {mapDots.slice(0, 25).map((dot, i) => {
+              const color = dotColor[dot.severity as keyof typeof dotColor] || "#94a3b8";
+              const size = mapMode === "heat"
+                ? (dotSize[dot.severity as keyof typeof dotSize] || 8) * 1.8
+                : (dotSize[dot.severity as keyof typeof dotSize] || 8);
+              const opacity = mapMode === "heat" ? 0.4 : 1;
+              return (
+                <div key={i}
+                  className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${dot.x}%`, top: `${dot.y}%` }}>
+                  <div
+                    className="rounded-full animate-pulse"
+                    style={{ width: size, height: size, background: color, boxShadow: `0 0 ${size}px ${color}`, opacity }}
+                  />
+                </div>
+              );
+            })}
+
+            {/* Подсказка */}
+            <div className="absolute bottom-2 left-3 text-gray-600 text-[9px]">
+              Нажми на точку → детали и видео
+            </div>
+            <div className="absolute bottom-2 right-3 text-gray-600 text-[9px]">
+              {activeCount} активных · пульсируют
             </div>
           </div>
         </div>
       </div>
 
-      {/* ═══ Футер — обновлён до 20 мая 2026 ═══ */}
-      <footer className="mt-6 px-6 py-4 border-t border-blue-900/20 text-center">
-        <div className="text-gray-700 text-[10px]">
-          © 20 мая 2026 · ECSU 2.0 · Все права защищены
+      {/* Инциденты за неделю */}
+      <div className="px-4 mb-4">
+        <div className="bg-[#0d1225] border border-blue-900/30 rounded-2xl p-4">
+          <div className="text-gray-400 text-xs font-bold uppercase tracking-wide mb-3">
+            Инциденты за неделю
+          </div>
+          <div className="flex items-end gap-1.5" style={{ height: 80 }}>
+            {WEEK_BARS.map((b) => {
+              const h = Math.max(6, (b.value / maxBar) * 70);
+              return (
+                <div key={b.day} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="text-[9px] text-gray-500">{b.value}</div>
+                  <div className="w-full rounded-t-sm relative overflow-hidden"
+                    style={{ height: h, background: "linear-gradient(180deg,#3b82f6,#1e3a5f)" }}>
+                    <div className="absolute inset-0"
+                      style={{ backgroundImage: "repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(96,165,250,0.08) 3px,rgba(96,165,250,0.08) 4px)" }}
+                    />
+                  </div>
+                  <div className="text-gray-600 text-[9px]">{b.day}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div className="text-gray-800 text-[9px] mt-0.5">
-          Платформа разработана группой компаний Николаева. Все операции фиксируются.
-          Несанкционированный доступ запрещён.
+      </div>
+
+      {/* Список инцидентов */}
+      <div className="px-4">
+        <div className="bg-[#0d1225] border border-blue-900/30 rounded-2xl p-4">
+          <div className="text-gray-400 text-xs font-bold uppercase tracking-wide mb-3 flex items-center gap-2">
+            <Icon name="AlertTriangle" size={12} className="text-blue-400" />
+            Последние инциденты
+          </div>
+          <div className="space-y-2">
+            {loading ? (
+              <div className="text-gray-600 text-xs animate-pulse py-4 text-center">Загрузка...</div>
+            ) : recent.map((e, i) => {
+              const color = dotColor[e.severity as keyof typeof dotColor] || "#94a3b8";
+              return (
+                <div key={i}
+                  className="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
+                  <span className="w-2 h-2 rounded-full shrink-0 mt-0.5"
+                    style={{ background: color, boxShadow: `0 0 4px ${color}` }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-gray-300 text-xs truncate">{e.title}</div>
+                    <div className="text-gray-600 text-[10px] mt-0.5">{e.country} · {e.created_at?.slice(0,10).split("-").reverse().join(".")}</div>
+                  </div>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full font-semibold shrink-0"
+                    style={{ background: color + "22", color }}>
+                    Активен
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div className="text-gray-800 text-[9px] mt-0.5">
-          Программа TahkaOS · Фоновая программа ECSU · v2.0.5 · обновлено 20.05.2026
-        </div>
-      </footer>
+      </div>
+
+      {/* Футер */}
+      <div className="mt-6 px-4 text-center">
+        <div className="text-gray-700 text-[9px]">© 2026 · ECSU 2.0 · SYNERGON GLOBAL · Николаев В.В.</div>
+      </div>
     </div>
   );
 };
