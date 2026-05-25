@@ -36,8 +36,7 @@ const SettingsTab = () => {
         );
         setEdited(flat);
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      });
   }, []);
 
   const save = async (key: string) => {
