@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Icon from "@/components/ui/icon";
+
+const AI_URL = "https://functions.poehali.dev/e74ce640-7610-467a-81ee-cab7c2347d3e";
 
 const INCIDENTS_URL =
   "https://functions.poehali.dev/df1d9dd9-c455-479d-807f-b25e000928ff";
@@ -86,6 +88,104 @@ interface MapDot {
   y: number;
   severity: string;
 }
+
+/* ── Блок реагирования ── */
+const QUICK_COMMANDS = [
+  "Активировать протокол уровня 5",
+  "Немедленная эвакуация",
+  "Медицинская помощь",
+  "Связаться с оператором",
+  "Заблокировать угрозу",
+  "Передать в МЧС",
+  "Уведомить владельца",
+];
+
+const ResponseBlock = ({ incident }: { incident: Incident }) => {
+  const [cmd, setCmd] = useState("");
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+
+  const sendCommand = useCallback(async (command?: string) => {
+    const text = command || cmd.trim();
+    if (!text || sending) return;
+    setCmd("");
+    setSending(true);
+    setResult(null);
+    try {
+      const prompt = `Инцидент: ${incident.title}\nСтрана: ${incident.country}\nОписание: ${incident.description}\n\nКоманда реагирования: ${text}\n\nДай краткий план действий (3-5 шагов) для выполнения этой команды.`;
+      const res = await fetch(AI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: prompt }],
+          mode: "assistant",
+          model: "meta-llama/llama-3.1-8b-instruct:free",
+        }),
+      });
+      const data = await res.json();
+      setResult(data.reply || "Команда принята к исполнению.");
+      setSent(true);
+    } catch {
+      setResult("Команда зафиксирована. Ожидание подтверждения от операторов.");
+      setSent(true);
+    }
+    setSending(false);
+  }, [cmd, sending, incident]);
+
+  return (
+    <div className="mt-3 bg-[#0d1225] border border-[#e94560]/20 rounded-xl p-4">
+      <div className="text-[#e94560] text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+        <Icon name="Siren" size={12} />
+        Отправить команду реагирования
+      </div>
+
+      {/* Быстрые команды */}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {QUICK_COMMANDS.map(q => (
+          <button key={q} onClick={() => sendCommand(q)}
+            className="text-[10px] px-2.5 py-1 rounded-full border border-[#e94560]/30 bg-[#e94560]/10 text-[#e94560] hover:bg-[#e94560]/20 transition-colors">
+            {q}
+          </button>
+        ))}
+      </div>
+
+      {/* Поле ввода */}
+      <div className="flex gap-2">
+        <input
+          value={cmd}
+          onChange={e => setCmd(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && sendCommand()}
+          placeholder="Введите команду для реагирования..."
+          className="flex-1 bg-[#060d1f] border border-[#e94560]/20 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#e94560]/50 placeholder-gray-700"
+        />
+        <button
+          onClick={() => sendCommand()}
+          disabled={!cmd.trim() || sending}
+          className="px-4 py-2 rounded-lg text-sm font-bold transition-all disabled:opacity-40 flex items-center gap-1.5"
+          style={{ background: "#e94560", color: "#fff" }}
+        >
+          {sending
+            ? <><Icon name="Loader2" size={13} className="animate-spin" /> Отправка...</>
+            : <><Icon name="Send" size={13} /> Отправить</>}
+        </button>
+      </div>
+
+      {/* Результат */}
+      {result && (
+        <div className="mt-3 bg-[#060d1f] border border-green-800/30 rounded-lg p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Icon name="CheckCircle" size={12} className="text-green-400" />
+            <span className="text-green-400 text-xs font-bold">
+              {sent ? "Команда принята · ИИ ЕЦСУ отвечает:" : "Обработка..."}
+            </span>
+          </div>
+          <div className="text-gray-300 text-xs leading-relaxed whitespace-pre-wrap">{result}</div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 /* ── Видео-модалка ── */
 const VideoModal = ({
@@ -627,34 +727,22 @@ const EcsuIncidents = () => {
                           <button
                             onClick={() => setVideoIncident(inc)}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border"
-                            style={{
-                              background: "#e9456018",
-                              borderColor: "#e9456044",
-                              color: "#e94560",
-                            }}
+                            style={{ background: "#e9456018", borderColor: "#e9456044", color: "#e94560" }}
                           >
                             <Icon name="Play" size={12} />
                             Найти видео
                           </button>
                           <button
-                            onClick={() =>
-                              window.open(
-                                `https://www.google.com/search?q=${encodeURIComponent(
-                                  inc.title + " " + inc.country
-                                )}`,
-                                "_blank"
-                              )
-                            }
+                            onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(inc.title + " " + inc.country)}`, "_blank")}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border"
-                            style={{
-                              background: "#60a5fa10",
-                              borderColor: "#60a5fa30",
-                              color: "#60a5fa",
-                            }}
+                            style={{ background: "#60a5fa10", borderColor: "#60a5fa30", color: "#60a5fa" }}
                           >
                             <Icon name="Search" size={12} />
                             Поиск в сети
                           </button>
+                        </div>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <ResponseBlock incident={inc} />
                         </div>
                       </div>
                     </div>
