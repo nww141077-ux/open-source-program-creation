@@ -1,10 +1,25 @@
 {
   "tests": [
     {
-      "name": "ИИ-ассистент отвечает",
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "ИИ-ассистент режим assistant",
       "method": "POST",
       "path": "/",
-      "body": {"messages": [{"role": "user", "content": "Покажи текущие настройки системы"}]},
+      "body": {"messages": [{"role": "user", "content": "Привет, кто ты?"}], "mode": "assistant", "model": "meta-llama/llama-3.1-8b-instruct:free"},
+      "expectedStatus": 200,
+      "expectedBody": {"reply": "string"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "ИИ-ассистент режим analytics",
+      "method": "POST",
+      "path": "/",
+      "body": {"messages": [{"role": "user", "content": "Статистика инцидентов"}], "mode": "analytics", "model": "meta-llama/llama-3.1-8b-instruct:free"},
       "expectedStatus": 200,
       "expectedBody": {"reply": "string"},
       "bodyMatcher": "partial"

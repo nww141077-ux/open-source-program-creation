@@ -22,7 +22,8 @@ const GatewayTab = () => {
         setGatewayUrl(url);
         setGatewayEnabled(enabled);
         setTimeout_(t);
-      });
+      })
+      .catch(() => {});
   }, []);
 
   const checkConnection = async () => {

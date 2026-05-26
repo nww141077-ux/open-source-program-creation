@@ -17,22 +17,20 @@ import EcsuCpvoa from "@/components/ecsu/EcsuCpvoa";
 import EcsuMusonSync from "@/components/ecsu/EcsuMusonSync";
 import EcsuTahkaOS from "@/components/ecsu/EcsuTahkaOS";
 import EcsuOwner from "@/components/ecsu/EcsuOwner";
-import EcsuKovcheg from "@/components/ecsu/EcsuKovcheg";
-import EcsuAbsorption from "@/components/ecsu/EcsuAbsorption";
 import EcsuUpdateManager from "@/components/ecsu/EcsuUpdateManager";
 import EcsuGraphium from "@/components/ecsu/EcsuGraphium";
 
 type Section =
   | "overview" | "incidents" | "forecast" | "analytics"
   | "organs" | "security" | "license" | "loader" | "settings"
-  | "finance" | "dalan" | "tahka" | "admin" | "owner" | "graphium" | "cpvoa" | "kovcheg" | "absorption";
+  | "finance" | "dalan" | "tahka" | "admin" | "owner" | "graphium" | "cpvoa";
 
 // ── Верхняя навигация (цветные таблетки)
 const topNavItems: { id: Section | "cpvoa" | "updates" | "uved" | "vozm" | "admin_btn"; label: string; icon: string; color: string; bg: string; adminOnly?: boolean }[] = [
   { id: "cpvoa",     label: "ЦПВОА",        icon: "Radar",           color: "#34d399", bg: "#1a3d2e" },
   { id: "uved",      label: "Уведомления",  icon: "Bell",            color: "#f59e0b", bg: "#2d2a14" },
   { id: "analytics", label: "Аналитика",    icon: "BarChart2",       color: "#a78bfa", bg: "#2d1f4a" },
-  { id: "absorption", label: "Поглощение",  icon: "Zap",             color: "#e94560", bg: "#3d1520" },
+  { id: "organs",    label: "Поглощение",   icon: "Zap",             color: "#e94560", bg: "#3d1520" },
   { id: "finance",   label: "Финансы",      icon: "DollarSign",      color: "#fbbf24", bg: "#3d2e00", adminOnly: true },
   { id: "owner",     label: "Владелец",     icon: "Crown",           color: "#f97316", bg: "#3d1f00" },
   { id: "license",   label: "Правовая база",icon: "Scale",           color: "#60a5fa", bg: "#1e3a5f" },
@@ -237,15 +235,6 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
                 <span className={`text-[11px] font-medium ${active === "owner" ? "text-orange-300" : "text-gray-600 group-hover:text-gray-400"}`}>Владелец</span>
               </button>
               <button
-                onClick={() => setActive("kovcheg")}
-                className={`flex items-center gap-2.5 px-4 py-2 text-left transition-all group ${
-                  active === "kovcheg" ? "bg-cyan-900/20 border-r-2 border-cyan-500" : "hover:bg-white/5 border-r-2 border-transparent"
-                }`}
-              >
-                <Icon name="Anchor" size={13} className={active === "kovcheg" ? "text-cyan-400" : "text-gray-600 group-hover:text-gray-400"} />
-                <span className={`text-[11px] font-medium ${active === "kovcheg" ? "text-cyan-300" : "text-gray-600 group-hover:text-gray-400"}`}>Ковчег</span>
-              </button>
-              <button
                 onClick={() => setActive("tahka")}
                 className={`flex items-center gap-2.5 px-4 py-2 text-left transition-all group ${
                   active === "tahka" ? "bg-red-900/20 border-r-2 border-red-500" : "hover:bg-white/5 border-r-2 border-transparent"
@@ -290,9 +279,7 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
           {active === "tahka"     && <EcsuTahkaOS />}
           {active === "owner"     && <EcsuOwner />}
           {active === "graphium"  && <EcsuGraphium />}
-          {active === "cpvoa"      && <EcsuCpvoa />}
-          {active === "kovcheg"   && <EcsuKovcheg />}
-          {active === "absorption" && <EcsuAbsorption />}
+          {active === "cpvoa"     && <EcsuCpvoa />}
         </div>
       </div>
 
