@@ -20,13 +20,6 @@
       "path": "/?action=dalan",
       "expectedStatus": 200,
       "bodyMatcher": "partial"
-    },
-    {
-      "name": "Получить магазин модулей",
-      "method": "GET",
-      "path": "/?action=store",
-      "expectedStatus": 200,
-      "bodyMatcher": "partial"
     }
   ]
 }

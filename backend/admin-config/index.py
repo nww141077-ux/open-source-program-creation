@@ -90,35 +90,6 @@ def handler(event: dict, context) -> dict:
             conn.commit()
             return {"statusCode": 200, "headers": headers, "body": json.dumps({"ok": True})}
 
-        # GET ?action=store
-        if method == "GET" and action == "store":
-            cur.execute(f"SELECT id, name, description, category, version, size, icon, popular, installed FROM {SCHEMA}.store_modules ORDER BY category, name")
-            rows = cur.fetchall()
-            modules = [
-                {"id": r[0], "name": r[1], "description": r[2], "category": r[3],
-                 "version": r[4], "size": r[5], "icon": r[6], "popular": bool(r[7]), "installed": bool(r[8])}
-                for r in rows
-            ]
-            return {"statusCode": 200, "headers": headers, "body": json.dumps(modules, ensure_ascii=False)}
-
-        # POST ?action=store_install
-        if method == "POST" and action == "store_install":
-            body = json.loads(event.get("body") or "{}")
-            mod_id = body.get("id")
-            installed = body.get("installed", True)
-            if installed:
-                cur.execute(
-                    f"UPDATE {SCHEMA}.store_modules SET installed=true, installed_at=now(), updated_at=now() WHERE id=%s",
-                    (mod_id,)
-                )
-            else:
-                cur.execute(
-                    f"UPDATE {SCHEMA}.store_modules SET installed=false, installed_at=null, updated_at=now() WHERE id=%s",
-                    (mod_id,)
-                )
-            conn.commit()
-            return {"statusCode": 200, "headers": headers, "body": json.dumps({"ok": True})}
-
         return {"statusCode": 404, "headers": headers, "body": json.dumps({"error": "Unknown action"})}
 
     finally:
