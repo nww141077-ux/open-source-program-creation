@@ -27,10 +27,9 @@ const BackupTab = () => {
     fetch(`${BACKUP_URL}?action=list`)
       .then((r) => r.json())
       .then((data) => {
-        setBackups(Array.isArray(data) ? data : []);
+        setBackups(data);
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      });
   };
 
   useEffect(() => { load(); }, []);
