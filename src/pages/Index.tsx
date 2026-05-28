@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Zap, ArrowRight, X, Eye, EyeOff } from "lucide-react";
 import NexaflowDashboard from "@/components/nexaflow/NexaflowDashboard";
 
@@ -20,7 +20,7 @@ export default function Index() {
   // owner login state
   const [ownerPassword, setOwnerPassword] = useState("");
   const [ownerError, setOwnerError] = useState("");
-  const [ownerTaps, setOwnerTaps] = useState(0);
+  const ownerTapsRef = useRef(0);
   const [showOwnerModal, setShowOwnerModal] = useState(false);
 
   // user form state
@@ -33,10 +33,9 @@ export default function Index() {
 
   // тап по логотипу 5 раз — показывает вход владельца
   const handleLogoTap = () => {
-    const next = ownerTaps + 1;
-    setOwnerTaps(next);
-    if (next >= 5) {
-      setOwnerTaps(0);
+    ownerTapsRef.current += 1;
+    if (ownerTapsRef.current >= 5) {
+      ownerTapsRef.current = 0;
       setShowOwnerModal(true);
     }
   };
