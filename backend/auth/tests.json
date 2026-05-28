@@ -1,0 +1,31 @@
+{
+  "tests": [
+    {
+      "name": "Login existing user",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "login", "email": "test_nx_2026@example.com", "password": "test123"},
+      "expectedStatus": 200,
+      "expectedBody": {"role": "user"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Wrong password",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "login", "email": "test_nx_2026@example.com", "password": "wrongpass"},
+      "expectedStatus": 401,
+      "expectedBody": {},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Empty fields",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "register", "name": "", "email": "", "password": ""},
+      "expectedStatus": 400,
+      "expectedBody": {},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
