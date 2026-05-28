@@ -41,7 +41,7 @@ export default function Index() {
   };
 
   const handleOwnerLogin = () => {
-    if (ownerPassword === "nww.") {
+    if (ownerPassword === "nww") {
       setSession({ name: "Владимир", role: "owner", token: "owner" });
       setShowOwnerModal(false);
       setOwnerPassword("");
