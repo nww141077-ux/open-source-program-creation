@@ -4,8 +4,8 @@ import Icon from "@/components/ui/icon";
 const CONFIG_URL = "https://functions.poehali.dev/744a3183-098e-4b3a-8b5b-c27893d57779";
 
 const GatewayTab = () => {
-  const [gatewayUrl, setGatewayUrl] = useState("http://5.129.207.35:7749");
-  const [gatewayEnabled, setGatewayEnabled] = useState(true);
+  const [gatewayUrl, setGatewayUrl] = useState("");
+  const [gatewayEnabled, setGatewayEnabled] = useState(false);
   const [timeout, setTimeout_] = useState("5");
   const [status, setStatus] = useState<"idle" | "checking" | "online" | "offline">("idle");
   const [saving, setSaving] = useState(false);
