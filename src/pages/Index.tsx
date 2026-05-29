@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
-import { Zap, ArrowRight, X, Eye, EyeOff } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Zap, ArrowRight, X, Eye, EyeOff, Shield } from "lucide-react";
 import NexaflowDashboard from "@/components/nexaflow/NexaflowDashboard";
 
 const AUTH_URL = "https://functions.poehali.dev/ffe35261-9869-478f-8361-946fa981b34a";
@@ -14,6 +15,7 @@ interface UserSession {
 }
 
 export default function Index() {
+  const navigate = useNavigate();
   const [screen, setScreen] = useState<Screen>("landing");
   const [session, setSession] = useState<UserSession | null>(null);
 
@@ -115,10 +117,13 @@ export default function Index() {
                 Активен
               </div>
             </div>
-            <div className="bg-[#111827] border border-white/5 rounded-xl p-4 mb-6 text-center">
-              <div className="text-gray-500 text-xs">Функции платформы</div>
-              <div className="text-gray-400 text-sm mt-1">Скоро будут доступны</div>
-            </div>
+            <button
+              onClick={() => navigate("/ecsu")}
+              className="w-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 font-semibold py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2 mb-3"
+            >
+              <Shield size={16} />
+              Перейти в ЕЦСУ
+            </button>
             <button
               onClick={() => setSession(null)}
               className="w-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-semibold py-3 rounded-xl transition-colors text-sm"
@@ -177,6 +182,13 @@ export default function Index() {
               className="w-full bg-white/5 border border-white/10 text-white font-semibold py-4 rounded-xl text-base"
             >
               Войти в аккаунт
+            </button>
+            <button
+              onClick={() => navigate("/ecsu")}
+              className="w-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 font-semibold py-4 rounded-xl text-base flex items-center justify-center gap-2 transition-colors"
+            >
+              <Shield size={18} />
+              Открыть ЕЦСУ
             </button>
           </div>
         </main>
