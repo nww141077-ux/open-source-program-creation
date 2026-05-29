@@ -1,0 +1,13 @@
+{
+  "tests": [
+    {
+      "name": "ИИ-ассистент отвечает",
+      "method": "POST",
+      "path": "/",
+      "body": {"messages": [{"role": "user", "content": "Покажи текущие настройки системы"}]},
+      "expectedStatus": 200,
+      "expectedBody": {"reply": "string"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

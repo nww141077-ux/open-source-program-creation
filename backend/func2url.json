@@ -1,3 +1,5 @@
 {
-  "auth": "https://functions.poehali.dev/ffe35261-9869-478f-8361-946fa981b34a"
+  "admin-ai": "https://functions.poehali.dev/e74ce640-7610-467a-81ee-cab7c2347d3e",
+  "admin-config": "https://functions.poehali.dev/744a3183-098e-4b3a-8b5b-c27893d57779",
+  "admin-backup": "https://functions.poehali.dev/b98bd499-c703-43f7-a948-a79106a3d313"
 }
