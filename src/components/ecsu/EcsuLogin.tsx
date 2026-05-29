@@ -10,7 +10,7 @@ export default function EcsuLogin({ onLogin }: Props) {
   const [error, setError] = useState("");
 
   const handleLogin = () => {
-    if (password === "nww.") {
+    if (password === "2134") {
       onLogin();
     } else {
       setError("Доступ запрещён");
