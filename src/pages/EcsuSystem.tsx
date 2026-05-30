@@ -66,7 +66,7 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
           </div>
           <div>
             <div className="text-white font-bold text-xs leading-tight">ЦЕНТР ЗАДАЧ (ЦЗ)</div>
-            <div className="text-blue-400 text-[10px]">ECSU 2.0 · Аналитика</div>
+            <div className="text-blue-400 text-[10px]">ЕЦСУ · Аналитика</div>
           </div>
         </div>
         <div className="flex gap-1 overflow-x-auto">

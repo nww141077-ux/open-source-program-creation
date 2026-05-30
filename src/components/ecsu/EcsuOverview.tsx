@@ -2,12 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
-const now = new Date();
-const hour = now.getHours();
-const greeting = hour < 12 ? "Доброе утро" : hour < 18 ? "Добрый день" : "Добрый вечер";
-const dateStr = now.toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-const timeStr = now.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-
 const MODULES = [
   {
     id: "complaints", icon: "FileText", color: "#6366f1", bg: "#6366f110",
@@ -93,7 +87,13 @@ const SYSTEM_STATUS = [
 
 export default function EcsuOverview() {
   const navigate = useNavigate();
-  const [time, setTime] = useState(timeStr);
+  const getGreeting = () => {
+    const h = new Date().getHours();
+    return h < 12 ? "Доброе утро" : h < 18 ? "Добрый день" : "Добрый вечер";
+  };
+  const [time, setTime] = useState(() =>
+    new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+  );
   const [activeTab, setActiveTab] = useState<"civil" | "modules">("civil");
 
   useEffect(() => {
@@ -109,7 +109,7 @@ export default function EcsuOverview() {
       {/* Приветствие */}
       <div className="text-center mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">
-          {greeting}, <span style={{ color: "#00c896" }}>Владимир</span>
+          {getGreeting()}, <span style={{ color: "#00c896" }}>Владимир</span>
         </h1>
         <p className="text-gray-500 text-sm">
           ЕЦСУ 2.0 · Единая Централизованная Система Управления · Николаев В.В.
