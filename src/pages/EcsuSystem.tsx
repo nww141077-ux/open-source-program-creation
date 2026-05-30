@@ -30,7 +30,7 @@ const topNav = [
   { label: "Уведомления",  route: "/ecsu/notifications",  section: null },
   { label: "Аналитика",    route: null,                   section: "analytics" as Section },
   { label: "Финансы",      route: "/ecsu/finance",        section: null },
-  { label: "Владелец",     route: null,                   section: "owner" as Section },
+  { label: "Владелец",     route: "/ecsu/owner",          section: null },
   { label: "Правовая база",route: "/ecsu/legal",          section: null },
   { label: "Инциденты",    route: null,                   section: "incidents" as Section },
   { label: "Органы ЕЦСУ",  route: null,                   section: "organs" as Section },

@@ -1,0 +1,7 @@
+{
+  "tests": [
+    {"name": "Owner profile", "method": "GET", "path": "/owner", "expectedStatus": 200, "expectedBody": {"owner_name": "string"}, "bodyMatcher": "partial"},
+    {"name": "Owner settings", "method": "GET", "path": "/owner/settings", "expectedStatus": 200},
+    {"name": "Access log", "method": "GET", "path": "/owner/access-log", "expectedStatus": 200}
+  ]
+}
