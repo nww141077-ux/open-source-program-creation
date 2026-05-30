@@ -150,40 +150,40 @@ export default function Index() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] text-white flex flex-col">
+    <div className="min-h-screen text-white flex flex-col" style={{ background: "linear-gradient(160deg, #071a12 0%, #0a1a0f 40%, #080f1a 100%)" }}>
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-4">
         <button onClick={handleLogoTap} className="flex items-center gap-2 select-none">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #a855f7, #3b82f6)" }}>
-            <Shield size={18} className="text-white" />
+          <div className="w-9 h-9 bg-green-400 rounded-xl flex items-center justify-center">
+            <Zap size={18} className="text-black" />
           </div>
           <span className="font-bold text-white text-lg tracking-wide">ЕЦСУ 2.0</span>
         </button>
         <button
-          onClick={() => { resetForm(); setScreen("login"); }}
-          className="text-xs text-gray-500 hover:text-gray-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5 border border-white/10"
+          onClick={() => { resetForm(); setScreen("register"); }}
+          className="bg-gradient-to-r from-green-400 to-teal-400 text-black font-bold px-4 py-2 rounded-xl text-sm"
         >
-          Войти
+          Начать бесплатно
         </button>
       </header>
 
       {/* Landing */}
       {screen === "landing" && (
-        <main className="flex-1 flex flex-col px-5 pt-8 pb-10">
-          <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-full px-3 py-1.5 mb-6 self-start">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-            <span className="text-purple-400 text-xs font-medium">Цифровая платформа управления нового поколения</span>
+        <main className="flex-1 flex flex-col px-5 pt-6 pb-10">
+          <div className="inline-flex items-center gap-2 bg-green-500/15 border border-green-500/30 rounded-full px-3 py-1.5 mb-8 self-start">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-green-400 text-xs font-medium">Платформа управления нового поколения</span>
           </div>
-          <h1 className="text-5xl font-black leading-none mb-6">
-            <span className="text-white">ЕДИНАЯ</span><br />
-            <span className="bg-gradient-to-r from-purple-400 to-blue-500 bg-clip-text text-transparent">ЦЕНТРАЛЬНАЯ</span><br />
-            <span className="text-gray-500">СИСТЕМА</span><br />
-            <span className="text-gray-600">УПРАВЛЕНИЯ</span>
+          <h1 className="font-black leading-none mb-8" style={{ fontSize: "clamp(2.8rem,12vw,4rem)" }}>
+            <span className="text-white">ОБЪЕДИНИТЕ</span><br />
+            <span className="bg-gradient-to-r from-green-400 to-purple-500 bg-clip-text text-transparent">ВСЁ В ОДНОМ</span><br />
+            <span className="text-gray-500">ПОТОКЕ</span><br />
+            <span className="text-gray-600">ДАННЫХ</span>
           </h1>
           <p className="text-gray-400 text-base leading-relaxed mb-10">
-            ЕЦСУ 2.0 — платформа для мониторинга, верификации и реагирования на инциденты в сфере экологии, кибербезопасности и прав человека. Правообладатель: Николаев Владимир Владимирович.
+            ЕЦСУ 2.0 — единая платформа для мониторинга, верификации и управления данными в реальном времени. Правообладатель: Николаев Владимир Владимирович.
           </p>
-          <div className="bg-[#111827] border border-white/10 rounded-2xl p-5 flex flex-col gap-3">
+          <div className="bg-[#111827]/80 border border-white/10 rounded-2xl p-5 flex flex-col gap-3">
             <button
               onClick={() => { resetForm(); setScreen("register"); }}
               className="w-full bg-gradient-to-r from-green-400 to-teal-400 text-black font-bold py-4 rounded-xl text-base flex items-center justify-center gap-2"
