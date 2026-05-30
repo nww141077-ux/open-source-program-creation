@@ -1,0 +1,8 @@
+{
+  "tests": [
+    {"name": "Stats", "method": "GET", "path": "/", "expectedStatus": 200, "expectedBody": {"stats": {}}, "bodyMatcher": "partial"},
+    {"name": "Jurisdictions", "method": "GET", "path": "/jurisdictions", "expectedStatus": 200},
+    {"name": "Documents", "method": "GET", "path": "/documents", "expectedStatus": 200},
+    {"name": "Articles by doc", "method": "GET", "path": "/articles?document_id=1", "expectedStatus": 200}
+  ]
+}
