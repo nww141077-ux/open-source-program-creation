@@ -192,9 +192,9 @@ export default function EgsuOwner() {
 
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: "Непрочитанных\nуведомлений", val: owner.stats.unread_notifications, icon: "Bell", color: "#f59e0b" },
-                  { label: "Угроз за 24ч", val: owner.stats.threats_today, icon: "ShieldAlert", color: "#f43f5e" },
-                  { label: "Транзакций за 24ч", val: owner.stats.transactions_today, icon: "ArrowLeftRight", color: "#3b82f6" },
+                  { label: "Непрочитанных\nуведомлений", val: owner.stats?.unread_notifications ?? 0, icon: "Bell", color: "#f59e0b" },
+                  { label: "Угроз за 24ч", val: owner.stats?.threats_today ?? 0, icon: "ShieldAlert", color: "#f43f5e" },
+                  { label: "Транзакций за 24ч", val: owner.stats?.transactions_today ?? 0, icon: "ArrowLeftRight", color: "#3b82f6" },
                 ].map(k => (
                   <div key={k.label} className="p-4 rounded-2xl"
                     style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${k.color}20` }}>
@@ -207,7 +207,7 @@ export default function EgsuOwner() {
                 ))}
               </div>
 
-              {owner.last_access.length > 0 && (
+              {(owner.last_access?.length ?? 0) > 0 && (
                 <div className="p-5 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   <div className="font-display text-sm font-bold text-white/50 uppercase tracking-widest mb-3">Последние действия</div>
                   <div className="space-y-2">
