@@ -36,6 +36,7 @@ const topNav = [
   { label: "Органы ЕЦСУ",  route: null,                   section: "organs" as Section },
   { label: "Безопасность", route: null,                   section: "security" as Section },
   { label: "Dalan ИИ",     route: null,                   section: "dalan" as Section },
+  { label: "Сообщить",    route: "/ecsu/report",         section: null },
 ];
 
 interface Props {

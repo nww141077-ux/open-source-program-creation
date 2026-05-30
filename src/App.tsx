@@ -10,6 +10,7 @@ import EcsuFinance from "./pages/EcsuFinance";
 import EgsuLegal from "./pages/EgsuLegal";
 import EgsuNotifications from "./pages/EgsuNotifications";
 import EgsuOwner from "./pages/EgsuOwner";
+import EgsuReport from "./pages/EgsuReport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/ecsu/legal" element={<EgsuLegal />} />
           <Route path="/ecsu/notifications" element={<EgsuNotifications />} />
           <Route path="/ecsu/owner" element={<EgsuOwner />} />
+          <Route path="/ecsu/report" element={<EgsuReport />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
