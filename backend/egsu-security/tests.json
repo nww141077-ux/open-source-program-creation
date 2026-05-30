@@ -1,0 +1,7 @@
+{
+  "tests": [
+    {"name": "Security stats", "method": "GET", "path": "/", "expectedStatus": 200, "expectedBody": {"mode": "absorption"}, "bodyMatcher": "partial"},
+    {"name": "Events list", "method": "GET", "path": "/events", "expectedStatus": 200},
+    {"name": "Blocked IPs", "method": "GET", "path": "/blocked", "expectedStatus": 200}
+  ]
+}
