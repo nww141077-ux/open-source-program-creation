@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Bell, LayoutDashboard, Link2, User, Plus, Activity, Clock, Zap,
   Trash2, X, CheckCircle, AlertCircle, LogOut,
@@ -44,6 +45,7 @@ const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 interface Props { onLogout: () => void; }
 
 export default function NexaflowDashboard({ onLogout }: Props) {
+  const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState("dashboard");
   const [flows, setFlows] = useState<Flow[]>([]);
   const [showAddFlow, setShowAddFlow] = useState(false);
@@ -256,67 +258,26 @@ export default function NexaflowDashboard({ onLogout }: Props) {
             </>
           )}
 
-          {/* ECSU */}
+          {/* ECSU — переход в систему */}
           {activeNav === "ecsu" && (
-            <>
-              <div className="mb-6">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Shield size={20} className="text-green-400" /> ECSU — Система контроля
-                </h2>
-                <p className="text-gray-500 text-sm mt-1">Мониторинг платформы NEXAFLOW · 2026</p>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
+              <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center shadow-lg shadow-blue-900/50">
+                <Shield size={40} className="text-white" />
               </div>
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                {[
-                  { label: "Статус системы",    value: "Онлайн",  color: "text-green-400",  dot: "bg-green-400"  },
-                  { label: "Уровень защиты",    value: "Высокий", color: "text-blue-400",   dot: "bg-blue-400"   },
-                  { label: "Активных угроз",    value: "0",       color: "text-yellow-400", dot: "bg-yellow-400" },
-                  { label: "Версия платформы",  value: "1.0.0",   color: "text-purple-400", dot: "bg-purple-400" },
-                ].map(s => (
-                  <div key={s.label} className="bg-[#1a1d27] rounded-xl p-4 border border-white/5">
-                    <div className={`w-2 h-2 rounded-full ${s.dot} mb-2`} />
-                    <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
-                    <div className="text-gray-400 text-xs mt-1">{s.label}</div>
-                  </div>
-                ))}
+              <div className="text-center">
+                <div className="text-white font-black text-3xl tracking-widest mb-1">ЕЦСУ 2.0</div>
+                <div className="text-blue-400 text-xs tracking-[0.2em] uppercase">Система контроля · 2026</div>
               </div>
-              <div className="bg-[#1a1d27] border border-white/5 rounded-xl p-4 mb-4">
-                <div className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-                  <Shield size={15} className="text-green-400" /> Системный журнал
-                </div>
-                <div className="space-y-2">
-                  {[
-                    { msg: "Платформа запущена успешно",             level: "ok"   },
-                    { msg: "Авторизован: Владимир (Владелец)",        level: "ok"   },
-                    { msg: `Активных потоков: ${activeCount}`,        level: "info" },
-                    { msg: "Угроз не обнаружено",                     level: "ok"   },
-                  ].map((log, i) => (
-                    <div key={i} className="flex items-center gap-3 bg-[#0f1117] rounded-lg px-3 py-2">
-                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${log.level === "ok" ? "bg-green-400" : "bg-blue-400"}`} />
-                      <span className="text-gray-500 text-xs w-16 flex-shrink-0">{new Date().toLocaleTimeString("ru-RU")}</span>
-                      <span className="text-gray-300 text-xs">{log.msg}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="bg-[#1a1d27] border border-white/5 rounded-xl p-4">
-                <div className="text-white font-semibold text-sm mb-3">Информация о платформе</div>
-                <div className="space-y-0 text-xs">
-                  {[
-                    ["Платформа",  "NEXAFLOW"],
-                    ["Владелец",   "Владимир"],
-                    ["Год",        "2026"],
-                    ["Домен",      settings.domain    || "не указан"],
-                    ["Email",      settings.email     || "не указан"],
-                    ["Сервер",     settings.serverUrl || "не указан"],
-                  ].map(([k, v]) => (
-                    <div key={k} className="flex justify-between py-2 border-b border-white/5 last:border-0">
-                      <span className="text-gray-500">{k}</span>
-                      <span className="text-gray-300">{v}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
+              <button
+                onClick={() => navigate("/ecsu")}
+                className="flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-base transition-all hover:scale-105"
+                style={{ background: "linear-gradient(135deg, #3b82f6, #a855f7)", color: "white" }}
+              >
+                <Shield size={20} />
+                Открыть ЕЦСУ
+              </button>
+              <p className="text-gray-600 text-xs">Николаев В.В. · 2026</p>
+            </div>
           )}
 
           {/* SETTINGS */}
