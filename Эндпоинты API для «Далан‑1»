@@ -1,0 +1,81 @@
+app = FastAPI(title="Dalan-1 Global Coordination System")
+
+@app.post("/api/v1/dalan1/incident")
+async def receive_incident(incident: Incident):
+    """Приём инцидента от национального ИИ"""
+    result = await dalan1.process_incident(incident)
+    return result
+
+@app.get("/api/v1/dalan1/global-dashboard")
+async def global_dashboard():
+    """Глобальная панель мониторинга"""
+    stats = {
+        "total_incidents":
+@app.get("/api/v1/dalan1/global-dashboard")
+async def global_dashboard():
+    """Глобальная панель мониторинга"""
+    stats = {
+        "total_incidents": len(dalan1.global_knowledge_base),
+        "active_conflicts": len([c for c in dalan1.conflict_log if c.resolution_strategy != "Resolved"]),
+        "by_region": {},
+        "by_category": {},
+        "criticality_distribution": {
+            "high": 0,
+            "medium": 0,
+            "low": 0
+        }
+    }
+
+    # Подсчёт статистики по регионам и категориям
+    for incident in dalan1.global_knowledge_base.values():
+        # Статистика по регионам
+        region = incident.source_agent
+        stats["by_region"][region] = stats["by_region"].get(region, 0) + 1
+
+        # Статистика по категориям
+        category = incident.category
+        stats["by_category"][category] = stats["by_category"].get(category, 0) + 1
+
+        # Распределение по критичности
+        if incident.criticality >= 0.7:
+            stats["criticality_distribution"]["high"] += 1
+        elif incident.criticality >= 0.4:
+            stats["criticality_distribution"]["medium"] += 1
+        else:
+            stats["criticality_distribution"]["low"] += 1
+
+    return stats
+
+@app.get("/api/v1/dalan1/incidents")
+async def get_all_incidents():
+    """Получение всех инцидентов с фильтрацией"""
+    return list(dalan1.global_knowledge_base.values())
+
+@app.post("/api/v1/dalan1/command")
+async def issue_global_command(command: Dict):
+    """«Далан‑1» отдаёт глобальные команды агентам"""
+    target_agent = command.get("target_agent")
+    command_type = command.get("command_type")
+
+    if target_agent and target_agent in dalan1.agents:
+        agent_url = dalan1.agents[target_agent]
+        # Здесь будет отправка HTTP‑запроса к национальному ИИ
+        # response = await httpx.post(f"{agent_url}/command", json=command)
+        return {"status": "command_sent", "target": target_agent, "command": command_type}
+    else:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+@app.get("/api/v1/dalan1/conflicts")
+async def get_conflicts():
+    """Просмотр всех конфликтов и их статусов"""
+    return dalan1.conflict_log
+
+@app.post("/api/v1/dalan1/health-check")
+async def health_check():
+    """Проверка работоспособности системы"""
+    return {
+        "status": "healthy",
+        "agents_online": len(dalan1.agents),
+        "incidents_processed": len(dalan1.global_knowledge_base),
+        "last_update": datetime.utcnow()
+    }
