@@ -1,0 +1,5 @@
+{
+  "tests": [
+    {"name": "List notifications", "method": "GET", "path": "/notifications", "expectedStatus": 200}
+  ]
+}
