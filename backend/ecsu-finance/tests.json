@@ -1,0 +1,9 @@
+{
+  "tests": [
+    {"name": "Stats", "method": "GET", "path": "/", "expectedStatus": 200, "expectedBody": {"accounts": 0}, "bodyMatcher": "partial"},
+    {"name": "Accounts list", "method": "GET", "path": "/accounts", "expectedStatus": 200},
+    {"name": "Cards list", "method": "GET", "path": "/cards", "expectedStatus": 200},
+    {"name": "Transactions list", "method": "GET", "path": "/transactions", "expectedStatus": 200},
+    {"name": "Rules list", "method": "GET", "path": "/rules", "expectedStatus": 200}
+  ]
+}
