@@ -1,17 +1,12 @@
-import { useState } from "react";
-import EcsuLogin from "@/components/ecsu/EcsuLogin";
+import { useNavigate } from "react-router-dom";
 import EcsuSystem from "./EcsuSystem";
 
 export default function EcsuPage() {
-  const [authenticated, setAuthenticated] = useState(false);
-
-  if (!authenticated) {
-    return <EcsuLogin onLogin={() => setAuthenticated(true)} />;
-  }
+  const navigate = useNavigate();
 
   return (
     <EcsuSystem
-      onLogout={() => setAuthenticated(false)}
+      onLogout={() => navigate("/")}
       role="admin"
       userName="Николаев В.В."
     />
