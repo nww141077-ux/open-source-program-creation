@@ -154,10 +154,10 @@ export default function Index() {
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-4">
         <button onClick={handleLogoTap} className="flex items-center gap-2 select-none">
-          <div className="w-9 h-9 bg-green-400 rounded-xl flex items-center justify-center">
+          <div className="w-9 h-9 bg-green-500 rounded-xl flex items-center justify-center">
             <Zap size={18} className="text-black" />
           </div>
-          <span className="font-bold text-white text-lg tracking-wide">ЕЦСУ 2.0</span>
+          <span className="font-bold text-white text-lg tracking-wide">NEXAFLOW</span>
         </button>
         <button
           onClick={() => { resetForm(); setScreen("register"); }}
@@ -170,18 +170,18 @@ export default function Index() {
       {/* Landing */}
       {screen === "landing" && (
         <main className="flex-1 flex flex-col px-5 pt-6 pb-10">
-          <div className="inline-flex items-center gap-2 bg-green-500/15 border border-green-500/30 rounded-full px-3 py-1.5 mb-8 self-start">
+          <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-full px-3 py-1.5 mb-6 self-start">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-green-400 text-xs font-medium">Платформа управления нового поколения</span>
+            <span className="text-green-400 text-xs font-medium">Платформа интеграций нового поколения</span>
           </div>
-          <h1 className="font-black leading-none mb-8" style={{ fontSize: "clamp(2.8rem,12vw,4rem)" }}>
+          <h1 className="text-5xl font-black leading-none mb-6">
             <span className="text-white">ОБЪЕДИНИТЕ</span><br />
             <span className="bg-gradient-to-r from-green-400 to-purple-500 bg-clip-text text-transparent">ВСЁ В ОДНОМ</span><br />
             <span className="text-gray-500">ПОТОКЕ</span><br />
             <span className="text-gray-600">ДАННЫХ</span>
           </h1>
           <p className="text-gray-400 text-base leading-relaxed mb-10">
-            ЕЦСУ 2.0 — единая платформа для мониторинга, верификации и управления данными в реальном времени. Правообладатель: Николаев Владимир Владимирович.
+            NexaFlow — единая платформа для интеграции всех ваших сервисов, автоматизации процессов и управления данными в реальном времени.
           </p>
           <div className="bg-[#111827]/80 border border-white/10 rounded-2xl p-5 flex flex-col gap-3">
             <button
@@ -318,10 +318,10 @@ export default function Index() {
       {screen === "landing" && (
         <footer className="px-5 py-6 border-t border-white/5 flex flex-col items-center gap-2">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Shield size={12} className="text-white" />
+            <div className="w-6 h-6 bg-green-500 rounded-lg flex items-center justify-center">
+              <Zap size={12} className="text-black" />
             </div>
-            <span className="font-bold text-white text-sm tracking-wide">ЕЦСУ 2.0</span>
+            <span className="font-bold text-white text-sm tracking-wide">NEXAFLOW</span>
           </div>
           <p className="text-gray-700 text-xs">© 2026 Николаев В.В. Все права защищены.</p>
         </footer>
