@@ -274,7 +274,7 @@ export default function Index() {
             <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mb-3">
               <Zap size={22} className="text-black" />
             </div>
-            <div className="text-xl font-bold text-white">Вход в NEXAFLOW</div>
+            <div className="text-xl font-bold text-white">Вход в ЕЦСУ 2.0</div>
             <div className="text-gray-500 text-sm mt-1">Введите данные аккаунта</div>
           </div>
           <div className="bg-[#1a1d27] border border-white/10 rounded-2xl p-6 flex flex-col gap-3">
@@ -318,33 +318,36 @@ export default function Index() {
       {screen === "landing" && (
         <footer className="px-5 py-6 border-t border-white/5 flex flex-col items-center gap-2">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-green-500 rounded-lg flex items-center justify-center">
-              <Zap size={12} className="text-black" />
+            <div className="w-6 h-6 bg-blue-600 rounded-lg flex items-center justify-center">
+              <Shield size={12} className="text-white" />
             </div>
-            <span className="font-bold text-white text-sm tracking-wide">NEXAFLOW</span>
+            <span className="font-bold text-white text-sm tracking-wide">ЕЦСУ 2.0</span>
           </div>
-          <p className="text-gray-700 text-xs">© 2026 NexaFlow. Все права защищены.</p>
+          <p className="text-gray-700 text-xs">© 2026 Николаев В.В. Все права защищены.</p>
         </footer>
       )}
 
-      {/* Модальный вход владельца (5 тапов по логотипу) */}
+      {/* Вход владельца (5 тапов по логотипу) — полноэкранный */}
       {showOwnerModal && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center px-4 z-50">
-          <div className="w-full max-w-xs">
-            <div className="bg-[#1a1d27] border border-green-500/20 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                    <Zap size={15} className="text-black" />
-                  </div>
-                  <div>
-                    <div className="text-white font-bold text-sm">Владелец</div>
-                    <div className="text-gray-600 text-xs">Приватный вход</div>
-                  </div>
-                </div>
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-between px-6 py-12" style={{ background: "#0a0f1e" }}>
+          {/* Логотип */}
+          <div className="flex flex-col items-center gap-3 mt-8">
+            <div className="w-20 h-20 rounded-3xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-900/50">
+              <Shield size={40} className="text-white" />
+            </div>
+            <div className="text-white font-black text-4xl tracking-widest mt-2">ECSU</div>
+            <div className="text-blue-400 text-xs font-semibold tracking-[0.25em] uppercase">Система контроля · 2026</div>
+          </div>
+
+          {/* Форма */}
+          <div className="w-full max-w-sm">
+            <div className="bg-[#111827] border border-white/10 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-white font-bold text-lg">Авторизация</div>
                 <button onClick={() => { setShowOwnerModal(false); setOwnerPassword(""); setOwnerError(""); }}
                   className="text-gray-600 hover:text-white"><X size={18} /></button>
               </div>
+              <div className="text-gray-500 text-sm mb-5">Только для владельца системы</div>
               <input
                 type="password"
                 value={ownerPassword}
@@ -352,14 +355,26 @@ export default function Index() {
                 onKeyDown={e => e.key === "Enter" && handleOwnerLogin()}
                 placeholder="Пароль"
                 autoFocus
-                className="w-full bg-[#0f1117] border border-white/10 text-white rounded-lg px-4 py-3 mb-3 focus:outline-none focus:border-green-500/50 placeholder-gray-600"
+                className="w-full bg-[#0d1117] border border-white/10 text-white rounded-xl px-4 py-4 mb-3 focus:outline-none focus:border-blue-500/50 placeholder-gray-600 text-base"
               />
-              {ownerError && <div className="text-red-400 text-sm mb-3">{ownerError}</div>}
-              <button onClick={handleOwnerLogin}
-                className="w-full bg-green-500 hover:bg-green-400 text-black font-semibold py-3 rounded-lg transition-colors">
-                Войти
+              {ownerError && (
+                <div className="text-red-400 text-sm mb-3 flex items-center gap-2">
+                  <span>⊘</span> Доступ запрещён
+                </div>
+              )}
+              <button
+                onClick={handleOwnerLogin}
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors text-base"
+              >
+                {loading ? "Проверка..." : "Войти в систему"}
               </button>
             </div>
+          </div>
+
+          {/* Футер */}
+          <div className="text-gray-600 text-xs tracking-widest text-center">
+            SYNERGON GLOBAL · Николаев В.В. · 2026
           </div>
         </div>
       )}
