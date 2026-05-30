@@ -8,9 +8,10 @@ import EcsuFinance from "@/components/ecsu/EcsuFinance";
 import EcsuOrgans from "@/components/ecsu/EcsuOrgans";
 import EcsuSecurity from "@/components/ecsu/EcsuSecurity";
 import EcsuDalan from "@/components/ecsu/EcsuDalan";
+import EcsuOwner from "@/components/ecsu/EcsuOwner";
 import AdminPanel from "@/components/AdminPanel";
 
-type Section = "overview" | "incidents" | "analytics" | "finance" | "organs" | "security" | "dalan" | "admin";
+type Section = "overview" | "incidents" | "analytics" | "finance" | "organs" | "security" | "dalan" | "owner" | "admin";
 
 const allNavItems: { id: Section; label: string; icon: string; color?: string; adminOnly?: boolean }[] = [
   { id: "overview", label: "Обзор", icon: "LayoutDashboard" },
@@ -20,16 +21,18 @@ const allNavItems: { id: Section; label: string; icon: string; color?: string; a
   { id: "organs", label: "Органы ECSU", icon: "Network" },
   { id: "security", label: "Безопасность", icon: "Shield", adminOnly: true },
   { id: "dalan", label: "Dalan ИИ", icon: "Brain", color: "#e94560", adminOnly: true },
+  { id: "owner", label: "Владелец", icon: "Crown", color: "#FFD700", adminOnly: true },
   { id: "admin", label: "Администратор", icon: "Settings2", color: "#FFD700", adminOnly: true },
 ];
 
 const topNav = [
   { label: "ЦПВОА",        route: null,                   section: "overview" as Section },
   { label: "Уведомления",  route: "/ecsu/notifications",  section: null },
+  { label: "Аналитика",    route: null,                   section: "analytics" as Section },
   { label: "Финансы",      route: "/ecsu/finance",        section: null },
+  { label: "Владелец",     route: null,                   section: "owner" as Section },
   { label: "Правовая база",route: "/ecsu/legal",          section: null },
   { label: "Инциденты",    route: null,                   section: "incidents" as Section },
-  { label: "Аналитика",    route: null,                   section: "analytics" as Section },
   { label: "Органы ЕЦСУ",  route: null,                   section: "organs" as Section },
   { label: "Безопасность", route: null,                   section: "security" as Section },
   { label: "Dalan ИИ",     route: null,                   section: "dalan" as Section },
@@ -142,6 +145,7 @@ const EcsuSystem = ({ onLogout, role, userName }: Props) => {
           {active === "organs" && <EcsuOrgans />}
           {active === "security" && <EcsuSecurity />}
           {active === "dalan" && <EcsuDalan />}
+          {active === "owner" && <EcsuOwner />}
         </div>
       </div>
     </div>
