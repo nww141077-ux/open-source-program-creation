@@ -152,56 +152,124 @@ export default function Index() {
   return (
     <div className="min-h-screen text-white flex flex-col" style={{ background: "linear-gradient(160deg, #071a12 0%, #0a1a0f 40%, #080f1a 100%)" }}>
       {/* Header */}
-      <header className="flex items-center justify-between px-5 py-4">
+      <header className="flex items-center justify-between px-5 md:px-10 py-4">
         <button onClick={handleLogoTap} className="flex items-center gap-2 select-none">
           <div className="w-9 h-9 bg-green-500 rounded-xl flex items-center justify-center">
             <Zap size={18} className="text-black" />
           </div>
           <span className="font-bold text-white text-lg tracking-wide">NEXAFLOW</span>
         </button>
-        <button
-          onClick={() => { resetForm(); setScreen("register"); }}
-          className="bg-gradient-to-r from-green-400 to-teal-400 text-black font-bold px-4 py-2 rounded-xl text-sm"
-        >
-          Начать бесплатно
-        </button>
+        {/* Десктопное меню */}
+        <nav className="hidden md:flex items-center gap-6">
+          {["Возможности", "Интеграции", "Тарифы"].map(item => (
+            <button key={item} className="text-gray-400 hover:text-white text-sm transition-colors">{item}</button>
+          ))}
+        </nav>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => { resetForm(); setScreen("login"); }}
+            className="hidden md:block text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Войти
+          </button>
+          <button
+            onClick={() => { resetForm(); setScreen("register"); }}
+            className="bg-gradient-to-r from-green-400 to-teal-400 text-black font-bold px-4 py-2 rounded-xl text-sm"
+          >
+            Начать бесплатно
+          </button>
+        </div>
       </header>
 
       {/* Landing */}
       {screen === "landing" && (
-        <main className="flex-1 flex flex-col px-5 pt-6 pb-10">
-          <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-full px-3 py-1.5 mb-6 self-start">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-green-400 text-xs font-medium">Платформа интеграций нового поколения</span>
+        <main className="flex-1 flex flex-col md:flex-row items-center px-5 md:px-10 pt-6 pb-10 gap-10">
+          {/* Левая колонка */}
+          <div className="flex-1 flex flex-col max-w-xl">
+            <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-full px-3 py-1.5 mb-6 self-start">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-green-400 text-xs font-medium">Платформа интеграций нового поколения</span>
+            </div>
+            <h1 className="text-5xl md:text-6xl font-black leading-none mb-6">
+              <span className="text-white">ОБЪЕДИНИТЕ</span><br />
+              <span className="bg-gradient-to-r from-green-400 to-purple-500 bg-clip-text text-transparent">ВСЁ В ОДНОМ</span><br />
+              <span className="text-gray-500">ПОТОКЕ</span><br />
+              <span className="text-gray-600">ДАННЫХ</span>
+            </h1>
+            <p className="text-gray-400 text-base leading-relaxed mb-8">
+              NexaFlow — единая платформа для интеграции всех ваших сервисов, автоматизации процессов и управления данными в реальном времени.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
+              <button
+                onClick={() => { resetForm(); setScreen("register"); }}
+                className="bg-gradient-to-r from-green-400 to-teal-400 text-black font-bold py-3 px-6 rounded-xl text-base flex items-center justify-center gap-2"
+              >
+                Попробовать бесплатно <ArrowRight size={18} />
+              </button>
+              <button
+                onClick={() => navigate("/ecsu")}
+                className="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 font-semibold py-3 px-6 rounded-xl text-base flex items-center justify-center gap-2 transition-colors"
+              >
+                <Shield size={18} />
+                Открыть ЕЦСУ
+              </button>
+            </div>
+            <div className="flex items-center gap-5 text-xs text-gray-600">
+              <span className="flex items-center gap-1.5"><span className="text-green-500">✓</span> 14 дней бесплатно</span>
+              <span className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Без карты</span>
+              <span className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Отмена в любое время</span>
+            </div>
           </div>
-          <h1 className="text-5xl font-black leading-none mb-6">
-            <span className="text-white">ОБЪЕДИНИТЕ</span><br />
-            <span className="bg-gradient-to-r from-green-400 to-purple-500 bg-clip-text text-transparent">ВСЁ В ОДНОМ</span><br />
-            <span className="text-gray-500">ПОТОКЕ</span><br />
-            <span className="text-gray-600">ДАННЫХ</span>
-          </h1>
-          <p className="text-gray-400 text-base leading-relaxed mb-10">
-            NexaFlow — единая платформа для интеграции всех ваших сервисов, автоматизации процессов и управления данными в реальном времени.
-          </p>
-          <div className="bg-[#111827]/80 border border-white/10 rounded-2xl p-5 flex flex-col gap-3">
-            <button
-              onClick={() => { resetForm(); setScreen("register"); }}
-              className="w-full bg-gradient-to-r from-green-400 to-teal-400 text-black font-bold py-4 rounded-xl text-base flex items-center justify-center gap-2"
-            >
-              Начать бесплатно <ArrowRight size={18} />
-            </button>
+
+          {/* Правая колонка — картинка нейросети */}
+          <div className="hidden md:flex flex-1 items-center justify-center max-w-lg">
+            <div className="relative w-full aspect-square max-w-sm">
+              <div className="absolute inset-0 rounded-3xl overflow-hidden"
+                style={{ background: "linear-gradient(135deg, #0a2a1a 0%, #0d1a2e 100%)", border: "1px solid rgba(0,255,135,0.15)" }}>
+                <svg className="absolute inset-0 w-full h-full opacity-40" viewBox="0 0 400 400">
+                  {/* Узлы нейросети */}
+                  {[
+                    [80,80],[200,60],[320,100],[60,200],[160,180],[260,160],[340,220],
+                    [100,300],[200,280],[300,300],[220,380],[380,340]
+                  ].map(([x,y], i) => (
+                    <g key={i}>
+                      <circle cx={x} cy={y} r="6" fill="#00ff87" opacity="0.7" />
+                      <circle cx={x} cy={y} r="12" fill="#00ff87" opacity="0.15" />
+                    </g>
+                  ))}
+                  {/* Линии */}
+                  {[
+                    [80,80,200,60],[200,60,320,100],[80,80,60,200],[200,60,160,180],
+                    [320,100,340,220],[60,200,160,180],[160,180,260,160],[260,160,340,220],
+                    [60,200,100,300],[160,180,200,280],[260,160,300,300],[340,220,380,340],
+                    [100,300,200,280],[200,280,300,300],[200,280,220,380],[300,300,380,340],
+                  ].map(([x1,y1,x2,y2], i) => (
+                    <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#00ff87" strokeWidth="0.8" opacity="0.25" />
+                  ))}
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-2xl bg-green-500/20 border border-green-500/30 flex items-center justify-center">
+                    <Zap size={28} className="text-green-400" />
+                  </div>
+                </div>
+              </div>
+              {/* Декоративные блоки */}
+              <div className="absolute -top-4 -right-4 bg-[#111827] border border-white/10 rounded-xl px-4 py-2 text-xs text-green-400 font-semibold">
+                +12% скорость
+              </div>
+              <div className="absolute -bottom-4 -left-4 bg-[#111827] border border-white/10 rounded-xl px-4 py-2 text-xs text-blue-400 font-semibold">
+                1 247 интеграций
+              </div>
+            </div>
+          </div>
+
+          {/* Мобильные кнопки */}
+          <div className="md:hidden w-full bg-[#111827]/80 border border-white/10 rounded-2xl p-5 flex flex-col gap-3">
             <button
               onClick={() => { resetForm(); setScreen("login"); }}
               className="w-full bg-white/5 border border-white/10 text-white font-semibold py-4 rounded-xl text-base"
             >
               Войти в аккаунт
-            </button>
-            <button
-              onClick={() => navigate("/ecsu")}
-              className="w-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 font-semibold py-4 rounded-xl text-base flex items-center justify-center gap-2 transition-colors"
-            >
-              <Shield size={18} />
-              Открыть ЕЦСУ
             </button>
           </div>
         </main>
