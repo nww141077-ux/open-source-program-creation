@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 
 const UPDATES_URL = "https://functions.poehali.dev/0639f989-669a-462c-aac5-7730ba2e2470";
-const MUSON_URL   = "https://functions.poehali.dev/7bb30a16-64ef-48af-ae2a-132fc94893cd";
+const MUSON_URL   = "https://functions.poehali.dev/489c22f3-24ab-428c-bb1d-e19ec2f08a63";
 
 type UpdateType = "patch" | "minor" | "major" | "data" | "config";
 type UpdateStatus = "active" | "paused" | "archived";

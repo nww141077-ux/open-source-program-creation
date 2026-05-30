@@ -42,14 +42,27 @@ export default function Index() {
     }
   };
 
-  const handleOwnerLogin = () => {
-    if (ownerPassword === "nww") {
-      setSession({ name: "Владимир", role: "owner", token: "owner" });
-      setShowOwnerModal(false);
-      setOwnerPassword("");
-    } else {
-      setOwnerError("Неверный пароль");
-      setOwnerPassword("");
+  const handleOwnerLogin = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(AUTH_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "login", email: "nikolaevvladimir77@yandex.ru", password: ownerPassword }),
+      });
+      const data = await res.json();
+      if (data.role === "owner") {
+        setSession({ name: data.name || "Владимир", role: "owner", token: data.token });
+        setShowOwnerModal(false);
+        setOwnerPassword("");
+      } else {
+        setOwnerError("Неверный пароль");
+        setOwnerPassword("");
+      }
+    } catch {
+      setOwnerError("Ошибка сети");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -99,17 +112,17 @@ export default function Index() {
       <div className="min-h-screen bg-[#0a0f1a] text-white flex flex-col items-center justify-center px-4">
         <div className="w-full max-w-sm">
           <div className="flex flex-col items-center mb-8">
-            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mb-3">
-              <Zap size={22} className="text-black" />
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-3" style={{ background: "linear-gradient(135deg, #a855f7, #3b82f6)" }}>
+              <Shield size={22} className="text-white" />
             </div>
-            <div className="text-xl font-bold">NEXAFLOW</div>
+            <div className="text-xl font-bold">ЕЦСУ 2.0</div>
           </div>
           <div className="bg-[#1a1d27] border border-white/10 rounded-2xl p-6 text-center">
             <div className="w-14 h-14 bg-green-500/20 border border-green-500/30 rounded-xl flex items-center justify-center mx-auto mb-4">
               <span className="text-green-400 font-bold text-2xl">{session.name[0].toUpperCase()}</span>
             </div>
             <div className="text-white font-semibold text-lg mb-1">{session.name}</div>
-            <div className="text-gray-500 text-xs mb-6">Пользователь NEXAFLOW</div>
+            <div className="text-gray-500 text-xs mb-6">Пользователь ЕЦСУ 2.0</div>
             <div className="bg-[#0f1117] rounded-xl p-4 mb-4 text-left">
               <div className="text-gray-400 text-xs mb-1">Статус аккаунта</div>
               <div className="text-green-400 text-sm font-semibold flex items-center gap-2">
@@ -141,10 +154,10 @@ export default function Index() {
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-4">
         <button onClick={handleLogoTap} className="flex items-center gap-2 select-none">
-          <div className="w-9 h-9 bg-green-500 rounded-xl flex items-center justify-center">
-            <Zap size={18} className="text-black" />
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #a855f7, #3b82f6)" }}>
+            <Shield size={18} className="text-white" />
           </div>
-          <span className="font-bold text-white text-lg tracking-wide">NEXAFLOW</span>
+          <span className="font-bold text-white text-lg tracking-wide">ЕЦСУ 2.0</span>
         </button>
         <button
           onClick={() => { resetForm(); setScreen("login"); }}
@@ -157,18 +170,18 @@ export default function Index() {
       {/* Landing */}
       {screen === "landing" && (
         <main className="flex-1 flex flex-col px-5 pt-8 pb-10">
-          <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-full px-3 py-1.5 mb-6 self-start">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-green-400 text-xs font-medium">Платформа интеграций нового поколения</span>
+          <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-full px-3 py-1.5 mb-6 self-start">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+            <span className="text-purple-400 text-xs font-medium">Цифровая платформа управления нового поколения</span>
           </div>
           <h1 className="text-5xl font-black leading-none mb-6">
-            <span className="text-white">ОБЪЕДИНИТЕ</span><br />
-            <span className="bg-gradient-to-r from-green-400 to-purple-500 bg-clip-text text-transparent">ВСЁ В ОДНОМ</span><br />
-            <span className="text-gray-500">ПОТОКЕ</span><br />
-            <span className="text-gray-600">ДАННЫХ</span>
+            <span className="text-white">ЕДИНАЯ</span><br />
+            <span className="bg-gradient-to-r from-purple-400 to-blue-500 bg-clip-text text-transparent">ЦЕНТРАЛЬНАЯ</span><br />
+            <span className="text-gray-500">СИСТЕМА</span><br />
+            <span className="text-gray-600">УПРАВЛЕНИЯ</span>
           </h1>
           <p className="text-gray-400 text-base leading-relaxed mb-10">
-            NexaFlow — единая платформа для интеграции всех ваших сервисов, автоматизации процессов и управления данными в реальном времени.
+            ЕЦСУ 2.0 — платформа для мониторинга, верификации и реагирования на инциденты в сфере экологии, кибербезопасности и прав человека. Правообладатель: Николаев Владимир Владимирович.
           </p>
           <div className="bg-[#111827] border border-white/10 rounded-2xl p-5 flex flex-col gap-3">
             <button

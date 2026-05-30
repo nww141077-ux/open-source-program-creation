@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import Icon from "@/components/ui/icon";
 
-const API = "https://functions.poehali.dev/4e0c6e94-8c17-42df-a63e-dad5579bf7cf";
+const API = "https://functions.poehali.dev/b94f36d6-3df9-47fc-b56a-704d608465bc";
 
 type NoteType = "note" | "task" | "secret" | "log" | "config";
 type NoteColor = "default" | "blue" | "green" | "yellow" | "red" | "purple";

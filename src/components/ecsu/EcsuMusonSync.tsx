@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import Icon from "@/components/ui/icon";
 
-const SYNC_URL = "https://functions.poehali.dev/7bb30a16-64ef-48af-ae2a-132fc94893cd";
+const SYNC_URL = "https://functions.poehali.dev/489c22f3-24ab-428c-bb1d-e19ec2f08a63";
 const LOCAL_AGENT = "http://localhost:7749";
 const POLL_INTERVAL = 15000;
 

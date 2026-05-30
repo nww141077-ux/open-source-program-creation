@@ -1,3 +1,7 @@
 {
+  "muson-agent-sync": "https://functions.poehali.dev/489c22f3-24ab-428c-bb1d-e19ec2f08a63",
+  "ecsu-graphium": "https://functions.poehali.dev/b94f36d6-3df9-47fc-b56a-704d608465bc",
+  "admin-config": "https://functions.poehali.dev/b9c8beac-06a3-423e-a1c3-b06e1ef3c91f",
+  "admin-ai": "https://functions.poehali.dev/8322aea3-7c4f-489b-bb32-0ff490322e1e",
   "auth": "https://functions.poehali.dev/ffe35261-9869-478f-8361-946fa981b34a"
 }
