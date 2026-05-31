@@ -4,13 +4,11 @@ import ModulesTab from "@/components/admin/ModulesTab";
 import DalanTab from "@/components/admin/DalanTab";
 import BackupTab from "@/components/admin/BackupTab";
 import GatewayTab from "@/components/admin/GatewayTab";
-import AiAssistantTab from "@/components/admin/AiAssistantTab";
 import Icon from "@/components/ui/icon";
 
-type Tab = "ai" | "settings" | "modules" | "dalan" | "backup" | "gateway";
+type Tab = "settings" | "modules" | "dalan" | "backup" | "gateway";
 
-const tabs: { id: Tab; label: string; icon: string; highlight?: boolean }[] = [
-  { id: "ai", label: "ИИ-Ассистент", icon: "Bot", highlight: true },
+const tabs: { id: Tab; label: string; icon: string }[] = [
   { id: "settings", label: "Интерфейс", icon: "Settings" },
   { id: "modules", label: "Модули", icon: "LayoutGrid" },
   { id: "dalan", label: "Dalan", icon: "Brain" },
@@ -23,7 +21,7 @@ interface Props {
 }
 
 const AdminPanel = ({ onLogout }: Props) => {
-  const [activeTab, setActiveTab] = useState<Tab>("ai");
+  const [activeTab, setActiveTab] = useState<Tab>("settings");
 
   return (
     <div className="min-h-screen bg-[#0d0d1a] text-white flex flex-col">
@@ -57,23 +55,17 @@ const AdminPanel = ({ onLogout }: Props) => {
               className={`flex items-center gap-3 px-5 py-3 text-sm font-medium transition-all ${
                 activeTab === tab.id
                   ? "bg-[#e94560]/10 text-[#e94560] border-r-2 border-[#e94560]"
-                  : tab.highlight
-                  ? "text-[#e94560]/70 hover:text-[#e94560] hover:bg-[#e94560]/5"
                   : "text-gray-400 hover:text-white hover:bg-white/5"
               }`}
             >
               <Icon name={tab.icon} size={18} />
-              <span>{tab.label}</span>
-              {tab.highlight && activeTab !== tab.id && (
-                <span className="ml-auto w-2 h-2 bg-[#e94560] rounded-full animate-pulse" />
-              )}
+              {tab.label}
             </button>
           ))}
         </div>
 
         {/* Content */}
         <div className="flex-1 p-6 overflow-auto">
-          {activeTab === "ai" && <AiAssistantTab />}
           {activeTab === "settings" && <SettingsTab />}
           {activeTab === "modules" && <ModulesTab />}
           {activeTab === "dalan" && <DalanTab />}
