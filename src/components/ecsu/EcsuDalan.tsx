@@ -47,7 +47,7 @@ const EcsuDalan = () => {
           <p className="text-[#e94560] text-xs">Авторская разработка Николаева В.В. · Активен</p>
         </div>
       </div>
-      <p className="text-gray-500 text-xs mb-5 ml-12">Нейросеть оптимизации и аналитики системы ЕЦСУ</p>
+      <p className="text-gray-500 text-xs mb-5 ml-13">Нейросеть оптимизации и аналитики системы ЕЦСУ</p>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-5">
