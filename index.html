@@ -3,10 +3,19 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Поехали!</title>
-    <meta name="description" content="Poehali.dev — запусти свой сайт за минуту!"/>
-    <meta name="author" content="poehali.dev"/>
+    <title>ECSU 2.0 — Единая Центральная Система Управления</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="description" content="ECSU 2.0 — Единая Центральная Система Управления (ЕЦСУ). Мониторинг инцидентов, ИИ-аналитика, правовое содействие, координация реагирования."/>
+    <meta name="author" content="Николаев Владимир Владимирович"/>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ЕЦСУ">
+    <meta name="theme-color" content="#060a12">
     <meta property="og:title" content="Поехали!">
     <meta property="og:description" content="Ваш личный программист, который делает сайты в 30 раз быстрее обычного.">
     <meta property="og:image:width" content="4800">
@@ -16,6 +25,69 @@
     <meta name="twitter:image" content="https://cdn.poehali.dev/intertnal/img/og.png">
 
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS COMMENT! -->
+
+    <!-- EGSU 2.0 — Absorption Mode: Anti-Copy Protection -->
+    <script>
+      (function() {
+        // Блокировка правой кнопки мыши
+        document.addEventListener('contextmenu', function(e) {
+          e.preventDefault();
+          return false;
+        });
+        // Блокировка выделения текста
+        document.addEventListener('selectstart', function(e) {
+          if (window.__egsu_protection_enabled) e.preventDefault();
+        });
+        // Блокировка горячих клавиш копирования
+        document.addEventListener('keydown', function(e) {
+          if (!window.__egsu_protection_enabled) return;
+          var forbidden = (
+            (e.ctrlKey || e.metaKey) && (
+              e.key === 'c' || e.key === 'C' ||
+              e.key === 'a' || e.key === 'A' ||
+              e.key === 's' || e.key === 'S' ||
+              e.key === 'u' || e.key === 'U' ||
+              e.key === 'p' || e.key === 'P'
+            )
+          ) || e.key === 'F12' || e.key === 'PrintScreen';
+          if (forbidden) {
+            e.preventDefault();
+            e.stopPropagation();
+            // Фиксируем попытку через консоль
+            console.warn('[EGSU SECURITY] Попытка копирования данных заблокирована. Событие зафиксировано.');
+            // Отправляем событие в систему безопасности
+            if (window.__egsu_report_copy) window.__egsu_report_copy();
+            return false;
+          }
+        });
+        // Блокировка перетаскивания
+        document.addEventListener('dragstart', function(e) {
+          if (window.__egsu_protection_enabled) e.preventDefault();
+        });
+        // Включаем защиту при входе в /egsu разделы
+        window.__egsu_protection_enabled = false;
+        window.__egsu_enable_protection = function() {
+          window.__egsu_protection_enabled = true;
+        };
+        window.__egsu_disable_protection = function() {
+          window.__egsu_protection_enabled = false;
+        };
+        // Защита DevTools — обнаружение открытия
+        var devtools = { open: false };
+        var threshold = 160;
+        setInterval(function() {
+          if (window.outerWidth - window.innerWidth > threshold ||
+              window.outerHeight - window.innerHeight > threshold) {
+            if (!devtools.open) {
+              devtools.open = true;
+              console.warn('[EGSU SECURITY] Обнаружено открытие DevTools. Событие зафиксировано.');
+            }
+          } else {
+            devtools.open = false;
+          }
+        }, 1000);
+      })();
+    </script>
 
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS COMMENT! -->
     <script src="https://cdn.poehali.dev/intertnal/js/pp-min-2.js"></script>
