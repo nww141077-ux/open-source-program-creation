@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>ECSU 2.0 STUDIO</title>
+    <style>
+        body { background: #060a12; color: #00ff87; font-family: 'Courier New', monospace; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
+        #header { border-bottom: 2px solid #00ff87; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        #console { flex-grow: 1; background: #0d1b2e; border: 1px solid #00ff87; padding: 20px; overflow-y: auto; box-shadow: inset 0 0 15px rgba(0, 255, 135, 0.2); }
+        .log-entry { margin: 5px 0; line-height: 1.4; }
+        .system { color: #3b82f6; }
+        .warning { color: #f43f5e; font-weight: bold; }
+        #input-area { margin-top: 20px; display: flex; gap: 10px; }
+        input { flex-grow: 1; background: #000; border: 1px solid #00ff87; color: #00ff87; padding: 15px; outline: none; font-size: 16px; }
+        .btn { background: #00ff87; color: #060a12; border: none; padding: 0 20px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <div>ECSU 2.0 | ПРОТОКОЛ "КОВЧЕГ"</div>
+        <div style="font-size: 12px; color: #a855f7;">ВЛАДЕЛЕЦ: НИКОЛАЕВ В.В.</div>
+    </div>
+    
+    <div id="console"></div>
+
+    <div id="input-area">
+        <input type="text" id="user-input" placeholder="Введите команду (migrate, checklist, help)..." autofocus>
+        <button class="btn" onclick="sendCommand()">EXEC</button>
+    </div>
+
+    <script>
+        const consoleDiv = document.getElementById('console');
+        const input = document.getElementById('user-input');
+        const socket = new WebSocket('ws://127.0.0.1:8000/ws');
+
+        function addLog(text) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            if (text.includes('---')) entry.classList.add('system');
+            if (text.includes('⚠️') || text.includes('🔴')) entry.classList.add('warning');
+            entry.innerText = `[${new Date().toLocaleTimeString()}] ${text}`;
+            consoleDiv.appendChild(entry);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+
+        socket.onmessage = (event) => addLog(event.data);
+        socket.onclose = () => addLog('🔴 КРИТИЧЕСКИЙ СБОЙ: СВЯЗЬ С ЯДРОМ ПОТЕРЯНА');
+        socket.onerror = () => addLog('🔴 ОШИБКА ПОДКЛЮЧЕНИЯ');
+
+        function sendCommand() {
+            if (input.value) {
+                addLog(`> ${input.value}`);
+                socket.send(input.value);
+                input.value = '';
+            }
+        }
+
+        input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendCommand(); });
+    </script>
+</body>
+</html>

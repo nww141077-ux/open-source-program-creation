@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Далан‑1 — Система мониторинга инцидентов</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Далан‑1: Сбор глобальных инцидентов</h1>
+        <form id="incidentForm">
+            <textarea id="description" placeholder="Опишите инцидент..." rows="4" required></textarea>
+            <select id="source">
+                <option value="social_media">Соцсети</option>
+                <option value="news">Новости</option>
+                <option value="sensor">Датчики</option>
+                <option value="report">Отчёт</option>
+            </select>
+            <input type="text" id="location" placeholder="Локация (опционально)">
+            <button type="submit">Отправить инцидент</button>
+        </form>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        document.getElementById('incidentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = {
+                description: document.getElementById('description').value,
+                source: document.getElementById('source').value,
+                location_hint: document.getElementById('location').value
+            };
+
+            try {
+                const response = await fetch('/api/v1/incident', {
+                    method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+        document.getElementById('result').innerHTML = 
+		`            document.getElementById('result').innerHTML = `
+                <div class="incident-card">
+                    <h3>Инцидент зарегистрирован: ${result.incident_id}</h3>
+            <p><strong>Категория:</strong> ${result.category}</p>
+            <p><strong>Критичность:</strong> ${(result.criticality * 100).toFixed(1)}%</p>
+            <p><strong>Приоритет:</strong> ${result.priority}/5</p>
+            <p><strong>Координаты:</strong> [${result.coordinates[0].toFixed(4)}, ${result.coordinates[1].toFixed(4)}]</p>
+            <p><strong>Статус:</strong> ${result.status}</p>
+                </div>
+            `;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<p style="color: red;">Ошибка: ${error.message}</p>`;
+            }
+        });
+    </script>
+    <style>
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        textarea { width: 100%; padding: 10px; margin-bottom: 10px; }
+        select, input { padding: 8px; margin-bottom: 10px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .incident-card { border: 1px solid #ddd; padding: 15px; margin-top: 15px; border-radius: 5px; }
+    </style>
+</body>
+</html>

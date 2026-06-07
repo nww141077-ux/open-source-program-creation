@@ -1,291 +1,247 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import { useState } from "react";
 
-const now = new Date();
-const hour = now.getHours();
-const greeting = hour < 12 ? "Доброе утро" : hour < 18 ? "Добрый день" : "Добрый вечер";
-const dateStr = now.toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-const timeStr = now.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-
-const MODULES = [
-  {
-    id: "complaints", icon: "FileText", color: "#6366f1", bg: "#6366f110",
-    title: "Обращения и жалобы",
-    desc: "МЧС, МВД, Прокуратура, ФСБ, международные органы",
-    badge: null,
-    stats: [
-      { label: "Статья ФЗ-59", val: "ФЗ-59/2024 ст. 3" },
-      { label: "Закон СМИ", val: "Закон СМИ ст. 38" },
-      { label: "Ответственность", val: "УК РФ ст. 330 — ответственность за отказ органа" },
-    ],
-    route: null,
-  },
-  {
-    id: "finance", icon: "DollarSign", color: "#10b981", bg: "#10b98110",
-    title: "Финансовые операции",
-    desc: "Платежи, выплаты, права человека — с доказательной базой",
-    badge: null,
-    stats: [{ label: "Страховой счёт", val: "Страховой счёт: 43 ₽/л" }],
-    route: "/ecsu/finance",
-  },
-  {
-    id: "violations", icon: "AlertTriangle", color: "#f59e0b", bg: "#f59e0b10",
-    title: "Выявление нарушений",
-    desc: "За выявление коррупции, экологических нарушений, кибератак",
-    badge: null,
-    stats: [
-      { label: "Статьи", val: "ФЗ-273 «О противодействии коррупции»" },
-    ],
-    route: "/ecsu/report",
-  },
-  {
-    id: "emergency", icon: "Phone", color: "#ef4444", bg: "#ef444410",
-    title: "Экстренные службы",
-    desc: "112, МЧС, МВД, скорая — прямые контакты работают сейчас",
-    badge: null,
-    stats: [{ label: "Дежурство", val: "ФЗ-100 на дежурстве — 40+" }],
-    route: null,
-  },
-  {
-    id: "legal", icon: "Scale", color: "#a855f7", bg: "#a855f710",
-    title: "Правовая база",
-    desc: "УК РФ, КоАП, конституционные права, международные конвенции",
-    badge: null,
-    stats: [{ label: "Конституция РФ", val: "Конституция РФ ст. 2, Международные договоры РФ" }],
-    route: "/ecsu/legal",
-  },
-  {
-    id: "organs", icon: "Network", color: "#00c896", bg: "#00c89610",
-    title: "Органы надзора ЕЦСУ",
-    desc: "33 органа ЕЦСУ принимают и направляют обращения к государству",
-    badge: "NEW",
-    stats: [{ label: "Конституция", val: "Конституция РФ ст. 2, Конституция ст. 45, ФЗ ст. 45" }],
-    route: null,
-  },
-  {
-    id: "anon", icon: "EyeOff", color: "#ec4899", bg: "#ec489910",
-    title: "НИП-анонимный канал",
-    desc: "Конфиденциальная жалоба для судей, прокуроров, журналистов, граждан",
-    badge: "NEW",
-    stats: [
-      { label: "УК РФ", val: "УК 2024 ст. 72; Закон о СМИ ст. 152; РФ УК ст. 286" },
-    ],
-    route: null,
-  },
+const incidents = [
+  { region: "Северо-Западный", x: 28, y: 35, level: "high" },
+  { region: "Центральный", x: 52, y: 42, level: "critical" },
+  { region: "Южный", x: 45, y: 68, level: "medium" },
+  { region: "Приволжский", x: 62, y: 38, level: "high" },
+  { region: "Уральский", x: 72, y: 32, level: "low" },
+  { region: "Сибирский", x: 82, y: 40, level: "medium" },
+  { region: "Дальневосточный", x: 88, y: 55, level: "low" },
+  { region: "Северо-Кавказский", x: 38, y: 72, level: "critical" },
 ];
 
-const QUICK_ACTIONS = [
-  { label: "Органы ЕЦСУ", icon: "Network", color: "#00c896", bg: "rgba(0,200,150,0.12)", route: null },
-  { label: "Анонимная жалоба", icon: "EyeOff", color: "#a855f7", bg: "rgba(168,85,247,0.12)", route: null },
-  { label: "Обращение в орган", icon: "FileText", color: "#6366f1", bg: "rgba(99,102,241,0.12)", route: null },
-  { label: "Экстренные службы", icon: "Phone", color: "#ef4444", bg: "rgba(239,68,68,0.12)", route: null },
+const dotColor = { critical: "#e94560", high: "#f59e0b", medium: "#a78bfa", low: "#94a3b8" };
+const dotSize = { critical: 14, high: 12, medium: 10, low: 8 };
+
+const stats = [
+  { label: "Всего инцидентов", value: "1 247", delta: "+12%", icon: "AlertTriangle", color: "#e94560" },
+  { label: "Решено", value: "893", delta: "+8%", icon: "CheckCircle", color: "#00c896" },
+  { label: "Активных", value: "241", delta: "-3%", icon: "Activity", color: "#f59e0b" },
+  { label: "Стран-участниц", value: "47", delta: "+2", icon: "Globe", color: "#60a5fa" },
 ];
 
-const SYSTEM_STATUS = [
-  { label: "Ядро ЕЦСУ", status: "Онлайн", statusColor: "#00c896", detail: "82% активно", icon: "Shield" },
-  { label: "База данных", status: "Онлайн", statusColor: "#00c896", detail: "PostgreSQL · активно", icon: "Database" },
-  { label: "ЦПВОА", status: "Не настроен", statusColor: "#f59e0b", detail: "настройка активна", icon: "Globe" },
-  { label: "Безопасность", status: "Онлайн", statusColor: "#00c896", detail: "Все системы работают", icon: "Lock" },
-  { label: "Сервером (Абонент)", status: "Онлайн", statusColor: "#00c896", detail: "3/5 узлов в сети", icon: "Server" },
-  { label: "НИП-канал", status: "Недоступен", statusColor: "#ef4444", detail: "нет соединения", icon: "EyeOff" },
+const recentIncidents = [
+  { code: "ИНЦ-001", title: "Незаконная вырубка леса", region: "Сибирский", level: "high" },
+  { code: "ИНЦ-003", title: "Загрязнение реки Рейн", region: "Международный", level: "critical" },
+  { code: "ИНЦ-003", title: "Выброс CO₂ сверх нормы", region: "Центральный", level: "medium" },
+  { code: "ИНЦ-004", title: "Браконьерство в заповеднике", region: "Уральский", level: "high" },
 ];
 
-export default function EcsuOverview() {
-  const navigate = useNavigate();
-  const [time, setTime] = useState(timeStr);
-  const [activeTab, setActiveTab] = useState<"civil" | "modules">("civil");
+const weekData = [22, 38, 15, 52, 41, 28, 63, 19, 44, 31, 55, 20, 48, 36];
 
-  useEffect(() => {
-    const t = setInterval(() => {
-      setTime(new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
-    }, 1000);
-    return () => clearInterval(t);
-  }, []);
+const EcsuOverview = () => {
+  const [mapMode, setMapMode] = useState<"flat" | "globe" | "heat">("globe");
 
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto">
-
-      {/* Приветствие */}
-      <div className="text-center mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">
-          {greeting}, <span style={{ color: "#00c896" }}>Владимир</span>
-        </h1>
-        <p className="text-gray-500 text-sm">
-          ЕЦСУ 2.0 · Единая Централизованная Система Управления · Николаев В.В.
-        </p>
+    <div className="p-6">
+      <div className="mb-4">
+        <h2 className="text-xl font-bold text-white">ОБЗОР СИСТЕМЫ</h2>
+        <p className="text-gray-500 text-sm">Апрель 2026 · Все регионы</p>
       </div>
 
-      {/* Анонимная жалоба — баннер */}
-      <div className="mb-6 p-4 rounded-xl flex items-center gap-4 cursor-pointer hover:opacity-90 transition-opacity relative"
-        style={{ background: "linear-gradient(135deg, #312e81 0%, #1e1b4b 100%)", border: "1px solid rgba(99,102,241,0.4)" }}>
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: "rgba(99,102,241,0.3)" }}>
-          <Icon name="EyeOff" size={20} className="text-indigo-300" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-white font-bold text-sm">НИП Анонимный Канал</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(99,102,241,0.3)", color: "#a5b4fc" }}>Засекречено</span>
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        {stats.map((s) => (
+          <div key={s.label} className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <Icon name={s.icon} size={18} style={{ color: s.color }} />
+              <span className="text-xs font-bold" style={{ color: s.color }}>{s.delta}</span>
+            </div>
+            <div className="text-2xl font-bold text-white">{s.value}</div>
+            <div className="text-gray-500 text-xs mt-1">{s.label}</div>
           </div>
-          <p className="text-indigo-300 text-xs leading-relaxed">
-            Для судей, прокуроров, следователей, журналистов и граждан — анонимная подача жалобы. Личность скрыта даже от владельца системы. Раскрытие только по решению суда.
-          </p>
-          <div className="flex gap-4 mt-2 text-[10px] text-indigo-400">
-            <span>§ ФЗ-ЭКЗО ст. 3</span>
-            <span>§ Закон СМИ ст. 42</span>
-            <span>§ УК РФ ст. 304 — ответственность за отказ органа</span>
-          </div>
-        </div>
-        <Icon name="ChevronRight" size={18} className="text-indigo-400 shrink-0" />
+        ))}
       </div>
 
-      {/* Быстрые действия */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-yellow-400 text-sm">⚡</span>
-          <span className="text-white/60 text-xs font-bold uppercase tracking-widest">Быстрые действия</span>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {QUICK_ACTIONS.map(a => (
-            <button key={a.label}
-              onClick={() => a.route ? navigate(a.route) : undefined}
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all hover:scale-105"
-              style={{ background: a.bg, color: a.color, border: `1px solid ${a.color}30` }}>
-              <Icon name={a.icon as "Network"} size={15} />
-              <span className="text-xs">{a.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Статус систем */}
-      <div className="mb-6 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <div className="flex items-center justify-between mb-3">
+      {/* Map */}
+      <div className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-4 mb-4">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <span className="text-yellow-400 text-sm">⚡</span>
-            <span className="text-white/60 text-xs font-bold uppercase tracking-widest">Статус систем</span>
+            <Icon name="Map" size={16} className="text-blue-400" />
+            <span className="text-white font-bold text-sm">КАРТА ИНЦИДЕНТОВ</span>
+            <span className="bg-blue-900/40 text-blue-400 text-xs px-2 py-0.5 rounded-full">8 объектов</span>
           </div>
-          <span className="font-mono text-white/30 text-xs">{time}</span>
+          <div className="flex gap-1">
+            {(["flat", "globe", "heat"] as const).map((m) => (
+              <button key={m} onClick={() => setMapMode(m)}
+                className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                  mapMode === m ? "bg-blue-600 text-white" : "text-gray-500 hover:text-white"
+                }`}>
+                {m === "flat" ? "Плоская" : m === "globe" ? "3D Глобус" : "Тепловая"}
+              </button>
+            ))}
+            <div className="flex items-center gap-2 ml-3 text-xs text-gray-500">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#e94560] inline-block" />Крит.</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#f59e0b] inline-block" />Выс.</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#a78bfa] inline-block" />Ср.</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#94a3b8] inline-block" />Низ.</span>
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {SYSTEM_STATUS.map(s => (
-            <div key={s.label} className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-2 h-2 rounded-full" style={{ background: s.statusColor }} />
-                <span className="text-white/80 text-xs font-semibold">{s.label}</span>
+
+        <div className="relative bg-[#060d1f] rounded-xl overflow-hidden" style={{ height: 320 }}>
+          {/* Flat */}
+          {mapMode === "flat" && (
+            <>
+              <svg className="absolute inset-0 w-full h-full opacity-10">
+                {[...Array(10)].map((_, i) => (
+                  <line key={`h${i}`} x1="0" y1={`${i * 10}%`} x2="100%" y2={`${i * 10}%`} stroke="#60a5fa" strokeWidth="0.5" />
+                ))}
+                {[...Array(10)].map((_, i) => (
+                  <line key={`v${i}`} x1={`${i * 10}%`} y1="0" x2={`${i * 10}%`} y2="100%" stroke="#60a5fa" strokeWidth="0.5" />
+                ))}
+              </svg>
+              <svg className="absolute inset-0 w-full h-full opacity-20">
+                <ellipse cx="30%" cy="38%" rx="10%" ry="8%" fill="#1e3a5f" />
+                <ellipse cx="52%" cy="44%" rx="12%" ry="9%" fill="#1e3a5f" />
+                <ellipse cx="45%" cy="68%" rx="9%" ry="7%" fill="#1e3a5f" />
+                <ellipse cx="63%" cy="40%" rx="11%" ry="8%" fill="#1e3a5f" />
+                <ellipse cx="73%" cy="34%" rx="10%" ry="7%" fill="#1e3a5f" />
+                <ellipse cx="83%" cy="42%" rx="9%" ry="8%" fill="#1e3a5f" />
+                <ellipse cx="89%" cy="56%" rx="8%" ry="9%" fill="#1e3a5f" />
+                <ellipse cx="38%" cy="72%" rx="8%" ry="6%" fill="#1e3a5f" />
+              </svg>
+              {incidents.map((inc, i) => (
+                <div key={i} className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+                  style={{ left: `${inc.x}%`, top: `${inc.y}%` }}>
+                  <div className="rounded-full animate-pulse"
+                    style={{
+                      width: dotSize[inc.level as keyof typeof dotSize],
+                      height: dotSize[inc.level as keyof typeof dotSize],
+                      background: dotColor[inc.level as keyof typeof dotColor],
+                      boxShadow: `0 0 8px ${dotColor[inc.level as keyof typeof dotColor]}`,
+                    }} />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#0d1225] border border-blue-900/50 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    {inc.region}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* Globe */}
+          {mapMode === "globe" && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="relative">
+                <svg width="260" height="260" viewBox="0 0 260 260">
+                  <defs>
+                    <radialGradient id="globeGrad" cx="35%" cy="35%">
+                      <stop offset="0%" stopColor="#1e3a8a" />
+                      <stop offset="100%" stopColor="#0a1628" />
+                    </radialGradient>
+                  </defs>
+                  <circle cx="130" cy="130" r="110" fill="url(#globeGrad)" stroke="#1e3a5f" strokeWidth="1.5" />
+                  <ellipse cx="130" cy="130" rx="110" ry="44" fill="none" stroke="#1e4a8f" strokeWidth="0.8" opacity="0.6" />
+                  <ellipse cx="130" cy="130" rx="110" ry="22" fill="none" stroke="#1e4a8f" strokeWidth="0.5" opacity="0.4" />
+                  <ellipse cx="130" cy="130" rx="65" ry="110" fill="none" stroke="#1e4a8f" strokeWidth="0.8" opacity="0.6" />
+                  <ellipse cx="130" cy="130" rx="32" ry="110" fill="none" stroke="#1e4a8f" strokeWidth="0.5" opacity="0.4" />
+                  <line x1="20" y1="130" x2="240" y2="130" stroke="#1e4a8f" strokeWidth="0.8" opacity="0.5" />
+                  <line x1="130" y1="20" x2="130" y2="240" stroke="#1e4a8f" strokeWidth="0.8" opacity="0.5" />
+                  {incidents.map((inc, i) => {
+                    const angle = (inc.x / 100) * Math.PI * 1.6 - 0.8;
+                    const lat = (inc.y / 100) * Math.PI - Math.PI / 2;
+                    const cx = 130 + Math.cos(lat) * Math.sin(angle) * 105;
+                    const cy = 130 - Math.sin(lat) * 105;
+                    const color = dotColor[inc.level as keyof typeof dotColor];
+                    const size = dotSize[inc.level as keyof typeof dotSize];
+                    return (
+                      <g key={i}>
+                        <circle cx={cx} cy={cy} r={size} fill={color} opacity="0.15" />
+                        <circle cx={cx} cy={cy} r={size / 2} fill={color} opacity="0.9" />
+                      </g>
+                    );
+                  })}
+                  <circle cx="130" cy="130" r="110" fill="none" stroke="#3b82f6" strokeWidth="1" opacity="0.25" />
+                </svg>
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 text-blue-400 text-xs font-mono opacity-50 whitespace-nowrap">3D ГЛОБУС · ECSU</div>
               </div>
-              <div className="text-xs font-bold mb-0.5" style={{ color: s.statusColor }}>{s.status}</div>
-              <div className="text-white/30 text-[10px]">{s.detail}</div>
+            </div>
+          )}
+
+          {/* Heat */}
+          {mapMode === "heat" && (
+            <svg className="absolute inset-0 w-full h-full">
+              {incidents.map((inc, i) => {
+                const color = dotColor[inc.level as keyof typeof dotColor];
+                const r = inc.level === "critical" ? 80 : inc.level === "high" ? 65 : inc.level === "medium" ? 50 : 35;
+                return (
+                  <g key={i}>
+                    <defs>
+                      <radialGradient id={`hg${i}`} cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor={color} stopOpacity="0.7" />
+                        <stop offset="100%" stopColor={color} stopOpacity="0" />
+                      </radialGradient>
+                    </defs>
+                    <circle cx={`${inc.x}%`} cy={`${inc.y}%`} r={r} fill={`url(#hg${i})`} />
+                  </g>
+                );
+              })}
+            </svg>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom row */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="col-span-2 bg-[#0d1225] border border-blue-900/30 rounded-xl p-4">
+          <div className="text-white font-bold text-sm mb-1">ИНЦИДЕНТЫ ЗА НЕДЕЛЮ</div>
+          <div className="flex items-end gap-1 h-20 mt-3">
+            {weekData.map((v, i) => (
+              <div key={i} className="flex-1 rounded-t"
+                style={{
+                  height: `${(v / Math.max(...weekData)) * 100}%`,
+                  background: "linear-gradient(180deg, #3b82f6 0%, #1e40af 100%)",
+                  opacity: 0.6 + (v / Math.max(...weekData)) * 0.4,
+                }} />
+            ))}
+          </div>
+          <div className="flex justify-between text-gray-600 text-[10px] mt-1">
+            <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
+          </div>
+        </div>
+
+        <div className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-4">
+          <div className="text-white font-bold text-sm mb-3">ПО ТИПАМ</div>
+          <div className="space-y-2">
+            {[
+              { label: "Экология", pct: 42, color: "#00c896" },
+              { label: "Кибербезопасность", pct: 28, color: "#3b82f6" },
+              { label: "Вода", pct: 18, color: "#60a5fa" },
+              { label: "Отходы", pct: 8, color: "#f59e0b" },
+              { label: "Прибор", pct: 4, color: "#e94560" },
+            ].map(t => (
+              <div key={t.label}>
+                <div className="flex justify-between text-[10px] mb-0.5">
+                  <span className="text-gray-400">{t.label}</span>
+                  <span style={{ color: t.color }}>{t.pct}%</span>
+                </div>
+                <div className="h-1 rounded-full bg-blue-900/30">
+                  <div className="h-1 rounded-full" style={{ width: `${t.pct}%`, background: t.color }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Последние инциденты */}
+      <div className="mt-4 bg-[#0d1225] border border-blue-900/30 rounded-xl p-4">
+        <div className="text-white font-bold text-sm mb-3">ПОСЛЕДНИЕ ИНЦИДЕНТЫ</div>
+        <div className="space-y-2">
+          {recentIncidents.map((inc, i) => (
+            <div key={i} className="flex items-center gap-3 py-1.5">
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ background: dotColor[inc.level as keyof typeof dotColor] }} />
+              <span className="text-gray-500 text-xs font-mono w-16 shrink-0">{inc.code}</span>
+              <span className="text-gray-300 text-sm flex-1">{inc.title}</span>
+              <span className="text-gray-600 text-xs">{inc.region}</span>
             </div>
           ))}
         </div>
       </div>
-
-      {/* Вкладки */}
-      <div className="flex gap-2 mb-4">
-        <button onClick={() => setActiveTab("civil")}
-          className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-          style={{
-            background: activeTab === "civil" ? "rgba(0,200,150,0.15)" : "rgba(255,255,255,0.04)",
-            color: activeTab === "civil" ? "#00c896" : "rgba(255,255,255,0.4)",
-            border: activeTab === "civil" ? "1px solid rgba(0,200,150,0.3)" : "1px solid transparent",
-          }}>
-          Гражданские инструменты
-        </button>
-        <button onClick={() => setActiveTab("modules")}
-          className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-          style={{
-            background: activeTab === "modules" ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.04)",
-            color: activeTab === "modules" ? "#818cf8" : "rgba(255,255,255,0.4)",
-            border: activeTab === "modules" ? "1px solid rgba(99,102,241,0.3)" : "1px solid transparent",
-          }}>
-          Модули системы
-        </button>
-      </div>
-
-      {/* Карточки */}
-      {activeTab === "civil" && (
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-yellow-400 text-sm">🔒</span>
-            <span className="text-white/60 text-xs font-bold uppercase tracking-widest">Доступно каждому гражданину — на основании законов РФ</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {MODULES.map(m => (
-              <button key={m.id}
-                onClick={() => m.route ? navigate(m.route) : undefined}
-                className="p-4 rounded-xl text-left transition-all hover:scale-[1.01] group"
-                style={{ background: m.bg, border: `1px solid ${m.color}25` }}>
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: `${m.color}20` }}>
-                    <Icon name={m.icon as "FileText"} size={18} style={{ color: m.color }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-white font-semibold text-sm">{m.title}</span>
-                      {m.badge && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded font-bold"
-                          style={{ background: `${m.color}25`, color: m.color }}>{m.badge}</span>
-                      )}
-                    </div>
-                    <p className="text-white/45 text-xs leading-relaxed mb-2">{m.desc}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {m.stats.map((st, i) => (
-                        <span key={i} className="text-[10px] px-2 py-0.5 rounded"
-                          style={{ background: "rgba(255,255,255,0.05)", color: m.color }}>
-                          § {st.val}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <Icon name="ChevronRight" size={16} className="text-white/20 group-hover:text-white/50 transition-colors shrink-0 mt-1" />
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {activeTab === "modules" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {[
-            { icon: "LayoutDashboard", label: "Обзор системы", color: "#60a5fa", route: null },
-            { icon: "AlertTriangle", label: "Инциденты", color: "#f43f5e", route: null },
-            { icon: "BarChart3", label: "ИИ-аналитика", color: "#a855f7", route: null },
-            { icon: "DollarSign", label: "Финансы", color: "#10b981", route: "/ecsu/finance" },
-            { icon: "Network", label: "Органы ЕЦСУ", color: "#00c896", route: null },
-            { icon: "Shield", label: "Безопасность", color: "#ef4444", route: "/ecsu/security" },
-            { icon: "Scale", label: "Правовая база", color: "#a855f7", route: "/ecsu/legal" },
-            { icon: "Bell", label: "Уведомления", color: "#f59e0b", route: "/ecsu/notifications" },
-          ].map(m => (
-            <button key={m.label}
-              onClick={() => m.route ? navigate(m.route) : undefined}
-              className="flex items-center gap-3 p-4 rounded-xl text-left transition-all hover:scale-[1.01]"
-              style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${m.color}20` }}>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: `${m.color}18` }}>
-                <Icon name={m.icon as "Shield"} size={18} style={{ color: m.color }} />
-              </div>
-              <span className="text-white/80 font-semibold text-sm">{m.label}</span>
-              <Icon name="ChevronRight" size={15} className="text-white/20 ml-auto" />
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Правовой футер */}
-      <div className="mt-8 p-4 rounded-xl text-white/25 text-[10px] leading-relaxed"
-        style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-        Правовая основа системы ЕЦСУ 2.0: Все инструменты работают в рамках действующего законодательства РФ и международных конвенций. Система за является органов власти и не является официальным представителем госструктур.
-        Правообладатель: Николаев Владимир Владимирович (УК РФ ст. 146, ГК РФ). Владелец системы: Николаев Владимир Владимирович.
-        nikolaevvladimir77@yandex.ru
-      </div>
-      <div className="text-center text-white/20 text-[10px] mt-3">
-        ЕЦСУ 2.0 · © 2026 Николаев Владимир Владимирович · Все права защищены.
-      </div>
     </div>
   );
-}
+};
+
+export default EcsuOverview;
