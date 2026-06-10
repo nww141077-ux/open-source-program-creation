@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Icon from "@/components/ui/icon";
 
 const UPDATES_URL = "https://functions.poehali.dev/0639f989-669a-462c-aac5-7730ba2e2470";
@@ -76,7 +76,7 @@ const EcsuUpdateManager = ({ onClose }: Props) => {
   const [filesLoading, setFilesLoading] = useState(false);
   const [fileUploading, setFileUploading] = useState(false);
   const [fileForm, setFileForm]       = useState({ description: "", dest_path: "", file_type: "document" });
-  const fileInputRef                  = React.useRef<HTMLInputElement>(null);
+  const fileInputRef                  = useRef<HTMLInputElement>(null);
   const [snapshots, setSnapshots]     = useState<Snapshot[]>([]);
   const [snapLoading, setSnapLoading] = useState(false);
   const [snapForm, setSnapForm]       = useState({ name: "", description: "", tag: "" });

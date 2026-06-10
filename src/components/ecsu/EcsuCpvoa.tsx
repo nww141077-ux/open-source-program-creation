@@ -67,7 +67,7 @@ const MAP_NODES = [
   { id: "ext",  label: "Внешний IP", x: 74, y: 40, severity: "high" as const },
 ];
 
-const EcsuCpvoa = ({ onClose }: { onClose?: () => void }) => {
+const EcsuCpvoa = () => {
   const [incidents, setIncidents] = useState<Incident[]>(INITIAL_INCIDENTS);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
