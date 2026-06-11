@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import EcsuPage from "./pages/EcsuPage";
+import EgsuStart from "./pages/EgsuStart";
 import EcsuFinance from "./pages/EcsuFinance";
 import EgsuLegal from "./pages/EgsuLegal";
 import EgsuNotifications from "./pages/EgsuNotifications";
@@ -24,6 +25,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/ecsu" element={<EcsuPage />} />
+          <Route path="/egsu/start" element={<EgsuStart />} />
           <Route path="/ecsu/finance" element={<EcsuFinance />} />
           <Route path="/ecsu/legal" element={<EgsuLegal />} />
           <Route path="/ecsu/notifications" element={<EgsuNotifications />} />
