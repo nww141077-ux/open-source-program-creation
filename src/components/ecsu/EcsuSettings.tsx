@@ -109,7 +109,7 @@ const EcsuSettings = () => {
               ["DALAN Engine", "v1.2 UBO Edition"],
               ["База данных", "PostgreSQL 15"],
               ["Последнее обновление", "09.05.2026"],
-              ["Разработчик", "SYNERGON GLOBAL · Николаев В.В. · 2026"],
+              ["Разработчик", "SYNERGON GLOBAL · Николаев В.В."],
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between py-1.5 border-b border-blue-900/10 last:border-0">
                 <span className="text-gray-500">{k}</span>

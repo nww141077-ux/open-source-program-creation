@@ -1,291 +1,320 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import { useState, useEffect } from "react";
 
-const now = new Date();
-const hour = now.getHours();
-const greeting = hour < 12 ? "Доброе утро" : hour < 18 ? "Добрый день" : "Добрый вечер";
-const dateStr = now.toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-const timeStr = now.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+const INCIDENTS_URL = "https://functions.poehali.dev/df1d9dd9-c455-479d-807f-b25e000928ff";
 
-const MODULES = [
-  {
-    id: "complaints", icon: "FileText", color: "#6366f1", bg: "#6366f110",
-    title: "Обращения и жалобы",
-    desc: "МЧС, МВД, Прокуратура, ФСБ, международные органы",
-    badge: null,
-    stats: [
-      { label: "Статья ФЗ-59", val: "ФЗ-59/2024 ст. 3" },
-      { label: "Закон СМИ", val: "Закон СМИ ст. 38" },
-      { label: "Ответственность", val: "УК РФ ст. 330 — ответственность за отказ органа" },
-    ],
-    route: null,
-  },
-  {
-    id: "finance", icon: "DollarSign", color: "#10b981", bg: "#10b98110",
-    title: "Финансовые операции",
-    desc: "Платежи, выплаты, права человека — с доказательной базой",
-    badge: null,
-    stats: [{ label: "Страховой счёт", val: "Страховой счёт: 43 ₽/л" }],
-    route: "/ecsu/finance",
-  },
-  {
-    id: "violations", icon: "AlertTriangle", color: "#f59e0b", bg: "#f59e0b10",
-    title: "Выявление нарушений",
-    desc: "За выявление коррупции, экологических нарушений, кибератак",
-    badge: null,
-    stats: [
-      { label: "Статьи", val: "ФЗ-273 «О противодействии коррупции»" },
-    ],
-    route: "/ecsu/report",
-  },
-  {
-    id: "emergency", icon: "Phone", color: "#ef4444", bg: "#ef444410",
-    title: "Экстренные службы",
-    desc: "112, МЧС, МВД, скорая — прямые контакты работают сейчас",
-    badge: null,
-    stats: [{ label: "Дежурство", val: "ФЗ-100 на дежурстве — 40+" }],
-    route: null,
-  },
-  {
-    id: "legal", icon: "Scale", color: "#a855f7", bg: "#a855f710",
-    title: "Правовая база",
-    desc: "УК РФ, КоАП, конституционные права, международные конвенции",
-    badge: null,
-    stats: [{ label: "Конституция РФ", val: "Конституция РФ ст. 2, Международные договоры РФ" }],
-    route: "/ecsu/legal",
-  },
-  {
-    id: "organs", icon: "Network", color: "#00c896", bg: "#00c89610",
-    title: "Органы надзора ЕЦСУ",
-    desc: "33 органа ЕЦСУ принимают и направляют обращения к государству",
-    badge: "NEW",
-    stats: [{ label: "Конституция", val: "Конституция РФ ст. 2, Конституция ст. 45, ФЗ ст. 45" }],
-    route: null,
-  },
-  {
-    id: "anon", icon: "EyeOff", color: "#ec4899", bg: "#ec489910",
-    title: "НИП-анонимный канал",
-    desc: "Конфиденциальная жалоба для судей, прокуроров, журналистов, граждан",
-    badge: "NEW",
-    stats: [
-      { label: "УК РФ", val: "УК 2024 ст. 72; Закон о СМИ ст. 152; РФ УК ст. 286" },
-    ],
-    route: null,
-  },
-];
+const dotColor = { critical: "#e94560", high: "#f59e0b", medium: "#a78bfa", low: "#94a3b8" };
+const dotSize = { critical: 14, high: 12, medium: 10, low: 8 };
 
-const QUICK_ACTIONS = [
-  { label: "Органы ЕЦСУ", icon: "Network", color: "#00c896", bg: "rgba(0,200,150,0.12)", route: null },
-  { label: "Анонимная жалоба", icon: "EyeOff", color: "#a855f7", bg: "rgba(168,85,247,0.12)", route: null },
-  { label: "Обращение в орган", icon: "FileText", color: "#6366f1", bg: "rgba(99,102,241,0.12)", route: null },
-  { label: "Экстренные службы", icon: "Phone", color: "#ef4444", bg: "rgba(239,68,68,0.12)", route: null },
-];
+const COUNTRY_COORDS: Record<string, { x: number; y: number }> = {
+  "Russia": { x: 68, y: 28 }, "Russian Federation": { x: 68, y: 28 },
+  "China": { x: 75, y: 38 }, "United States": { x: 20, y: 38 }, "USA": { x: 20, y: 38 },
+  "India": { x: 68, y: 48 }, "Brazil": { x: 35, y: 62 }, "Global": { x: 50, y: 50 },
+  "Japan": { x: 82, y: 36 }, "Germany": { x: 50, y: 30 }, "France": { x: 48, y: 32 },
+  "United Kingdom": { x: 46, y: 28 }, "Ukraine": { x: 55, y: 30 }, "Iran": { x: 60, y: 40 },
+  "Syria": { x: 57, y: 40 }, "Pakistan": { x: 65, y: 42 }, "Turkey": { x: 56, y: 35 },
+  "North Korea": { x: 80, y: 34 }, "South Korea": { x: 81, y: 36 },
+  "Australia": { x: 80, y: 68 }, "Canada": { x: 22, y: 25 }, "Mexico": { x: 18, y: 45 },
+  "Indonesia": { x: 78, y: 56 }, "Philippines": { x: 82, y: 50 }, "Thailand": { x: 76, y: 48 },
+  "Spain": { x: 46, y: 36 }, "Italy": { x: 51, y: 35 }, "Poland": { x: 52, y: 29 },
+  "Bangladesh": { x: 70, y: 46 }, "Peru": { x: 28, y: 60 }, "Kyrgyzstan": { x: 67, y: 36 },
+  "Nigeria": { x: 50, y: 52 }, "Egypt": { x: 56, y: 43 }, "South Africa": { x: 55, y: 72 },
+  "Papua New Guinea": { x: 84, y: 58 }, "Argentina": { x: 32, y: 72 },
+};
 
-const SYSTEM_STATUS = [
-  { label: "Ядро ЕЦСУ", status: "Онлайн", statusColor: "#00c896", detail: "82% активно", icon: "Shield" },
-  { label: "База данных", status: "Онлайн", statusColor: "#00c896", detail: "PostgreSQL · активно", icon: "Database" },
-  { label: "ЦПВОА", status: "Не настроен", statusColor: "#f59e0b", detail: "настройка активна", icon: "Globe" },
-  { label: "Безопасность", status: "Онлайн", statusColor: "#00c896", detail: "Все системы работают", icon: "Lock" },
-  { label: "Сервером (Абонент)", status: "Онлайн", statusColor: "#00c896", detail: "3/5 узлов в сети", icon: "Server" },
-  { label: "НИП-канал", status: "Недоступен", statusColor: "#ef4444", detail: "нет соединения", icon: "EyeOff" },
-];
+function getCoords(country: string) {
+  if (COUNTRY_COORDS[country]) return COUNTRY_COORDS[country];
+  const upper = country.toUpperCase();
+  if (upper.includes("INDONESIA") || upper.includes("SUMATRA")) return { x: 78, y: 56 };
+  if (upper.includes("CHINA") || upper.includes("SICHUAN")) return { x: 76, y: 37 };
+  if (upper.includes("JAPAN") || upper.includes("KURIL")) return { x: 83, y: 33 };
+  if (upper.includes("RUSSIA") || upper.includes("KAMCHATKA")) return { x: 78, y: 27 };
+  if (upper.includes("INDIA") || upper.includes("NICOBAR")) return { x: 70, y: 50 };
+  if (upper.includes("PHILIPPINES") || upper.includes("MINDANAO")) return { x: 82, y: 50 };
+  if (upper.includes("NEW ZEALAND") || upper.includes("KERMADEC")) return { x: 87, y: 70 };
+  if (upper.includes("ALASKA") || upper.includes("ALEUTIAN")) return { x: 12, y: 25 };
+  if (upper.includes("CHILE") || upper.includes("PERU")) return { x: 27, y: 62 };
+  if (upper.includes("MEXICO") || upper.includes("OAXACA")) return { x: 18, y: 46 };
+  if (upper.includes("AFRICA")) return { x: 52, y: 58 };
+  if (upper.includes("ATLANTIC")) return { x: 42, y: 45 };
+  if (upper.includes("PACIFIC")) return { x: 15, y: 52 };
+  if (upper.includes("INDIAN")) return { x: 66, y: 58 };
+  return { x: 40 + Math.random() * 30, y: 35 + Math.random() * 25 };
+}
 
-export default function EcsuOverview() {
-  const navigate = useNavigate();
-  const [time, setTime] = useState(timeStr);
-  const [activeTab, setActiveTab] = useState<"civil" | "modules">("civil");
+interface Stats {
+  total: number;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  resolved: number;
+  active: number;
+  countries: number;
+}
+
+interface MapDot {
+  country: string;
+  severity: string;
+  x: number;
+  y: number;
+  count: number;
+}
+
+interface RecentInc {
+  title: string;
+  country: string;
+  severity: string;
+  created_at: string;
+}
+
+const EcsuOverview = () => {
+  const [mapMode, setMapMode] = useState<"flat" | "globe" | "heat">("flat");
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [mapDots, setMapDots] = useState<MapDot[]>([]);
+  const [recent, setRecent] = useState<RecentInc[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const t = setInterval(() => {
-      setTime(new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
-    }, 1000);
-    return () => clearInterval(t);
+    fetch(`${INCIDENTS_URL}?action=stats`)
+      .then(r => r.json())
+      .then(setStats)
+      .catch(() => {});
+
+    fetch(`${INCIDENTS_URL}?action=list&limit=200`)
+      .then(r => r.json())
+      .then(data => {
+        const incs = data.incidents || [];
+        const byCountry: Record<string, { severity: string; count: number }> = {};
+        incs.forEach((inc: RecentInc & { severity: string }) => {
+          const key = inc.country;
+          if (!byCountry[key]) {
+            byCountry[key] = { severity: inc.severity, count: 0 };
+          }
+          byCountry[key].count++;
+          const order = ["critical","high","medium","low"];
+          if (order.indexOf(inc.severity) < order.indexOf(byCountry[key].severity)) {
+            byCountry[key].severity = inc.severity;
+          }
+        });
+        const dots: MapDot[] = Object.entries(byCountry).map(([country, info]) => ({
+          country,
+          severity: info.severity,
+          count: info.count,
+          ...getCoords(country),
+        }));
+        setMapDots(dots);
+        setRecent(incs.slice(0, 5).map((inc: RecentInc & { severity: string }) => ({
+          title: inc.title,
+          country: inc.country,
+          severity: inc.severity,
+          created_at: inc.created_at,
+        })));
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
+  const statsCards = stats ? [
+    { label: "Всего инцидентов", value: stats.total.toString(), delta: `+${stats.critical} крит.`, icon: "AlertTriangle", color: "#e94560" },
+    { label: "Решено", value: stats.resolved.toString(), delta: `${Math.round(stats.resolved/stats.total*100)}%`, icon: "CheckCircle", color: "#00c896" },
+    { label: "Активных", value: stats.active.toString(), delta: `${stats.high} высоких`, icon: "Activity", color: "#f59e0b" },
+    { label: "Стран охвачено", value: stats.countries.toString(), delta: "международные", icon: "Globe", color: "#60a5fa" },
+  ] : [
+    { label: "Всего инцидентов", value: "...", delta: "", icon: "AlertTriangle", color: "#e94560" },
+    { label: "Решено", value: "...", delta: "", icon: "CheckCircle", color: "#00c896" },
+    { label: "Активных", value: "...", delta: "", icon: "Activity", color: "#f59e0b" },
+    { label: "Стран охвачено", value: "...", delta: "", icon: "Globe", color: "#60a5fa" },
+  ];
+
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto">
-
-      {/* Приветствие */}
-      <div className="text-center mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">
-          {greeting}, <span style={{ color: "#00c896" }}>Владимир</span>
-        </h1>
-        <p className="text-gray-500 text-sm">
-          ЕЦСУ 2.0 · Единая Централизованная Система Управления · Николаев В.В.
-        </p>
-      </div>
-
-      {/* Анонимная жалоба — баннер */}
-      <div className="mb-6 p-4 rounded-xl flex items-center gap-4 cursor-pointer hover:opacity-90 transition-opacity relative"
-        style={{ background: "linear-gradient(135deg, #312e81 0%, #1e1b4b 100%)", border: "1px solid rgba(99,102,241,0.4)" }}>
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: "rgba(99,102,241,0.3)" }}>
-          <Icon name="EyeOff" size={20} className="text-indigo-300" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-white font-bold text-sm">НИП Анонимный Канал</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(99,102,241,0.3)", color: "#a5b4fc" }}>Засекречено</span>
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          </div>
-          <p className="text-indigo-300 text-xs leading-relaxed">
-            Для судей, прокуроров, следователей, журналистов и граждан — анонимная подача жалобы. Личность скрыта даже от владельца системы. Раскрытие только по решению суда.
-          </p>
-          <div className="flex gap-4 mt-2 text-[10px] text-indigo-400">
-            <span>§ ФЗ-ЭКЗО ст. 3</span>
-            <span>§ Закон СМИ ст. 42</span>
-            <span>§ УК РФ ст. 304 — ответственность за отказ органа</span>
-          </div>
-        </div>
-        <Icon name="ChevronRight" size={18} className="text-indigo-400 shrink-0" />
-      </div>
-
-      {/* Быстрые действия */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-yellow-400 text-sm">⚡</span>
-          <span className="text-white/60 text-xs font-bold uppercase tracking-widest">Быстрые действия</span>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {QUICK_ACTIONS.map(a => (
-            <button key={a.label}
-              onClick={() => a.route ? navigate(a.route) : undefined}
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all hover:scale-105"
-              style={{ background: a.bg, color: a.color, border: `1px solid ${a.color}30` }}>
-              <Icon name={a.icon as "Network"} size={15} />
-              <span className="text-xs">{a.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Статус систем */}
-      <div className="mb-6 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-yellow-400 text-sm">⚡</span>
-            <span className="text-white/60 text-xs font-bold uppercase tracking-widest">Статус систем</span>
-          </div>
-          <span className="font-mono text-white/30 text-xs">{time}</span>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {SYSTEM_STATUS.map(s => (
-            <div key={s.label} className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-2 h-2 rounded-full" style={{ background: s.statusColor }} />
-                <span className="text-white/80 text-xs font-semibold">{s.label}</span>
-              </div>
-              <div className="text-xs font-bold mb-0.5" style={{ color: s.statusColor }}>{s.status}</div>
-              <div className="text-white/30 text-[10px]">{s.detail}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Вкладки */}
-      <div className="flex gap-2 mb-4">
-        <button onClick={() => setActiveTab("civil")}
-          className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-          style={{
-            background: activeTab === "civil" ? "rgba(0,200,150,0.15)" : "rgba(255,255,255,0.04)",
-            color: activeTab === "civil" ? "#00c896" : "rgba(255,255,255,0.4)",
-            border: activeTab === "civil" ? "1px solid rgba(0,200,150,0.3)" : "1px solid transparent",
-          }}>
-          Гражданские инструменты
-        </button>
-        <button onClick={() => setActiveTab("modules")}
-          className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-          style={{
-            background: activeTab === "modules" ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.04)",
-            color: activeTab === "modules" ? "#818cf8" : "rgba(255,255,255,0.4)",
-            border: activeTab === "modules" ? "1px solid rgba(99,102,241,0.3)" : "1px solid transparent",
-          }}>
-          Модули системы
-        </button>
-      </div>
-
-      {/* Карточки */}
-      {activeTab === "civil" && (
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-yellow-400 text-sm">🔒</span>
-            <span className="text-white/60 text-xs font-bold uppercase tracking-widest">Доступно каждому гражданину — на основании законов РФ</span>
+          <h2 className="text-xl font-bold text-white">ОБЗОР СИСТЕМЫ</h2>
+          <p className="text-gray-500 text-sm">Международные данные · Реальная база ЕЦСУ</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+          <span className="text-green-400 text-xs">LIVE</span>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        {statsCards.map((s) => (
+          <div key={s.label} className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <Icon name={s.icon} size={18} style={{ color: s.color }} />
+              <span className="text-xs font-bold" style={{ color: s.color }}>{s.delta}</span>
+            </div>
+            <div className="text-2xl font-bold text-white">{s.value}</div>
+            <div className="text-gray-500 text-xs mt-1">{s.label}</div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {MODULES.map(m => (
-              <button key={m.id}
-                onClick={() => m.route ? navigate(m.route) : undefined}
-                className="p-4 rounded-xl text-left transition-all hover:scale-[1.01] group"
-                style={{ background: m.bg, border: `1px solid ${m.color}25` }}>
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: `${m.color}20` }}>
-                    <Icon name={m.icon as "FileText"} size={18} style={{ color: m.color }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-white font-semibold text-sm">{m.title}</span>
-                      {m.badge && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded font-bold"
-                          style={{ background: `${m.color}25`, color: m.color }}>{m.badge}</span>
-                      )}
-                    </div>
-                    <p className="text-white/45 text-xs leading-relaxed mb-2">{m.desc}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {m.stats.map((st, i) => (
-                        <span key={i} className="text-[10px] px-2 py-0.5 rounded"
-                          style={{ background: "rgba(255,255,255,0.05)", color: m.color }}>
-                          § {st.val}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <Icon name="ChevronRight" size={16} className="text-white/20 group-hover:text-white/50 transition-colors shrink-0 mt-1" />
-                </div>
+        ))}
+      </div>
+
+      {/* Map */}
+      <div className="bg-[#0d1225] border border-blue-900/30 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Icon name="Map" size={16} className="text-blue-400" />
+            <span className="text-white font-bold text-sm">КАРТА ИНЦИДЕНТОВ</span>
+            <span className="bg-blue-900/40 text-blue-400 text-xs px-2 py-0.5 rounded-full">
+              {loading ? "..." : `${mapDots.length} стран`}
+            </span>
+          </div>
+          <div className="flex gap-1">
+            {(["flat", "globe", "heat"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMapMode(m)}
+                className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                  mapMode === m ? "bg-blue-600 text-white" : "text-gray-500 hover:text-white"
+                }`}
+              >
+                {m === "flat" ? "Плоская" : m === "globe" ? "3D Глобус" : "Тепловая"}
               </button>
             ))}
+            <div className="flex items-center gap-2 ml-3 text-xs text-gray-500">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#e94560] inline-block" />Крит.</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#f59e0b] inline-block" />Выс.</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#a78bfa] inline-block" />Ср.</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#94a3b8] inline-block" />Мин.</span>
+            </div>
           </div>
         </div>
-      )}
 
-      {activeTab === "modules" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {[
-            { icon: "LayoutDashboard", label: "Обзор системы", color: "#60a5fa", route: null },
-            { icon: "AlertTriangle", label: "Инциденты", color: "#f43f5e", route: null },
-            { icon: "BarChart3", label: "ИИ-аналитика", color: "#a855f7", route: null },
-            { icon: "DollarSign", label: "Финансы", color: "#10b981", route: "/ecsu/finance" },
-            { icon: "Network", label: "Органы ЕЦСУ", color: "#00c896", route: null },
-            { icon: "Shield", label: "Безопасность", color: "#ef4444", route: "/ecsu/security" },
-            { icon: "Scale", label: "Правовая база", color: "#a855f7", route: "/ecsu/legal" },
-            { icon: "Bell", label: "Уведомления", color: "#f59e0b", route: "/ecsu/notifications" },
-          ].map(m => (
-            <button key={m.label}
-              onClick={() => m.route ? navigate(m.route) : undefined}
-              className="flex items-center gap-3 p-4 rounded-xl text-left transition-all hover:scale-[1.01]"
-              style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${m.color}20` }}>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: `${m.color}18` }}>
-                <Icon name={m.icon as "Shield"} size={18} style={{ color: m.color }} />
+        <div className="relative bg-[#060d1f] rounded-xl overflow-hidden" style={{ height: 320 }}>
+
+          {/* Flat mode */}
+          {mapMode === "flat" && (
+            <>
+              <svg className="absolute inset-0 w-full h-full opacity-10">
+                {[...Array(10)].map((_, i) => (
+                  <line key={`h${i}`} x1="0" y1={`${i * 10}%`} x2="100%" y2={`${i * 10}%`} stroke="#60a5fa" strokeWidth="0.5" />
+                ))}
+                {[...Array(10)].map((_, i) => (
+                  <line key={`v${i}`} x1={`${i * 10}%`} y1="0" x2={`${i * 10}%`} y2="100%" stroke="#60a5fa" strokeWidth="0.5" />
+                ))}
+              </svg>
+              {loading ? (
+                <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-sm animate-pulse">Загрузка карты...</div>
+              ) : (
+                mapDots.map((dot, i) => {
+                  const color = dotColor[dot.severity as keyof typeof dotColor] || "#94a3b8";
+                  const size = dotSize[dot.severity as keyof typeof dotSize] || 8;
+                  return (
+                    <div
+                      key={i}
+                      className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+                      style={{ left: `${dot.x}%`, top: `${dot.y}%` }}
+                    >
+                      <div
+                        className="rounded-full animate-pulse"
+                        style={{ width: size, height: size, background: color, boxShadow: `0 0 8px ${color}` }}
+                      />
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#0d1225] border border-blue-900/50 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                        {dot.country} · {dot.count} инц.
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </>
+          )}
+
+          {/* Globe mode */}
+          {mapMode === "globe" && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="relative">
+                <svg width="240" height="240" viewBox="0 0 240 240">
+                  <circle cx="120" cy="120" r="100" fill="#0a1628" stroke="#1e3a5f" strokeWidth="1.5" />
+                  <ellipse cx="120" cy="120" rx="100" ry="40" fill="none" stroke="#1e3a5f" strokeWidth="0.8" opacity="0.5" />
+                  <ellipse cx="120" cy="120" rx="60" ry="100" fill="none" stroke="#1e3a5f" strokeWidth="0.8" opacity="0.5" />
+                  <line x1="20" y1="120" x2="220" y2="120" stroke="#1e3a5f" strokeWidth="0.8" opacity="0.5" />
+                  <line x1="120" y1="20" x2="120" y2="220" stroke="#1e3a5f" strokeWidth="0.8" opacity="0.5" />
+                  {mapDots.map((dot, i) => {
+                    const angle = (dot.x / 100) * Math.PI * 1.6 - 0.8;
+                    const lat = (dot.y / 100) * Math.PI - Math.PI / 2;
+                    const cx = 120 + Math.cos(lat) * Math.sin(angle) * 95;
+                    const cy = 120 - Math.sin(lat) * 95;
+                    const color = dotColor[dot.severity as keyof typeof dotColor] || "#94a3b8";
+                    const r = (dotSize[dot.severity as keyof typeof dotSize] || 8) / 2;
+                    return (
+                      <g key={i}>
+                        <circle cx={cx} cy={cy} r={r} fill={color} opacity="0.9" />
+                        <circle cx={cx} cy={cy} r={r * 2} fill={color} opacity="0.15" />
+                      </g>
+                    );
+                  })}
+                  <circle cx="120" cy="120" r="100" fill="none" stroke="#60a5fa" strokeWidth="1" opacity="0.3" />
+                </svg>
+                <div className="absolute top-1 left-1/2 -translate-x-1/2 text-blue-400 text-xs font-mono opacity-60">3D ГЛОБУС · ECSU</div>
               </div>
-              <span className="text-white/80 font-semibold text-sm">{m.label}</span>
-              <Icon name="ChevronRight" size={15} className="text-white/20 ml-auto" />
-            </button>
-          ))}
-        </div>
-      )}
+            </div>
+          )}
 
-      {/* Правовой футер */}
-      <div className="mt-8 p-4 rounded-xl text-white/25 text-[10px] leading-relaxed"
-        style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-        Правовая основа системы ЕЦСУ 2.0: Все инструменты работают в рамках действующего законодательства РФ и международных конвенций. Система за является органов власти и не является официальным представителем госструктур.
-        Правообладатель: Николаев Владимир Владимирович (УК РФ ст. 146, ГК РФ). Владелец системы: Николаев Владимир Владимирович.
-        nikolaevvladimir77@yandex.ru
+          {/* Heat mode */}
+          {mapMode === "heat" && (
+            <>
+              <svg className="absolute inset-0 w-full h-full">
+                <defs>
+                  {mapDots.map((dot, i) => (
+                    <radialGradient key={`g${i}`} id={`hg${i}`} cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor={dotColor[dot.severity as keyof typeof dotColor] || "#94a3b8"} stopOpacity="0.55" />
+                      <stop offset="100%" stopColor={dotColor[dot.severity as keyof typeof dotColor] || "#94a3b8"} stopOpacity="0" />
+                    </radialGradient>
+                  ))}
+                </defs>
+                {mapDots.map((dot, i) => {
+                  const r = dot.severity === "critical" ? 8 : dot.severity === "high" ? 6 : dot.severity === "medium" ? 5 : 3;
+                  return (
+                    <ellipse key={`e${i}`} cx={`${dot.x}%`} cy={`${dot.y}%`} rx={`${r}%`} ry={`${r * 0.6}%`} fill={`url(#hg${i})`} />
+                  );
+                })}
+              </svg>
+              <div className="absolute top-3 left-3 text-blue-400 text-xs font-mono opacity-60">ТЕПЛОВАЯ КАРТА · УГРОЗЫ</div>
+              {mapDots.map((dot, i) => (
+                <div key={i} className="absolute transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
+                  style={{ left: `${dot.x}%`, top: `${dot.y}%` }}>
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: dotColor[dot.severity as keyof typeof dotColor] || "#94a3b8" }} />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#0d1225] border border-blue-900/50 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                    {dot.country} · {dot.count}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          <div className="absolute bottom-3 right-3 text-blue-900/50 text-xs font-mono">ECSU 2.0 · DALAN</div>
+        </div>
       </div>
-      <div className="text-center text-white/20 text-[10px] mt-3">
-        ЕЦСУ 2.0 · © 2026 Николаев Владимир Владимирович · Все права защищены.
+
+      {/* Recent */}
+      <div className="mt-4 bg-[#0d1225] border border-blue-900/30 rounded-xl p-4">
+        <div className="text-white font-bold text-sm mb-3 flex items-center gap-2">
+          <Icon name="Activity" size={15} className="text-blue-400" />
+          Последние события
+        </div>
+        <div className="space-y-2">
+          {loading ? (
+            <div className="text-gray-600 text-xs animate-pulse">Загрузка...</div>
+          ) : recent.map((e, i) => {
+            const color = dotColor[e.severity as keyof typeof dotColor] || "#94a3b8";
+            return (
+              <div key={i} className="flex items-center gap-3 text-xs">
+                <span className="text-gray-600 w-20 shrink-0">{e.created_at?.slice(0, 10)}</span>
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
+                <span className="text-gray-300 truncate">{e.title}</span>
+                <span className="text-gray-600 shrink-0 ml-auto">{e.country}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default EcsuOverview;

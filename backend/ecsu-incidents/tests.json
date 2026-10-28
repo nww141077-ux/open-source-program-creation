@@ -1,0 +1,25 @@
+{
+  "tests": [
+    {
+      "name": "Статистика инцидентов",
+      "method": "GET",
+      "path": "/?action=stats",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Список инцидентов",
+      "method": "GET",
+      "path": "/?action=list&limit=5",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Критические инциденты",
+      "method": "GET",
+      "path": "/?action=list&severity=critical",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

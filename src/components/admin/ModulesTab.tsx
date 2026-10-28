@@ -21,7 +21,8 @@ const ModulesTab = () => {
       .then((data) => {
         setModules(data);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   const toggle = async (mod: Module) => {
