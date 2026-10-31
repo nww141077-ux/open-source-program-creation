@@ -1,451 +1,336 @@
-import { useState, useRef } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Zap, ArrowRight, X, Eye, EyeOff, Shield } from "lucide-react";
-import NexaflowDashboard from "@/components/nexaflow/NexaflowDashboard";
+import Icon from "@/components/ui/icon";
 
-const AUTH_URL = "https://functions.poehali.dev/ffe35261-9869-478f-8361-946fa981b34a";
+const HERO_IMAGE = "https://cdn.poehali.dev/projects/61a665c2-cff9-41a1-9a78-364c960d2ecc/files/b91e9987-ba19-4e46-a84b-beeb45e6aa11.jpg";
 
-type Screen = "landing" | "login" | "register";
-type Role = "owner" | "user" | null;
+const FEATURES = [
+  {
+    icon: "Zap",
+    title: "Молниеносная скорость",
+    desc: "Обработка до 10 000 запросов в секунду. Ваши данные всегда в реальном времени.",
+    color: "#00ff87",
+  },
+  {
+    icon: "GitBranch",
+    title: "Умные интеграции",
+    desc: "Подключите любой сервис за минуты. REST, GraphQL, WebSocket — всё из коробки.",
+    color: "#a855f7",
+  },
+  {
+    icon: "ShieldCheck",
+    title: "Безопасность данных",
+    desc: "Шифрование E2E, аудит событий и контроль доступа на уровне предприятия.",
+    color: "#3b82f6",
+  },
+  {
+    icon: "BarChart3",
+    title: "Аналитика в реальном времени",
+    desc: "Дашборды, метрики и алерты. Видите всё что происходит в вашей системе.",
+    color: "#f43f5e",
+  },
+  {
+    icon: "RefreshCw",
+    title: "Автосинхронизация",
+    desc: "Данные всегда актуальны. Синхронизация между системами без ручного вмешательства.",
+    color: "#f59e0b",
+  },
+  {
+    icon: "Blocks",
+    title: "Модульная архитектура",
+    desc: "Масштабируйте только нужные части. Платите за то, что используете.",
+    color: "#06b6d4",
+  },
+];
 
-interface UserSession {
-  name: string;
-  role: Role;
-  token: string;
+const INTEGRATIONS = [
+  { name: "Salesforce", icon: "Cloud", color: "#00a1e0" },
+  { name: "Slack", icon: "MessageSquare", color: "#9b59b6" },
+  { name: "Google", icon: "Globe", color: "#4285f4" },
+  { name: "Stripe", icon: "CreditCard", color: "#635bff" },
+  { name: "PostgreSQL", icon: "Database", color: "#336791" },
+  { name: "AWS", icon: "Server", color: "#ff9900" },
+  { name: "GitHub", icon: "Code2", color: "#3fb950" },
+  { name: "Telegram", icon: "Send", color: "#0088cc" },
+];
+
+const STATS = [
+  { value: "500+", label: "Интеграций", icon: "Puzzle" },
+  { value: "99.9%", label: "Uptime SLA", icon: "Activity" },
+  { value: "< 50мс", label: "Задержка API", icon: "Timer" },
+  { value: "10M+", label: "Запросов/день", icon: "TrendingUp" },
+];
+
+function useInView(threshold = 0.1) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setInView(true); },
+      { threshold }
+    );
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, []);
+
+  return { ref, inView };
 }
 
 export default function Index() {
   const navigate = useNavigate();
-  const [screen, setScreen] = useState<Screen>("landing");
-  const [session, setSession] = useState<UserSession | null>(null);
-
-  // owner login state
-  const [ownerPassword, setOwnerPassword] = useState("");
-  const [ownerError, setOwnerError] = useState("");
-  const ownerTapsRef = useRef(0);
-  const [showOwnerModal, setShowOwnerModal] = useState(false);
-
-  // user form state
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPass, setShowPass] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  // тап по логотипу 5 раз — показывает вход владельца
-  const handleLogoTap = () => {
-    ownerTapsRef.current += 1;
-    if (ownerTapsRef.current >= 5) {
-      ownerTapsRef.current = 0;
-      setShowOwnerModal(true);
-    }
-  };
-
-  const handleOwnerLogin = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(AUTH_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "login", email: "nikolaevvladimir77@yandex.ru", password: ownerPassword }),
-      });
-      const data = await res.json();
-      if (data.role === "owner") {
-        setSession({ name: data.name || "Владимир", role: "owner", token: data.token });
-        setShowOwnerModal(false);
-        setOwnerPassword("");
-      } else {
-        setOwnerError("Неверный пароль");
-        setOwnerPassword("");
-      }
-    } catch {
-      setOwnerError("Ошибка сети");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUserAuth = async (action: "login" | "register") => {
-    setError("");
-    if (action === "register" && !name.trim()) { setError("Введите имя"); return; }
-    if (!email.trim()) { setError("Введите email"); return; }
-    if (!password) { setError("Введите пароль"); return; }
-
-    setLoading(true);
-    try {
-      const body: Record<string, string> = { action, email, password };
-      if (action === "register") body.name = name;
-
-      const res = await fetch(AUTH_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = JSON.parse(typeof (await res.clone().text()) === "string" ? await res.text() : "{}");
-
-      if (!res.ok) {
-        setError(data.error || "Ошибка");
-      } else {
-        setSession({ name: data.name, role: "user", token: data.token });
-        setName(""); setEmail(""); setPassword("");
-      }
-    } catch {
-      setError("Ошибка сети");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetForm = () => {
-    setName(""); setEmail(""); setPassword(""); setError(""); setShowPass(false);
-  };
-
-  // Если залогинен как владелец — дашборд
-  if (session?.role === "owner") {
-    return <NexaflowDashboard onLogout={() => setSession(null)} />;
-  }
-
-  // Если залогинен как пользователь — простой кабинет
-  if (session?.role === "user") {
-    return (
-      <div className="min-h-screen bg-[#0a0f1a] text-white flex flex-col items-center justify-center px-4">
-        <div className="w-full max-w-sm">
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-3" style={{ background: "linear-gradient(135deg, #a855f7, #3b82f6)" }}>
-              <Shield size={22} className="text-white" />
-            </div>
-            <div className="text-xl font-bold">ЕЦСУ 2.0</div>
-          </div>
-          <div className="bg-[#1a1d27] border border-white/10 rounded-2xl p-6 text-center">
-            <div className="w-14 h-14 bg-green-500/20 border border-green-500/30 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <span className="text-green-400 font-bold text-2xl">{session.name[0].toUpperCase()}</span>
-            </div>
-            <div className="text-white font-semibold text-lg mb-1">{session.name}</div>
-            <div className="text-gray-500 text-xs mb-6">Пользователь ЕЦСУ 2.0</div>
-            <div className="bg-[#0f1117] rounded-xl p-4 mb-4 text-left">
-              <div className="text-gray-400 text-xs mb-1">Статус аккаунта</div>
-              <div className="text-green-400 text-sm font-semibold flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                Активен
-              </div>
-            </div>
-            <button
-              onClick={() => navigate("/ecsu")}
-              className="w-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 font-semibold py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2 mb-3"
-            >
-              <Shield size={16} />
-              Перейти в ЕЦСУ
-            </button>
-            <button
-              onClick={() => setSession(null)}
-              className="w-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-semibold py-3 rounded-xl transition-colors text-sm"
-            >
-              Выйти
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const heroRef = useInView(0.1);
+  const featuresRef = useInView(0.05);
+  const integrationsRef = useInView(0.05);
+  const statsRef = useInView(0.1);
 
   return (
-    <div className="min-h-screen text-white flex flex-col" style={{ background: "linear-gradient(160deg, #071a12 0%, #0a1a0f 40%, #080f1a 100%)" }}>
-      {/* Header */}
-      <header className="flex items-center justify-between px-5 md:px-10 py-4">
-        <button onClick={handleLogoTap} className="flex items-center gap-2 select-none">
-          <div className="w-9 h-9 bg-green-500 rounded-xl flex items-center justify-center">
-            <Zap size={18} className="text-black" />
-          </div>
-          <span className="font-bold text-white text-lg tracking-wide">NEXAFLOW</span>
-        </button>
-        {/* Десктопное меню */}
-        <nav className="hidden md:flex items-center gap-6">
-          {["Возможности", "Интеграции", "Тарифы"].map(item => (
-            <button key={item} className="text-gray-400 hover:text-white text-sm transition-colors">{item}</button>
-          ))}
-        </nav>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => { resetForm(); setScreen("login"); }}
-            className="hidden md:block text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            Войти
-          </button>
-          <button
-            onClick={() => { resetForm(); setScreen("register"); }}
-            className="bg-gradient-to-r from-green-400 to-teal-400 text-black font-bold px-4 py-2 rounded-xl text-sm"
-          >
-            Начать бесплатно
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen mesh-bg font-body overflow-x-hidden">
 
-      {/* Landing */}
-      {screen === "landing" && (
-        <main className="flex-1 flex flex-col md:flex-row items-center px-5 md:px-10 pt-6 pb-10 gap-10">
-          {/* Левая колонка */}
-          <div className="flex-1 flex flex-col max-w-xl">
-            <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-full px-3 py-1.5 mb-6 self-start">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-green-400 text-xs font-medium">Платформа интеграций нового поколения</span>
+      {/* NAV */}
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4"
+        style={{ background: 'rgba(8,12,20,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(0,255,135,0.1)' }}>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #00ff87, #a855f7)' }}>
+            <Icon name="Zap" size={16} className="text-black" />
+          </div>
+          <span className="font-display text-xl font-bold text-white tracking-wide">NEXAFLOW</span>
+        </div>
+        <div className="hidden md:flex items-center gap-8">
+          {["Возможности", "Интеграции", "Тарифы"].map((item) => (
+            <a key={item} href="#" className="text-sm text-white/60 hover:text-white transition-colors duration-200">{item}</a>
+          ))}
+        </div>
+        <button onClick={() => navigate('/app')} className="px-5 py-2 rounded-lg font-semibold text-sm text-black transition-all duration-200 hover:scale-105"
+          style={{ background: 'linear-gradient(135deg, #00ff87, #3b82f6)', boxShadow: '0 0 20px rgba(0,255,135,0.3)' }}>
+          Начать бесплатно
+        </button>
+      </nav>
+
+      {/* HERO */}
+      <section className="relative min-h-screen flex items-center justify-center pt-20 px-6" ref={heroRef.ref}>
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-20 animate-float"
+            style={{ background: 'radial-gradient(circle, #00ff87, transparent)' }} />
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full blur-3xl opacity-15 animate-float-delay"
+            style={{ background: 'radial-gradient(circle, #a855f7, transparent)' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full border opacity-5 animate-spin-slow"
+            style={{ borderColor: '#00ff87' }} />
+        </div>
+
+        <div className="relative z-10 max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+          <div className={`space-y-8 ${heroRef.inView ? 'animate-fade-up' : 'opacity-0-init'}`}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold"
+              style={{ background: 'rgba(0,255,135,0.1)', border: '1px solid rgba(0,255,135,0.3)', color: '#00ff87' }}>
+              <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#00ff87' }} />
+              Платформа интеграций нового поколения
             </div>
-            <h1 className="text-5xl md:text-6xl font-black leading-none mb-6">
-              <span className="text-white">ОБЪЕДИНИТЕ</span><br />
-              <span className="bg-gradient-to-r from-green-400 to-purple-500 bg-clip-text text-transparent">ВСЁ В ОДНОМ</span><br />
-              <span className="text-gray-500">ПОТОКЕ</span><br />
-              <span className="text-gray-600">ДАННЫХ</span>
+
+            <h1 className="font-display text-5xl md:text-7xl font-bold leading-none uppercase tracking-tight">
+              <span className="text-white">Объедините</span>
+              <br />
+              <span className="gradient-text">всё в одном</span>
+              <br />
+              <span className="text-white/40">потоке данных</span>
             </h1>
-            <p className="text-gray-400 text-base leading-relaxed mb-8">
+
+            <p className="text-white/60 text-lg leading-relaxed max-w-lg">
               NexaFlow — единая платформа для интеграции всех ваших сервисов, автоматизации процессов и управления данными в реальном времени.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 mb-6">
-              <button
-                onClick={() => { resetForm(); setScreen("register"); }}
-                className="bg-gradient-to-r from-green-400 to-teal-400 text-black font-bold py-3 px-6 rounded-xl text-base flex items-center justify-center gap-2"
-              >
-                Попробовать бесплатно <ArrowRight size={18} />
+
+            <div className="flex flex-wrap gap-4">
+              <button onClick={() => navigate('/app')} className="px-8 py-4 rounded-xl font-semibold text-black text-base transition-all duration-300 hover:scale-105 glow-green"
+                style={{ background: 'linear-gradient(135deg, #00ff87, #3b82f6)' }}>
+                Попробовать бесплатно →
               </button>
-              <button
-                onClick={() => navigate("/ecsu")}
-                className="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 font-semibold py-3 px-6 rounded-xl text-base flex items-center justify-center gap-2 transition-colors"
-              >
-                <Shield size={18} />
-                Открыть ЕЦСУ
+              <button className="px-8 py-4 rounded-xl font-semibold text-white text-base transition-all duration-300 hover:scale-105 gradient-border"
+                style={{ background: 'rgba(255,255,255,0.05)' }}>
+                Смотреть демо
               </button>
             </div>
-            <div className="flex items-center gap-5 text-xs text-gray-600">
-              <span className="flex items-center gap-1.5"><span className="text-green-500">✓</span> 14 дней бесплатно</span>
-              <span className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Без карты</span>
-              <span className="flex items-center gap-1.5"><span className="text-green-500">✓</span> Отмена в любое время</span>
+
+            <div className="flex items-center gap-6 pt-2">
+              {["14 дней бесплатно", "Без карты", "Отмена в любое время"].map((text) => (
+                <div key={text} className="flex items-center gap-1.5 text-xs text-white/40">
+                  <Icon name="Check" size={12} style={{ color: '#00ff87' }} />
+                  {text}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Правая колонка — картинка нейросети */}
-          <div className="hidden md:flex flex-1 items-center justify-center max-w-lg">
-            <div className="relative w-full aspect-square max-w-sm">
-              <div className="absolute inset-0 rounded-3xl overflow-hidden"
-                style={{ background: "linear-gradient(135deg, #0a2a1a 0%, #0d1a2e 100%)", border: "1px solid rgba(0,255,135,0.15)" }}>
-                <svg className="absolute inset-0 w-full h-full opacity-40" viewBox="0 0 400 400">
-                  {/* Узлы нейросети */}
-                  {[
-                    [80,80],[200,60],[320,100],[60,200],[160,180],[260,160],[340,220],
-                    [100,300],[200,280],[300,300],[220,380],[380,340]
-                  ].map(([x,y], i) => (
-                    <g key={i}>
-                      <circle cx={x} cy={y} r="6" fill="#00ff87" opacity="0.7" />
-                      <circle cx={x} cy={y} r="12" fill="#00ff87" opacity="0.15" />
-                    </g>
-                  ))}
-                  {/* Линии */}
-                  {[
-                    [80,80,200,60],[200,60,320,100],[80,80,60,200],[200,60,160,180],
-                    [320,100,340,220],[60,200,160,180],[160,180,260,160],[260,160,340,220],
-                    [60,200,100,300],[160,180,200,280],[260,160,300,300],[340,220,380,340],
-                    [100,300,200,280],[200,280,300,300],[200,280,220,380],[300,300,380,340],
-                  ].map(([x1,y1,x2,y2], i) => (
-                    <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#00ff87" strokeWidth="0.8" opacity="0.25" />
-                  ))}
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-16 h-16 rounded-2xl bg-green-500/20 border border-green-500/30 flex items-center justify-center">
-                    <Zap size={28} className="text-green-400" />
-                  </div>
+          <div className={`relative ${heroRef.inView ? 'animate-slide-right delay-300' : 'opacity-0-init'}`}>
+            <div className="relative rounded-2xl overflow-hidden gradient-border"
+              style={{ boxShadow: '0 0 60px rgba(0,255,135,0.15), 0 0 120px rgba(168,85,247,0.1)' }}>
+              <img src={HERO_IMAGE} alt="NexaFlow Dashboard" className="w-full object-cover" style={{ height: '420px' }} />
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(8,12,20,0.8) 0%, transparent 60%)' }} />
+              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+                <div className="px-3 py-1.5 rounded-lg text-xs font-semibold text-black" style={{ background: '#00ff87' }}>
+                  ● Живое подключение
+                </div>
+                <div className="px-3 py-1.5 rounded-lg text-xs text-white"
+                  style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)' }}>
+                  1,247 активных потоков
                 </div>
               </div>
-              {/* Декоративные блоки */}
-              <div className="absolute -top-4 -right-4 bg-[#111827] border border-white/10 rounded-xl px-4 py-2 text-xs text-green-400 font-semibold">
-                +12% скорость
-              </div>
-              <div className="absolute -bottom-4 -left-4 bg-[#111827] border border-white/10 rounded-xl px-4 py-2 text-xs text-blue-400 font-semibold">
-                1 247 интеграций
-              </div>
             </div>
-          </div>
-
-          {/* Мобильные кнопки */}
-          <div className="md:hidden w-full bg-[#111827]/80 border border-white/10 rounded-2xl p-5 flex flex-col gap-3">
-            <button
-              onClick={() => { resetForm(); setScreen("login"); }}
-              className="w-full bg-white/5 border border-white/10 text-white font-semibold py-4 rounded-xl text-base"
-            >
-              Войти в аккаунт
-            </button>
-          </div>
-        </main>
-      )}
-
-      {/* Регистрация */}
-      {screen === "register" && (
-        <main className="flex-1 flex flex-col px-5 pt-6 pb-10">
-          <button onClick={() => setScreen("landing")} className="text-gray-500 hover:text-white text-sm mb-6 self-start flex items-center gap-1">
-            ← Назад
-          </button>
-          <div className="flex flex-col items-center mb-6">
-            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mb-3">
-              <Zap size={22} className="text-black" />
+            <div className="absolute -top-4 -right-4 w-20 h-20 rounded-2xl flex items-center justify-center animate-float"
+              style={{ background: 'linear-gradient(135deg, #a855f7, #3b82f6)', boxShadow: '0 0 30px rgba(168,85,247,0.4)' }}>
+              <Icon name="GitMerge" size={32} className="text-white" />
             </div>
-            <div className="text-xl font-bold text-white">Создать аккаунт</div>
-            <div className="text-gray-500 text-sm mt-1">Начните бесплатно</div>
-          </div>
-          <div className="bg-[#1a1d27] border border-white/10 rounded-2xl p-6 flex flex-col gap-3">
-            <div>
-              <label className="text-gray-400 text-xs mb-1 block">Ваше имя</label>
-              <input type="text" placeholder="Имя" value={name}
-                onChange={e => { setName(e.target.value); setError(""); }}
-                className="w-full bg-[#0f1117] border border-white/10 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-green-500/50 placeholder-gray-600"
-              />
-            </div>
-            <div>
-              <label className="text-gray-400 text-xs mb-1 block">Email</label>
-              <input type="email" placeholder="your@email.com" value={email}
-                onChange={e => { setEmail(e.target.value); setError(""); }}
-                className="w-full bg-[#0f1117] border border-white/10 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-green-500/50 placeholder-gray-600"
-              />
-            </div>
-            <div>
-              <label className="text-gray-400 text-xs mb-1 block">Пароль (минимум 6 символов)</label>
-              <div className="relative">
-                <input type={showPass ? "text" : "password"} placeholder="Пароль" value={password}
-                  onChange={e => { setPassword(e.target.value); setError(""); }}
-                  onKeyDown={e => e.key === "Enter" && handleUserAuth("register")}
-                  className="w-full bg-[#0f1117] border border-white/10 text-white rounded-lg px-4 py-3 pr-11 focus:outline-none focus:border-green-500/50 placeholder-gray-600"
-                />
-                <button onClick={() => setShowPass(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
-                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-            {error && <div className="text-red-400 text-sm">{error}</div>}
-            <button
-              onClick={() => handleUserAuth("register")}
-              disabled={loading}
-              className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-50 text-black font-semibold py-3 rounded-lg transition-colors mt-1"
-            >
-              {loading ? "Регистрация..." : "Создать аккаунт"}
-            </button>
-            <button onClick={() => { resetForm(); setScreen("login"); }}
-              className="text-gray-500 hover:text-white text-sm text-center transition-colors">
-              Уже есть аккаунт? Войти
-            </button>
-          </div>
-        </main>
-      )}
-
-      {/* Вход */}
-      {screen === "login" && (
-        <main className="flex-1 flex flex-col px-5 pt-6 pb-10">
-          <button onClick={() => setScreen("landing")} className="text-gray-500 hover:text-white text-sm mb-6 self-start">
-            ← Назад
-          </button>
-          <div className="flex flex-col items-center mb-6">
-            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mb-3">
-              <Zap size={22} className="text-black" />
-            </div>
-            <div className="text-xl font-bold text-white">Вход в ЕЦСУ 2.0</div>
-            <div className="text-gray-500 text-sm mt-1">Введите данные аккаунта</div>
-          </div>
-          <div className="bg-[#1a1d27] border border-white/10 rounded-2xl p-6 flex flex-col gap-3">
-            <div>
-              <label className="text-gray-400 text-xs mb-1 block">Email</label>
-              <input type="email" placeholder="your@email.com" value={email}
-                onChange={e => { setEmail(e.target.value); setError(""); }}
-                className="w-full bg-[#0f1117] border border-white/10 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-green-500/50 placeholder-gray-600"
-              />
-            </div>
-            <div>
-              <label className="text-gray-400 text-xs mb-1 block">Пароль</label>
-              <div className="relative">
-                <input type={showPass ? "text" : "password"} placeholder="Пароль" value={password}
-                  onChange={e => { setPassword(e.target.value); setError(""); }}
-                  onKeyDown={e => e.key === "Enter" && handleUserAuth("login")}
-                  className="w-full bg-[#0f1117] border border-white/10 text-white rounded-lg px-4 py-3 pr-11 focus:outline-none focus:border-green-500/50 placeholder-gray-600"
-                />
-                <button onClick={() => setShowPass(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
-                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-            {error && <div className="text-red-400 text-sm">{error}</div>}
-            <button
-              onClick={() => handleUserAuth("login")}
-              disabled={loading}
-              className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-50 text-black font-semibold py-3 rounded-lg transition-colors mt-1"
-            >
-              {loading ? "Вход..." : "Войти"}
-            </button>
-            <button onClick={() => { resetForm(); setScreen("register"); }}
-              className="text-gray-500 hover:text-white text-sm text-center transition-colors">
-              Нет аккаунта? Зарегистрироваться
-            </button>
-          </div>
-        </main>
-      )}
-
-      {/* Footer */}
-      {screen === "landing" && (
-        <footer className="px-5 py-6 border-t border-white/5 flex flex-col items-center gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-green-500 rounded-lg flex items-center justify-center">
-              <Zap size={12} className="text-black" />
-            </div>
-            <span className="font-bold text-white text-sm tracking-wide">NEXAFLOW</span>
-          </div>
-          <p className="text-gray-700 text-xs">© 2026 Николаев В.В. Все права защищены.</p>
-        </footer>
-      )}
-
-      {/* Вход владельца (5 тапов по логотипу) — полноэкранный */}
-      {showOwnerModal && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-between px-6 py-12" style={{ background: "#0a0f1e" }}>
-          {/* Логотип */}
-          <div className="flex flex-col items-center gap-3 mt-8">
-            <div className="w-20 h-20 rounded-3xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-900/50">
-              <Shield size={40} className="text-white" />
-            </div>
-            <div className="text-white font-black text-4xl tracking-widest mt-2">ECSU</div>
-            <div className="text-blue-400 text-xs font-semibold tracking-[0.25em] uppercase">Система контроля · 2026</div>
-          </div>
-
-          {/* Форма */}
-          <div className="w-full max-w-sm">
-            <div className="bg-[#111827] border border-white/10 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-1">
-                <div className="text-white font-bold text-lg">Авторизация</div>
-                <button onClick={() => { setShowOwnerModal(false); setOwnerPassword(""); setOwnerError(""); }}
-                  className="text-gray-600 hover:text-white"><X size={18} /></button>
-              </div>
-              <div className="text-gray-500 text-sm mb-5">Только для владельца системы</div>
-              <input
-                type="password"
-                value={ownerPassword}
-                onChange={e => { setOwnerPassword(e.target.value); setOwnerError(""); }}
-                onKeyDown={e => e.key === "Enter" && handleOwnerLogin()}
-                placeholder="Пароль"
-                autoFocus
-                className="w-full bg-[#0d1117] border border-white/10 text-white rounded-xl px-4 py-4 mb-3 focus:outline-none focus:border-blue-500/50 placeholder-gray-600 text-base"
-              />
-              {ownerError && (
-                <div className="text-red-400 text-sm mb-3 flex items-center gap-2">
-                  <span>⊘</span> Доступ запрещён
-                </div>
-              )}
-              <button
-                onClick={handleOwnerLogin}
-                disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors text-base"
-              >
-                {loading ? "Проверка..." : "Войти в систему"}
-              </button>
-            </div>
-          </div>
-
-          {/* Футер */}
-          <div className="text-gray-600 text-xs tracking-widest text-center">
-            SYNERGON GLOBAL · Николаев В.В. · 2026
           </div>
         </div>
-      )}
+      </section>
+
+      {/* STATS */}
+      <section className="py-16 px-6" ref={statsRef.ref}>
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {STATS.map((stat, i) => (
+              <div key={stat.label}
+                className={`p-6 rounded-2xl text-center gradient-border card-hover ${statsRef.inView ? 'animate-fade-up' : 'opacity-0-init'}`}
+                style={{ background: 'rgba(13,18,32,0.8)', animationDelay: `${i * 0.1}s` }}>
+                <Icon name={stat.icon as any} size={24} className="mx-auto mb-3" style={{ color: '#00ff87' }} />
+                <div className="font-display text-3xl font-bold gradient-text mb-1">{stat.value}</div>
+                <div className="text-xs text-white/50">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURES */}
+      <section className="py-24 px-6" ref={featuresRef.ref}>
+        <div className="max-w-6xl mx-auto">
+          <div className={`text-center mb-16 ${featuresRef.inView ? 'animate-fade-up' : 'opacity-0-init'}`}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold mb-6"
+              style={{ background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.3)', color: '#a855f7' }}>
+              <Icon name="Sparkles" size={12} />
+              Ключевые возможности
+            </div>
+            <h2 className="font-display text-4xl md:text-6xl font-bold text-white uppercase tracking-tight mb-4">
+              Всё что нужно<br /><span className="gradient-text">для роста</span>
+            </h2>
+            <p className="text-white/50 text-lg max-w-xl mx-auto">
+              Мощный набор инструментов для автоматизации, интеграции и масштабирования вашего бизнеса
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {FEATURES.map((feat, i) => (
+              <div key={feat.title}
+                className={`p-6 rounded-2xl card-hover gradient-border cursor-pointer group ${featuresRef.inView ? 'animate-fade-up' : 'opacity-0-init'}`}
+                style={{ background: 'rgba(13,18,32,0.9)', animationDelay: `${i * 0.08}s` }}>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110"
+                  style={{ background: `${feat.color}18`, border: `1px solid ${feat.color}40` }}>
+                  <Icon name={feat.icon as any} size={22} style={{ color: feat.color }} />
+                </div>
+                <h3 className="font-display text-lg font-semibold text-white mb-2 uppercase tracking-wide">{feat.title}</h3>
+                <p className="text-white/50 text-sm leading-relaxed">{feat.desc}</p>
+                <div className="mt-4 flex items-center gap-1 text-xs font-semibold transition-all duration-200 group-hover:gap-2"
+                  style={{ color: feat.color }}>
+                  Подробнее <Icon name="ArrowRight" size={12} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* INTEGRATIONS */}
+      <section className="py-24 px-6" ref={integrationsRef.ref}>
+        <div className="max-w-6xl mx-auto">
+          <div className={`text-center mb-16 ${integrationsRef.inView ? 'animate-fade-up' : 'opacity-0-init'}`}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold mb-6"
+              style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6' }}>
+              <Icon name="Link2" size={12} />
+              Экосистема интеграций
+            </div>
+            <h2 className="font-display text-4xl md:text-6xl font-bold text-white uppercase tracking-tight mb-4">
+              500+ сервисов<br /><span className="gradient-text">под рукой</span>
+            </h2>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 pointer-events-none"
+              style={{ background: 'radial-gradient(ellipse at center, rgba(0,255,135,0.05) 0%, transparent 70%)' }} />
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              {INTEGRATIONS.map((item, i) => (
+                <div key={item.name}
+                  className={`p-5 rounded-2xl flex items-center gap-4 card-hover gradient-border group cursor-pointer ${integrationsRef.inView ? 'animate-fade-up' : 'opacity-0-init'}`}
+                  style={{ background: 'rgba(13,18,32,0.9)', animationDelay: `${i * 0.07}s` }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110"
+                    style={{ background: `${item.color}20`, border: `1px solid ${item.color}40` }}>
+                    <Icon name={item.icon as any} size={18} style={{ color: item.color }} />
+                  </div>
+                  <span className="font-semibold text-white/80 text-sm group-hover:text-white transition-colors">{item.name}</span>
+                  <Icon name="Plus" size={14} className="ml-auto" style={{ color: 'rgba(255,255,255,0.2)' }} />
+                </div>
+              ))}
+            </div>
+
+            <div className={`text-center ${integrationsRef.inView ? 'animate-fade-up delay-500' : 'opacity-0-init'}`}>
+              <button className="px-8 py-3 rounded-xl font-semibold text-sm transition-all duration-300 hover:scale-105 gradient-border text-white"
+                style={{ background: 'rgba(255,255,255,0.05)' }}>
+                Смотреть все интеграции →
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-24 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="p-12 rounded-3xl relative overflow-hidden gradient-border"
+            style={{ background: 'rgba(13,18,32,0.95)' }}>
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute top-0 left-1/4 w-64 h-64 rounded-full blur-3xl opacity-20"
+                style={{ background: '#00ff87' }} />
+              <div className="absolute bottom-0 right-1/4 w-64 h-64 rounded-full blur-3xl opacity-15"
+                style={{ background: '#a855f7' }} />
+            </div>
+            <div className="relative z-10">
+              <div className="text-4xl mb-4">🚀</div>
+              <h2 className="font-display text-4xl md:text-5xl font-bold text-white uppercase tracking-tight mb-4">
+                Готовы к запуску?
+              </h2>
+              <p className="text-white/60 text-lg mb-8 max-w-xl mx-auto">
+                Начните бесплатно и подключите первую интеграцию за 5 минут. Никаких ограничений на 14 дней.
+              </p>
+              <div className="flex flex-wrap gap-4 justify-center">
+                <button className="px-10 py-4 rounded-xl font-bold text-black text-base transition-all duration-300 hover:scale-105 glow-green"
+                  style={{ background: 'linear-gradient(135deg, #00ff87, #3b82f6)' }}>
+                  Начать бесплатно →
+                </button>
+                <button className="px-10 py-4 rounded-xl font-semibold text-white text-base transition-all duration-300 hover:scale-105"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}>
+                  Связаться с командой
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="py-8 px-6" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #00ff87, #a855f7)' }}>
+              <Icon name="Zap" size={12} className="text-black" />
+            </div>
+            <span className="font-display text-sm font-bold text-white/60 tracking-wide">NEXAFLOW</span>
+          </div>
+          <p className="text-white/30 text-xs">© 2024 Николаев Владимир Владимирович. Все права защищены.</p>
+          <div className="flex items-center gap-1.5 text-xs text-white/30">
+            <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#00ff87' }} />
+            Все системы работают
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

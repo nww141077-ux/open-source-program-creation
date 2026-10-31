@@ -1,0 +1,29 @@
+{
+  "tests": [
+    {
+      "name": "Voice command - filter critical",
+      "method": "POST",
+      "path": "/",
+      "body": {"mode": "command", "text": "покажи критические инциденты"},
+      "expectedStatus": 200,
+      "expectedBody": {"command": {"action": "filter"}},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Voice command - navigate report",
+      "method": "POST",
+      "path": "/",
+      "body": {"mode": "command", "text": "новый инцидент"},
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Voice command - unknown",
+      "method": "POST",
+      "path": "/",
+      "body": {"mode": "command", "text": "ерунда какая-то"},
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

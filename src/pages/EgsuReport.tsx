@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
-const API = "https://functions.poehali.dev/f336856e-d200-4e1a-b378-38c213f8867d";
+const API = "https://functions.poehali.dev/c71047de-6e10-499a-aa1c-e9fdba33e7bd";
 
 const INCIDENT_TYPES = [
   { key: "ecology", label: "Вырубка леса", icon: "Leaf", color: "#00ff87" },
@@ -61,6 +61,7 @@ export default function EgsuReport() {
   const canNext1 = form.type && form.severity;
   const canNext2 = form.title && form.description && form.country;
 
+  // Подсчёт балла верификации для показа пользователю
   const calcScore = () => {
     const weights: Record<string, number> = {
       has_photo: 20, has_video: 25, has_witnesses: 20,
@@ -76,13 +77,21 @@ export default function EgsuReport() {
     setError("");
     try {
       const payload = {
-        type: form.type, severity: form.severity, title: form.title,
-        description: form.description, country: form.country, location: form.location,
-        contact_email: form.contact || null, is_anonymous: form.anonymous,
-        has_photo: form.has_photo, has_video: form.has_video,
-        has_witnesses: form.has_witnesses, has_satellite: form.has_satellite,
+        type: form.type,
+        severity: form.severity,
+        title: form.title,
+        description: form.description,
+        country: form.country,
+        location: form.location,
+        contact_email: form.contact || null,
+        is_anonymous: form.anonymous,
+        has_photo: form.has_photo,
+        has_video: form.has_video,
+        has_witnesses: form.has_witnesses,
+        has_satellite: form.has_satellite,
         has_official_source: form.has_official_source,
-        mgp_distinction: form.mgp_distinction, mgp_proportionality: form.mgp_proportionality,
+        mgp_distinction: form.mgp_distinction,
+        mgp_proportionality: form.mgp_proportionality,
         mgp_necessity: form.mgp_necessity,
       };
       const res = await fetch(API, {
@@ -103,16 +112,18 @@ export default function EgsuReport() {
     setLoading(false);
   };
 
+  // Успешная отправка
   if (result) {
     const inc = result.incident;
     const isVerified = inc.status === "verified";
     return (
       <div className="min-h-screen font-body flex items-center justify-center px-4" style={{ background: "#060a12" }}>
-        <div className="max-w-sm w-full text-center">
+        <div className="max-w-sm w-full text-center animate-fade-up">
           <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
             style={{ background: isVerified ? "rgba(0,255,135,0.1)" : "rgba(245,158,11,0.1)", border: `2px solid ${isVerified ? "rgba(0,255,135,0.3)" : "rgba(245,158,11,0.3)"}` }}>
             <Icon name={isVerified ? "CheckCircle" : "Clock"} size={40} style={{ color: isVerified ? "#00ff87" : "#f59e0b" }} />
           </div>
+
           <h2 className="font-display text-2xl font-bold text-white uppercase mb-2">
             {isVerified ? "Инцидент принят!" : "На проверке"}
           </h2>
@@ -121,12 +132,15 @@ export default function EgsuReport() {
               ? `Верификация пройдена. Балл доверия: ${inc.verification_score}/100. ОГР направлена на место.`
               : `Балл доверия: ${inc.verification_score}/100. Требуется дополнительная проверка.`}
           </p>
-          <div className="p-4 rounded-2xl mb-4"
-            style={{ background: isVerified ? "rgba(0,255,135,0.06)" : "rgba(245,158,11,0.06)", border: `1px solid ${isVerified ? "rgba(0,255,135,0.15)" : "rgba(245,158,11,0.15)"}` }}>
+
+          {/* Номер */}
+          <div className="p-4 rounded-2xl mb-4" style={{ background: isVerified ? "rgba(0,255,135,0.06)" : "rgba(245,158,11,0.06)", border: `1px solid ${isVerified ? "rgba(0,255,135,0.15)" : "rgba(245,158,11,0.15)"}` }}>
             <div className="text-white/40 text-xs mb-1">Номер инцидента в системе ЕЦСУ</div>
             <div className="font-display text-2xl font-bold" style={{ color: isVerified ? "#00ff87" : "#f59e0b" }}>{inc.incident_code}</div>
             <div className="text-white/30 text-xs mt-1">Сохраните для отслеживания</div>
           </div>
+
+          {/* Автоматические действия */}
           {result.actions_applied?.length > 0 && (
             <div className="p-4 rounded-2xl mb-4 text-left" style={{ background: "rgba(168,85,247,0.06)", border: "1px solid rgba(168,85,247,0.15)" }}>
               <div className="text-white/50 text-xs uppercase tracking-wider font-semibold mb-2">Автоматически применено</div>
@@ -138,8 +152,9 @@ export default function EgsuReport() {
               ))}
             </div>
           )}
+
           <div className="flex flex-col gap-2">
-            <button onClick={() => navigate("/ecsu")}
+            <button onClick={() => navigate("/egsu/dashboard")}
               className="w-full py-3 rounded-xl font-semibold text-black text-sm"
               style={{ background: "linear-gradient(135deg, #00ff87, #3b82f6)" }}>
               Перейти в дашборд
@@ -157,9 +172,10 @@ export default function EgsuReport() {
 
   return (
     <div className="min-h-screen font-body" style={{ background: "#060a12" }}>
+      {/* NAV */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center gap-3 px-4 py-3"
         style={{ background: "rgba(6,10,18,0.97)", borderBottom: "1px solid rgba(244,63,94,0.15)", backdropFilter: "blur(20px)" }}>
-        <button onClick={() => step > 1 ? setStep(s => s - 1) : navigate("/ecsu")}
+        <button onClick={() => step > 1 ? setStep(s => s - 1) : navigate("/egsu")}
           className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white transition-colors"
           style={{ background: "rgba(255,255,255,0.05)" }}>
           <Icon name="ChevronLeft" size={16} />
@@ -178,9 +194,9 @@ export default function EgsuReport() {
 
       <div className="pt-16 px-4 pb-8 max-w-lg mx-auto">
 
-        {/* STEP 1 */}
+        {/* STEP 1 — тип и серьёзность */}
         {step === 1 && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-up">
             <div className="pt-4">
               <h2 className="font-display text-xl font-bold text-white uppercase">Тип нарушения</h2>
               <p className="text-white/40 text-sm mt-1">Выберите категорию инцидента</p>
@@ -224,9 +240,9 @@ export default function EgsuReport() {
           </div>
         )}
 
-        {/* STEP 2 */}
+        {/* STEP 2 — описание */}
         {step === 2 && (
-          <div className="space-y-4">
+          <div className="space-y-4 animate-fade-up">
             <div className="pt-4">
               <h2 className="font-display text-xl font-bold text-white uppercase">Описание</h2>
               <p className="text-white/40 text-sm mt-1">Опишите что произошло</p>
@@ -283,13 +299,15 @@ export default function EgsuReport() {
           </div>
         )}
 
-        {/* STEP 3 */}
+        {/* STEP 3 — доказательства и МГП (защита от фейков) */}
         {step === 3 && (
-          <div className="space-y-5">
+          <div className="space-y-5 animate-fade-up">
             <div className="pt-4">
               <h2 className="font-display text-xl font-bold text-white uppercase">Доказательства</h2>
               <p className="text-white/40 text-sm mt-1">Система ЕЦСУ проверяет достоверность. Минимальный балл: 40</p>
             </div>
+
+            {/* Балл верификации */}
             <div className="p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${score >= 60 ? "rgba(0,255,135,0.25)" : score >= 40 ? "rgba(245,158,11,0.25)" : "rgba(244,63,94,0.25)"}` }}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-white/50 text-xs uppercase tracking-wider font-semibold">Балл достоверности МГП</span>
@@ -303,6 +321,8 @@ export default function EgsuReport() {
                 {score >= 60 ? "Инцидент будет автоматически верифицирован" : score >= 40 ? "Будет принят на дополнительную проверку" : "Недостаточно доказательств — добавьте источники"}
               </p>
             </div>
+
+            {/* Источники доказательств */}
             <div>
               <h3 className="text-white/50 text-xs uppercase tracking-wider font-semibold mb-3">Источники доказательств</h3>
               <div className="space-y-2">
@@ -332,6 +352,8 @@ export default function EgsuReport() {
                 ))}
               </div>
             </div>
+
+            {/* Принципы МГП */}
             <div>
               <h3 className="text-white/50 text-xs uppercase tracking-wider font-semibold mb-1">Критерии МГП</h3>
               <p className="text-white/25 text-xs mb-3">Международное гуманитарное право — принципы различия, соразмерности, необходимости</p>
@@ -362,6 +384,7 @@ export default function EgsuReport() {
                 ))}
               </div>
             </div>
+
             <button onClick={() => setStep(4)}
               className="w-full py-4 rounded-xl font-bold text-sm transition-all"
               style={{ background: "linear-gradient(135deg, #f43f5e, #f59e0b)", color: "#000" }}>
@@ -370,13 +393,15 @@ export default function EgsuReport() {
           </div>
         )}
 
-        {/* STEP 4 */}
+        {/* STEP 4 — контакт и отправка */}
         {step === 4 && (
-          <div className="space-y-4">
+          <div className="space-y-4 animate-fade-up">
             <div className="pt-4">
               <h2 className="font-display text-xl font-bold text-white uppercase">Отправка</h2>
               <p className="text-white/40 text-sm mt-1">Проверьте данные и отправьте в систему ЕЦСУ</p>
             </div>
+
+            {/* Итоговый балл */}
             <div className="p-4 rounded-2xl flex items-center gap-4"
               style={{ background: score >= 60 ? "rgba(0,255,135,0.06)" : "rgba(245,158,11,0.06)", border: `1px solid ${score >= 60 ? "rgba(0,255,135,0.2)" : "rgba(245,158,11,0.2)"}` }}>
               <Icon name={score >= 60 ? "ShieldCheck" : "ShieldAlert"} size={28} style={{ color: score >= 60 ? "#00ff87" : "#f59e0b" }} />
@@ -385,6 +410,8 @@ export default function EgsuReport() {
                 <div className="text-white/30 text-xs">{score >= 60 ? "Автоматическая верификация ✓" : score >= 40 ? "Принят на дополнительную проверку" : "Риск отклонения — вернитесь и добавьте доказательства"}</div>
               </div>
             </div>
+
+            {/* Превью */}
             <div className="p-4 rounded-2xl space-y-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
               {[
                 { label: "Тип", value: INCIDENT_TYPES.find(t => t.key === form.type)?.label },
@@ -399,6 +426,7 @@ export default function EgsuReport() {
                 </div>
               ))}
             </div>
+
             <div>
               <label className="text-white/40 text-xs mb-1.5 block font-semibold uppercase tracking-wider">Контактный email (необязательно)</label>
               <input value={form.contact} onChange={e => setForm(f => ({ ...f, contact: e.target.value }))}
@@ -406,6 +434,7 @@ export default function EgsuReport() {
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
                 placeholder="для уведомления о статусе расследования" />
             </div>
+
             <button onClick={() => setForm(f => ({ ...f, anonymous: !f.anonymous }))}
               className="flex items-center gap-3 w-full p-4 rounded-xl transition-all"
               style={{ background: form.anonymous ? "rgba(168,85,247,0.08)" : "rgba(255,255,255,0.03)", border: `1px solid ${form.anonymous ? "rgba(168,85,247,0.3)" : "rgba(255,255,255,0.07)"}` }}>
@@ -417,21 +446,25 @@ export default function EgsuReport() {
                 <div className="text-white/30 text-xs">Контактные данные не будут переданы третьим лицам</div>
               </div>
             </button>
+
             <div className="p-3 rounded-xl flex items-start gap-2" style={{ background: "rgba(168,85,247,0.05)", border: "1px solid rgba(168,85,247,0.12)" }}>
               <Icon name="Scale" size={14} style={{ color: "#a855f7" }} className="mt-0.5 shrink-0" />
               <p className="text-white/40 text-xs">Инцидент будет зарегистрирован в блокчейн-реестре ЕЦСУ. Ответственная группа ОГР получит уведомление в течение 2 часов. Расследование — до 7 дней, решение МС — до 14 дней.</p>
             </div>
+
             {error && (
               <div className="p-3 rounded-xl flex items-start gap-2" style={{ background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.2)" }}>
                 <Icon name="AlertTriangle" size={14} style={{ color: "#f43f5e" }} className="mt-0.5 shrink-0" />
                 <p className="text-red-400 text-xs">{error}</p>
               </div>
             )}
+
             <button onClick={handleSubmit} disabled={loading || score < 40}
               className="w-full py-4 rounded-xl font-bold text-black text-sm transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{ background: score >= 40 ? "linear-gradient(135deg, #f43f5e, #f59e0b)" : "rgba(255,255,255,0.06)", boxShadow: score >= 40 ? "0 0 30px rgba(244,63,94,0.3)" : "none", color: score >= 40 ? "#000" : "rgba(255,255,255,0.2)" }}>
               {loading ? <><Icon name="Loader" size={16} className="animate-spin" /> Отправка в ЕЦСУ...</> : score < 40 ? "Добавьте больше доказательств" : "Отправить в систему ЕЦСУ"}
             </button>
+
             {score < 40 && (
               <button onClick={() => setStep(3)} className="w-full py-3 rounded-xl text-sm font-semibold text-white/50"
                 style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>

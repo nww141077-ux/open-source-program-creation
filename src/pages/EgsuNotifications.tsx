@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
-const API = "https://functions.poehali.dev/a3946930-062f-42cb-b38b-7f913b4e55a3";
+const API = "https://functions.poehali.dev/e610af8a-f8c5-4c04-8d9b-092391fb0c70";
 const G = (s: string) => `linear-gradient(135deg, ${s})`;
 
 type Notification = {
@@ -87,7 +87,7 @@ export default function EgsuNotifications() {
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 md:px-8 py-3"
         style={{ background: "rgba(6,10,18,0.98)", borderBottom: "1px solid rgba(168,85,247,0.2)", backdropFilter: "blur(20px)" }}>
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/ecsu")} className="text-white/40 hover:text-white/70 transition-colors">
+          <button onClick={() => navigate("/egsu/dashboard")} className="text-white/40 hover:text-white/70 transition-colors">
             <Icon name="ChevronLeft" size={16} />
           </button>
           <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: G("#a855f7, #f43f5e") }}>
@@ -163,10 +163,12 @@ export default function EgsuNotifications() {
                   if (n.action_url) navigate(n.action_url);
                 }}>
                 <div className="flex items-start gap-3">
+                  {/* Иконка */}
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                     style={{ background: `${tc}15` }}>
-                    <Icon name={(TYPE_ICONS[n.type] ?? "Bell") as "Bell"} size={18} style={{ color: tc }} />
+                    <Icon name={TYPE_ICONS[n.type] as "Bell" ?? "Bell"} size={18} style={{ color: tc }} />
                   </div>
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       {!n.is_read && (
@@ -190,6 +192,7 @@ export default function EgsuNotifications() {
                       )}
                     </div>
                   </div>
+
                   {!n.is_read && (
                     <button onClick={e => { e.stopPropagation(); markRead(n.id); }}
                       className="shrink-0 p-1.5 rounded-lg text-white/20 hover:text-white/60 transition-colors"
@@ -277,7 +280,7 @@ export default function EgsuNotifications() {
                 <div>
                   <label className="text-white/40 text-xs uppercase tracking-wide block mb-1.5">Ссылка</label>
                   <input value={form.action_url} onChange={e => setForm(f => ({ ...f, action_url: e.target.value }))}
-                    placeholder="/ecsu/finance"
+                    placeholder="/egsu/finance"
                     className="w-full px-3 py-2.5 rounded-xl text-white text-sm outline-none"
                     style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
                 </div>

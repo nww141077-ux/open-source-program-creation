@@ -1,0 +1,11 @@
+{
+  "tests": [
+    {
+      "name": "Статус режима поглощения",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

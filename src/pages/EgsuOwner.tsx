@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
-const API = "https://functions.poehali.dev/76c27171-ed39-4c44-827b-54b226b23b24";
+const API = "https://functions.poehali.dev/e610af8a-f8c5-4c04-8d9b-092391fb0c70";
 const G = (s: string) => `linear-gradient(135deg, ${s})`;
 
 type Setting = { key: string; value: string; type: string; description: string; updated_at: string };
@@ -106,7 +106,7 @@ export default function EgsuOwner() {
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 md:px-8 py-3"
         style={{ background: "rgba(6,10,18,0.98)", borderBottom: "1px solid rgba(168,85,247,0.2)", backdropFilter: "blur(20px)" }}>
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/ecsu")} className="text-white/40 hover:text-white/70 transition-colors">
+          <button onClick={() => navigate("/egsu/dashboard")} className="text-white/40 hover:text-white/70 transition-colors">
             <Icon name="ChevronLeft" size={16} />
           </button>
           <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: G("#a855f7, #3b82f6") }}>
@@ -165,6 +165,7 @@ export default function EgsuOwner() {
                 <p className="text-white/30 text-sm mt-1">Системная информация и статус</p>
               </div>
 
+              {/* Карточка владельца */}
               <div className="p-6 rounded-2xl relative overflow-hidden"
                 style={{ background: "rgba(168,85,247,0.07)", border: "2px solid rgba(168,85,247,0.25)" }}>
                 <div className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-5"
@@ -190,11 +191,12 @@ export default function EgsuOwner() {
                 </div>
               </div>
 
+              {/* Статистика */}
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: "Непрочитанных\nуведомлений", val: owner.stats?.unread_notifications ?? 0, icon: "Bell", color: "#f59e0b" },
-                  { label: "Угроз за 24ч", val: owner.stats?.threats_today ?? 0, icon: "ShieldAlert", color: "#f43f5e" },
-                  { label: "Транзакций за 24ч", val: owner.stats?.transactions_today ?? 0, icon: "ArrowLeftRight", color: "#3b82f6" },
+                  { label: "Непрочитанных\nуведомлений", val: owner.stats.unread_notifications, icon: "Bell", color: "#f59e0b" },
+                  { label: "Угроз за 24ч", val: owner.stats.threats_today, icon: "ShieldAlert", color: "#f43f5e" },
+                  { label: "Транзакций за 24ч", val: owner.stats.transactions_today, icon: "ArrowLeftRight", color: "#3b82f6" },
                 ].map(k => (
                   <div key={k.label} className="p-4 rounded-2xl"
                     style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${k.color}20` }}>
@@ -207,7 +209,8 @@ export default function EgsuOwner() {
                 ))}
               </div>
 
-              {(owner.last_access?.length ?? 0) > 0 && (
+              {/* Последний доступ */}
+              {owner.last_access.length > 0 && (
                 <div className="p-5 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   <div className="font-display text-sm font-bold text-white/50 uppercase tracking-widest mb-3">Последние действия</div>
                   <div className="space-y-2">
@@ -227,12 +230,13 @@ export default function EgsuOwner() {
                 </div>
               )}
 
+              {/* Быстрые переходы */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                  { label: "Финансы", icon: "Wallet", to: "/ecsu/finance", color: "#f59e0b" },
-                  { label: "Безопасность", icon: "ShieldAlert", to: "/ecsu", color: "#f43f5e" },
-                  { label: "Аналитика", icon: "BarChart3", to: "/ecsu", color: "#3b82f6" },
-                  { label: "Уведомления", icon: "Bell", to: "/ecsu/notifications", color: "#a855f7" },
+                  { label: "Финансы", icon: "Wallet", to: "/egsu/finance", color: "#f59e0b" },
+                  { label: "Безопасность", icon: "ShieldAlert", to: "/egsu/security", color: "#f43f5e" },
+                  { label: "Аналитика", icon: "BarChart3", to: "/egsu/analytics", color: "#3b82f6" },
+                  { label: "Уведомления", icon: "Bell", to: "/egsu/notifications", color: "#a855f7" },
                 ].map(item => (
                   <button key={item.label} onClick={() => navigate(item.to)}
                     className="p-4 rounded-2xl text-center transition-all hover:scale-105"
@@ -353,7 +357,10 @@ export default function EgsuOwner() {
                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    {["Потеря пароля","Смена устройства","Взлом аккаунта","Технический сбой","Смена телефона","Другая причина"].map(r => (
+                    {[
+                      "Потеря пароля", "Смена устройства", "Взлом аккаунта",
+                      "Технический сбой", "Смена телефона", "Другая причина"
+                    ].map(r => (
                       <button key={r} onClick={() => setRecoveryForm({ reason: r })}
                         className="px-3 py-2 rounded-lg text-xs text-left transition-all hover:scale-105"
                         style={{

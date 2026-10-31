@@ -5,12 +5,19 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
-import EcsuPage from "./pages/EcsuPage";
-import EcsuFinance from "./pages/EcsuFinance";
-import EgsuLegal from "./pages/EgsuLegal";
-import EgsuNotifications from "./pages/EgsuNotifications";
-import EgsuOwner from "./pages/EgsuOwner";
+import Dashboard from "./pages/Dashboard";
+import GlobalLaw from "./pages/GlobalLaw";
+import EgsuDashboard from "./pages/EgsuDashboard";
 import EgsuReport from "./pages/EgsuReport";
+import EgsuDocs from "./pages/EgsuDocs";
+import EgsuBusiness from "./pages/EgsuBusiness";
+import EgsuLegal from "./pages/EgsuLegal";
+import EgsuApi from "./pages/EgsuApi";
+import EgsuFinance from "./pages/EgsuFinance";
+import EgsuSecurity from "./pages/EgsuSecurity";
+import EgsuOwner from "./pages/EgsuOwner";
+import EgsuAnalytics from "./pages/EgsuAnalytics";
+import EgsuNotifications from "./pages/EgsuNotifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,12 +30,19 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/ecsu" element={<EcsuPage />} />
-          <Route path="/ecsu/finance" element={<EcsuFinance />} />
-          <Route path="/ecsu/legal" element={<EgsuLegal />} />
-          <Route path="/ecsu/notifications" element={<EgsuNotifications />} />
-          <Route path="/ecsu/owner" element={<EgsuOwner />} />
-          <Route path="/ecsu/report" element={<EgsuReport />} />
+          <Route path="/app" element={<Dashboard />} />
+          <Route path="/egsu" element={<GlobalLaw />} />
+          <Route path="/egsu/dashboard" element={<EgsuDashboard />} />
+          <Route path="/egsu/report" element={<EgsuReport />} />
+          <Route path="/egsu/docs" element={<EgsuDocs />} />
+          <Route path="/egsu/business" element={<EgsuBusiness />} />
+          <Route path="/egsu/legal" element={<EgsuLegal />} />
+          <Route path="/egsu/api" element={<EgsuApi />} />
+          <Route path="/egsu/finance" element={<EgsuFinance />} />
+          <Route path="/egsu/security" element={<EgsuSecurity />} />
+          <Route path="/egsu/owner" element={<EgsuOwner />} />
+          <Route path="/egsu/analytics" element={<EgsuAnalytics />} />
+          <Route path="/egsu/notifications" element={<EgsuNotifications />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

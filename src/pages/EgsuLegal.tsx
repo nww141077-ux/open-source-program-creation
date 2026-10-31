@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
-const API = "https://functions.poehali.dev/f0929879-cfe7-4c30-a00c-f8a208bb8b6c";
+const API = "https://functions.poehali.dev/7425192d-b613-4c55-bdb8-01479a9f0d24";
 
 const CAT_LABELS: Record<string, string> = {
   constitution: "Конституция",
@@ -98,7 +98,7 @@ export default function EgsuLegal() {
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 md:px-8 py-3"
         style={{ background: "rgba(6,10,18,0.97)", borderBottom: "1px solid rgba(168,85,247,0.15)", backdropFilter: "blur(20px)" }}>
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/ecsu")}
+          <button onClick={() => navigate("/egsu/dashboard")}
             className="flex items-center gap-2 text-white/40 hover:text-white/70 transition-colors">
             <Icon name="ChevronLeft" size={16} />
           </button>
@@ -126,6 +126,12 @@ export default function EgsuLegal() {
               ))}
             </div>
           )}
+          <button onClick={() => navigate("/egsu/api")}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+            style={{ background: "rgba(0,255,135,0.1)", color: "#00ff87", border: "1px solid rgba(0,255,135,0.2)" }}>
+            <Icon name="Plug" size={13} />
+            <span className="hidden md:inline">API</span>
+          </button>
         </div>
       </nav>
 
